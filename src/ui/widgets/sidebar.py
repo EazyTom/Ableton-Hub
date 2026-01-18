@@ -541,6 +541,13 @@ class Sidebar(QWidget):
         mcp_intro.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
         mcp_section.add_item(mcp_intro)
         
+        # Producer Pal - AI-powered assistant for Ableton Live
+        producer_pal = SidebarItem("Producer Pal", "🎹")
+        producer_pal.setCheckable(False)
+        producer_pal.setToolTip("AI-powered assistant for music production. Control Ableton Live with words.")
+        producer_pal.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://producer-pal.org/")))
+        mcp_section.add_item(producer_pal)
+        
         ableton_mcp = SidebarItem("Ableton MCP", "🤖")
         ableton_mcp.setCheckable(False)
         ableton_mcp.setToolTip("Control Ableton Live via AI assistants (Claude, etc.)")

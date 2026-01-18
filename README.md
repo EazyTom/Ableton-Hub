@@ -10,18 +10,164 @@ A comprehensive cross-platform desktop application for organizing, managing, and
   <img src="resources/images/ableton-hub-screenshot.png" alt="Ableton Hub Logo" />
 </div>
 
-## 🆕 What's New (v0.3.0)
+## 🎵 Features
 
-- **Tempo Filtering & Sorting**: Filter projects by tempo range (60-90, 90-120, 120-150, 150+ BPM or custom range) with always-visible controls in the search bar
-- **Enhanced List View**: Click column headers to sort by Name, Location, Tempo, Modified date, and more
-- **Audio Playback**: Play exported audio files directly from the project details dialog with full transport controls (WAV, AIFF, MP3, FLAC, OGG, M4A)
-- **Backup & Archive**: Configure a backup location and archive projects with one click; view all project backups
-- **Live Preferences Access**: Right-click installed Live versions to open Preferences folder or edit Options.txt
-- **Packs Browser**: Quick access links to Core Library, User Library, Factory Packs, and Ableton Pack Store
-- **MCP Servers Links**: Sidebar section with links to popular Ableton MCP server projects for AI integration
-- **Smart Collection Tempo Rules**: Create dynamic collections filtered by tempo range
-- **Visual Export Indicators**: Distinct icons for projects with/without exports
-- **Rainbow Tempo Colors**: Visual BPM indicator on project cards with color-coded tempo display (purple=60 BPM → red=200+ BPM)
+### Core Functionality
+
+#### Project Discovery & Management
+- **Multi-Location Scanning**: Scan and index Ableton `.als` project files across multiple locations (local drives, network shares, cloud storage)
+- **Automatic File Watching**: Real-time detection of new, modified, or deleted projects using file system watchers
+- **Project Metadata Extraction**: Automatically extracts rich metadata from `.als` files including:
+  - Plugins and devices used
+  - Tempo and time signature
+  - Track counts (audio, MIDI, return tracks)
+  - Arrangement length
+  - Ableton Live version
+  - Sample references
+  - Automation status
+- **File Hash Tracking**: SHA256 hashing for duplicate detection and integrity verification
+- **Project Health Dashboard**: Monitor project health metrics, identify issues, and track project status
+- **Visual Export Indicators**: Projects with exports display colorized icons
+
+#### Project Collections & Organization
+- **Static Collections**: Create custom collections for albums, EPs, sessions, compilations, and more
+- **Smart Collections**: Rule-based dynamic collections that auto-update based on criteria:
+  - Filter by tags, locations, date ranges
+  - Filter by plugins, devices, or project metadata
+  - Filter by rating, favorites, or export status
+  - Filter by tempo range (min/max BPM)
+- **Track Management**: Organize projects within collections as tracks with:
+  - Custom track names
+  - Per-track artwork
+  - Drag-and-drop reordering
+- **Collection Types**: Support for albums, EPs, sessions, compilations, and custom types
+
+#### Search & Discovery
+- **Full-Text Search**: Powerful FTS5-based search across:
+  - Project names
+  - Export song names
+  - Notes and tags
+  - Plugins and devices
+- **Advanced Filtering**:
+  - Date filters (Today, This Week, This Month, Last 7/30 Days, Custom Range)
+  - Location-based filtering
+  - Tag-based filtering
+  - Plugin/device search
+  - Tempo range filtering (preset ranges: 60-90, 90-120, 120-150, 150+ BPM or custom)
+- **Search Modes**: Filter by name, export name, tags, or notes
+- **Real-time Results**: Debounced search with instant results
+- **Always-Visible Tempo Filter**: Quick-access tempo range buttons in the search bar
+
+#### Location Management
+- **Multiple Location Types**:
+  - Local folders
+  - Network shares
+  - Dropbox/Cloud storage
+  - USB drives
+  - Custom locations
+- **Location Features**:
+  - Favorite locations
+  - Color coding
+  - Active/inactive status
+  - Project count tracking
+  - Last scan timestamp
+- **Bulk Operations**: Scan all active locations at once
+- **Location Statistics**: View project counts, total size, and scan history
+
+#### Tagging System
+- **Flexible Tagging**: Create and assign tags with categories
+- **Color-Coded Tags**: Visual organization with custom colors
+- **Tag Management**: Full CRUD operations for tags
+- **Tag Filtering**: Filter projects by one or more tags
+
+#### Export Tracking
+- **Automatic Export Detection**: Automatically discover exported audio files associated with projects
+- **Export Metadata**: Track export formats, bit depths, sample rates
+- **Export-to-Project Mapping**: Link exports back to source projects
+- **Export Status Indicators**: Visual indicators for projects with/without exports
+
+#### Duplicate Detection
+- **Multiple Detection Methods**:
+  - File hash comparison (SHA256)
+  - Name similarity matching
+  - Location-based detection
+- **Duplicate Reports**: View and manage duplicate projects
+- **Smart Merging**: Options to merge or remove duplicates
+
+#### Ableton Live Integration
+- **Live Version Detection**: Automatically detect installed Ableton Live versions
+- **Live Launcher**: Launch projects with a specific Live version
+- **Version Management**: View all installed Live versions in the sidebar
+- **Quick Launch**: Double-click projects to open with Live
+- **Preferences Access**: Right-click Live installations to:
+  - Open the Preferences folder for that version
+  - Edit or create `Options.txt` for advanced configuration
+
+#### Backup & Archive
+- **Backup Location Management**: Configure a dedicated backup folder from the sidebar
+- **Project Backups View**: See all backup copies of a project in the details dialog
+- **Archive Service**: Create compressed (ZIP) backups of projects with all assets
+- **One-Click Archive**: Archive projects directly to your configured backup location
+
+#### Ableton Link Network
+- **Link Device Discovery**: Discover and monitor devices on your Ableton Link network
+- **Real-time Monitoring**: Live updates of Link network status
+- **Device Information**: View device names, IP addresses, and connection status
+
+#### MCP Servers Integration
+- **Quick Access Links**: Sidebar section with links to popular Ableton MCP server projects:
+  - ableton-mcp (GitHub)
+  - ableton-copilot-mcp (GitHub)
+  - Live control via MCP documentation and resources
+
+#### Audio Preview & Playback
+- **Waveform Thumbnails**: Generate visual waveform previews from exported audio files
+- **Automatic Generation**: Thumbnails created automatically during export tracking
+- **Default Artwork**: Uses Ableton logo as default thumbnail when preview unavailable
+- **In-App Audio Playback**: Play exported audio files directly from the project details:
+  - Play/Pause and Stop controls
+  - Seek slider with time display
+  - Volume control
+  - Support for WAV, AIFF, MP3, FLAC, OGG, and M4A formats
+  - Cross-platform audio playback using Qt Multimedia
+
+#### User Interface
+- **Multiple Themes**: Choose from Orange (default), Cool Blue, Green, or Rainbow themes inspired by Ableton Live's aesthetic
+- **Grid & List Views**: Toggle between grid and list views for projects
+- **Sortable List View**: Click column headers to sort by:
+  - Name (A-Z / Z-A)
+  - Location (ascending / descending)
+  - Tempo (low to high / high to low)
+  - Modified date (newest / oldest)
+  - Tags, Export status, and more
+- **Rainbow Tempo Colors**: Visual BPM indicator on project cards with color gradient (purple for 60 BPM → red for 200+ BPM)
+- **Responsive Layout**: Resizable sidebar and content areas
+- **Keyboard Shortcuts**: Efficient keyboard navigation
+- **Context Menus**: Right-click actions throughout the interface
+- **High DPI Support**: Automatic scaling for high-resolution displays
+- **Learning Resources**: Built-in links to:
+  - Official Ableton documentation
+  - Certified trainers directory
+  - Regional user groups (Austin, Chicago, San Francisco)
+  - Ableton Discord community
+
+### Advanced Features
+
+#### Project Health Monitoring
+- **Health Metrics**: Track project health indicators
+- **Issue Detection**: Identify projects with missing files, outdated metadata, or other issues
+- **Health Dashboard**: Visual dashboard showing project health statistics
+
+#### Database Management
+- **SQLite Database**: Lightweight, local database for all project metadata
+- **Database Migrations**: Automatic schema migrations for updates
+- **Database Reset**: Option to reset database and start fresh
+- **Data Integrity**: Foreign key constraints and referential integrity
+
+#### Configuration
+- **User Preferences**: Persistent configuration storage
+- **Window State**: Remembers window size, position, and sidebar state
+- **View Preferences**: Default view mode (grid/list) and other UI settings
 
 ## 🏗️ Architecture
 
@@ -159,170 +305,6 @@ The application follows a layered architecture:
 - Services like Export Tracker and Archive Service interact with both files and database
 - All user preferences and window state are persisted in configuration
 
-## 🎵 Features
-
-### Core Functionality
-
-#### Project Discovery & Management
-- **Multi-Location Scanning**: Scan and index Ableton `.als` project files across multiple locations (local drives, network shares, cloud storage)
-- **Automatic File Watching**: Real-time detection of new, modified, or deleted projects using file system watchers
-- **Project Metadata Extraction**: Automatically extracts rich metadata from `.als` files including:
-  - Plugins and devices used
-  - Tempo and time signature
-  - Track counts (audio, MIDI, return tracks)
-  - Arrangement length
-  - Ableton Live version
-  - Sample references
-  - Automation status
-- **File Hash Tracking**: SHA256 hashing for duplicate detection and integrity verification
-- **Project Health Dashboard**: Monitor project health metrics, identify issues, and track project status
-- **Visual Export Indicators**: Projects with exports display colorized icons; projects without exports show distinct `AProject.ico` icon
-
-#### Collections & Organization
-- **Static Collections**: Create custom collections for albums, EPs, sessions, compilations, and more
-- **Smart Collections**: Rule-based dynamic collections that auto-update based on criteria:
-  - Filter by tags, locations, date ranges
-  - Filter by plugins, devices, or project metadata
-  - Filter by rating, favorites, or export status
-  - **NEW**: Filter by tempo range (min/max BPM)
-- **Track Management**: Organize projects within collections as tracks with:
-  - Custom track names
-  - Per-track artwork
-  - Drag-and-drop reordering
-- **Collection Types**: Support for albums, EPs, sessions, compilations, and custom types
-
-#### Search & Discovery
-- **Full-Text Search**: Powerful FTS5-based search across:
-  - Project names
-  - Export song names
-  - Notes and tags
-  - Plugins and devices
-- **Advanced Filtering**:
-  - Date filters (Today, This Week, This Month, Last 7/30 Days, Custom Range)
-  - Location-based filtering
-  - Tag-based filtering
-  - Plugin/device search
-  - **NEW**: Tempo range filtering (preset ranges: 60-90, 90-120, 120-150, 150+ BPM or custom)
-- **Search Modes**: Filter by name, export name, tags, or notes
-- **Real-time Results**: Debounced search with instant results
-- **Always-Visible Tempo Filter**: Quick-access tempo range buttons in the search bar
-
-#### Location Management
-- **Multiple Location Types**:
-  - Local folders
-  - Network shares
-  - Dropbox/Cloud storage
-  - USB drives
-  - Custom locations
-- **Location Features**:
-  - Favorite locations
-  - Color coding
-  - Active/inactive status
-  - Project count tracking
-  - Last scan timestamp
-- **Bulk Operations**: Scan all active locations at once
-- **Location Statistics**: View project counts, total size, and scan history
-
-#### Tagging System
-- **Flexible Tagging**: Create and assign tags with categories
-- **Color-Coded Tags**: Visual organization with custom colors
-- **Tag Management**: Full CRUD operations for tags
-- **Tag Filtering**: Filter projects by one or more tags
-
-#### Export Tracking
-- **Automatic Export Detection**: Automatically discover exported audio files associated with projects
-- **Export Metadata**: Track export formats, bit depths, sample rates
-- **Export-to-Project Mapping**: Link exports back to source projects
-- **Export Status Indicators**: Visual indicators for projects with/without exports
-
-#### Duplicate Detection
-- **Multiple Detection Methods**:
-  - File hash comparison (SHA256)
-  - Name similarity matching
-  - Location-based detection
-- **Duplicate Reports**: View and manage duplicate projects
-- **Smart Merging**: Options to merge or remove duplicates
-
-#### Ableton Live Integration
-- **Live Version Detection**: Automatically detect installed Ableton Live versions
-- **Live Launcher**: Launch projects with a specific Live version
-- **Version Management**: View all installed Live versions in the sidebar
-- **Quick Launch**: Double-click projects to open with Live
-- **NEW: Preferences Access**: Right-click Live installations to:
-  - Open the Preferences folder for that version
-  - Edit or create `Options.txt` for advanced configuration
-- **NEW: Packs Browser**: Quick access to Ableton library folders:
-  - Core Library
-  - User Library
-  - Factory Packs
-  - Link to Ableton Pack Store
-
-#### Backup & Archive
-- **Backup Location Management**: Configure a dedicated backup folder from the sidebar
-- **Project Backups View**: See all backup copies of a project in the details dialog
-- **Archive Service**: Create compressed (ZIP) backups of projects with all assets
-- **One-Click Archive**: Archive projects directly to your configured backup location
-
-#### Ableton Link Network
-- **Link Device Discovery**: Discover and monitor devices on your Ableton Link network
-- **Real-time Monitoring**: Live updates of Link network status
-- **Device Information**: View device names, IP addresses, and connection status
-
-#### MCP Servers Integration
-- **Quick Access Links**: Sidebar section with links to popular Ableton MCP server projects:
-  - ableton-mcp (GitHub)
-  - ableton-copilot-mcp (GitHub)
-  - Live control via MCP documentation and resources
-
-#### Audio Preview & Playback
-- **Waveform Thumbnails**: Generate visual waveform previews from exported audio files
-- **Automatic Generation**: Thumbnails created automatically during export tracking
-- **Default Artwork**: Uses Ableton logo as default thumbnail when preview unavailable
-- **In-App Audio Playback**: Play exported audio files directly from the project details:
-  - Play/Pause and Stop controls
-  - Seek slider with time display
-  - Volume control
-  - Support for WAV, AIFF, MP3, FLAC, OGG, and M4A formats
-  - Cross-platform audio playback using Qt Multimedia
-
-#### User Interface
-- **Multiple Themes**: Choose from Orange (default), Cool Blue, Green, or Rainbow themes inspired by Ableton Live's aesthetic
-- **Grid & List Views**: Toggle between grid and list views for projects
-- **Sortable List View**: Click column headers to sort by:
-  - Name (A-Z / Z-A)
-  - Location (ascending / descending)
-  - Tempo (low to high / high to low)
-  - Modified date (newest / oldest)
-  - Tags, Export status, and more
-- **Rainbow Tempo Colors**: Visual BPM indicator on project cards with color gradient (purple for 60 BPM → red for 200+ BPM)
-- **Responsive Layout**: Resizable sidebar and content areas
-- **Keyboard Shortcuts**: Efficient keyboard navigation
-- **Context Menus**: Right-click actions throughout the interface
-- **High DPI Support**: Automatic scaling for high-resolution displays
-- **Learning Resources**: Built-in links to:
-  - Official Ableton documentation
-  - Certified trainers directory
-  - Regional user groups (Austin, Chicago, San Francisco)
-  - Ableton Discord community
-
-### Advanced Features
-
-#### Project Health Monitoring
-- **Health Metrics**: Track project health indicators
-- **Issue Detection**: Identify projects with missing files, outdated metadata, or other issues
-- **Health Dashboard**: Visual dashboard showing project health statistics
-
-#### Database Management
-- **SQLite Database**: Lightweight, local database for all project metadata
-- **Database Migrations**: Automatic schema migrations for updates
-- **Database Reset**: Option to reset database and start fresh
-- **Data Integrity**: Foreign key constraints and referential integrity
-
-#### Configuration
-- **User Preferences**: Persistent configuration storage
-- **Window State**: Remembers window size, position, and sidebar state
-- **View Preferences**: Default view mode (grid/list) and other UI settings
-
 ## 📋 Requirements
 
 - **Python**: 3.11 or higher
@@ -371,7 +353,7 @@ The application follows a layered architecture:
    **Option C: Create Standalone Executable (Optional)**
    ```bash
    pip install pyinstaller
-   pyinstaller --name="Ableton Hub" --windowed --icon=resources/images/AProject.ico --add-data "resources;resources" --add-data "src;src" src/main.py
+   pyinstaller --name="Ableton Hub" --windowed --icon=resources/icons/AProject.ico --add-data "resources;resources" --add-data "src;src" src/main.py
    ```
    This creates a standalone executable in the `dist` folder that can be run without Python installed.
    
@@ -469,7 +451,6 @@ The application version uses a **single source of truth** pattern:
 **To release a new version:**
 1. Update `pyproject.toml` → `[project]` → `version`
 2. Update `src/__init__.py` → `WHATS_NEW` dictionary with new features
-3. Update `README.md` → "What's New" section (for documentation)
 
 **How it works:**
 - `pyproject.toml` defines the package version
@@ -477,7 +458,7 @@ The application version uses a **single source of truth** pattern:
 - `src/app.py` and `src/ui/main_window.py` import `__version__` from the package
 - The About dialog pulls "What's New" content from `src/__init__.py` → `get_whats_new_html()`
 
-> **Note**: The README "What's New" section is kept manually for documentation purposes, but the in-app About dialog auto-generates from `src/__init__.py`.
+> **Note**: The "What's New" section is maintained in `src/__init__.py` and displayed in the in-app About dialog. Feature lists in the README are updated as needed for documentation.
 
 ### Troubleshooting
 
@@ -668,16 +649,23 @@ Contributions are welcome! Please follow these guidelines:
 - ✅ In-app audio playback for exports
 - ✅ Project backup and archive system
 - ✅ Live preferences and Options.txt access
-- ✅ Packs browser sidebar section
 - ✅ MCP servers integration links
 - ✅ Smart collection tempo rules
 - ✅ Visual project export indicators
 
 ### In Progress
-- 🔄 Pack management and usage tracking
 - 🔄 Deep project analysis (plugin patterns, similarity detection)
 
 ### Planned
+- **Pack Management & Browsing**:
+  - Full pack browser with installed pack detection
+  - Pack usage statistics and tracking
+  - Pack-to-project associations
+  - Pack version tracking and update detection
+- **Ableton Lesson Integration**:
+  - Browse built-in Ableton Live lessons
+  - Lesson table of contents viewer
+  - Integration with Ableton's native lesson format
 - Project versioning and history tracking
 - Project relationships and linking (stems, remixes, versions)
 - Cloud sync integration

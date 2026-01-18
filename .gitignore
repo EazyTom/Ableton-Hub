@@ -85,6 +85,7 @@ desktop.ini
 
 # Project specific
 config.json
+example-projects/
 
 # Testing
 .pytest_cache/

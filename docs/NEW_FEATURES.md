@@ -1,6 +1,6 @@
 ## ✅ COMPLETED FEATURES
 
-- ✅ Use resources/images/AProject.ico for project icons with no audio export
+- ✅ Use resources/icons/AProject.ico for project icons with no audio export
 - ✅ Add new sidebar Section at bottom for managing Ableton MCP servers (GitHub links to projects like https://github.com/ahujasid/ableton-mcp)
 - ✅ Add ability to Create Collections from filtered groupings e.g. date range, recent projects, tempo range
   - Smart Collections support tempo range, relative date filters (last X days), absolute date ranges, and more

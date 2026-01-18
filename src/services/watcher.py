@@ -4,6 +4,8 @@ from typing import Optional, List, Dict, Set
 from pathlib import Path
 from datetime import datetime
 import time
+import json
+import hashlib
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, QTimer
 
@@ -15,6 +17,8 @@ from watchdog.events import (
 
 from ..database import get_session, Location, Project, ProjectStatus
 from ..utils.paths import is_ableton_project
+from ..utils.logging import get_logger
+from .als_parser import ALSParser
 
 
 class AbletonEventHandler(FileSystemEventHandler):
@@ -68,12 +72,14 @@ class FileWatcher(QObject):
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         
+        self.logger = get_logger(__name__)
         self._observer: Optional[Observer] = None
         self._watched_paths: Dict[str, int] = {}  # path -> location_id
         self._debounce_timer = QTimer()
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.timeout.connect(self._process_pending_events)
         self._pending_events: List[tuple] = []
+        self._parser = ALSParser()  # Parser for extracting metadata
     
     def start(self) -> None:
         """Start watching all active locations."""
@@ -209,16 +215,29 @@ class FileWatcher(QObject):
             path_obj = Path(path)
             stat = path_obj.stat()
             
+            # Calculate file hash for duplicate detection
+            file_hash = self._calculate_file_hash(path_obj)
+            
             project = Project(
                 name=path_obj.stem,
                 file_path=path,
                 location_id=location_id,
                 file_size=stat.st_size,
+                file_hash=file_hash,
                 created_date=datetime.fromtimestamp(stat.st_ctime),
                 modified_date=datetime.fromtimestamp(stat.st_mtime),
                 last_scanned=datetime.utcnow(),
                 status=ProjectStatus.LOCAL
             )
+            
+            # Parse .als metadata
+            try:
+                metadata = self._parser.parse(path_obj)
+                if metadata:
+                    self._apply_metadata_to_project(project, metadata)
+            except Exception as e:
+                # Don't fail project creation if parsing fails
+                self.logger.warning(f"Failed to parse metadata for {path}: {e}")
             
             session.add(project)
             session.commit()
@@ -227,11 +246,12 @@ class FileWatcher(QObject):
             
         except Exception as e:
             self.error_occurred.emit(f"Error handling created project: {e}")
+            self.logger.error(f"Error handling created project {path}: {e}", exc_info=True)
         finally:
             session.close()
     
     def _handle_modified(self, path: str) -> None:
-        """Handle project modification."""
+        """Handle project modification - re-parse metadata if file changed."""
         session = get_session()
         try:
             project = session.query(Project).filter(
@@ -245,12 +265,30 @@ class FileWatcher(QObject):
                     project.file_size = stat.st_size
                     project.modified_date = datetime.fromtimestamp(stat.st_mtime)
                     project.last_scanned = datetime.utcnow()
-                    session.commit()
+                    project.status = ProjectStatus.LOCAL
                     
+                    # Re-parse metadata if file was modified since last parse
+                    file_changed = (not project.last_parsed or 
+                                  datetime.fromtimestamp(stat.st_mtime) > project.last_parsed)
+                    if file_changed:
+                        try:
+                            # Recalculate hash in case file content changed
+                            project.file_hash = self._calculate_file_hash(path_obj)
+                            
+                            # Re-parse metadata
+                            metadata = self._parser.parse(path_obj)
+                            if metadata:
+                                self._apply_metadata_to_project(project, metadata)
+                        except Exception as e:
+                            # Don't fail update if parsing fails
+                            self.logger.warning(f"Failed to re-parse metadata for {path}: {e}")
+                    
+                    session.commit()
                     self.project_modified.emit(path)
                     
         except Exception as e:
             self.error_occurred.emit(f"Error handling modified project: {e}")
+            self.logger.error(f"Error handling modified project {path}: {e}", exc_info=True)
         finally:
             session.close()
     
@@ -284,20 +322,36 @@ class FileWatcher(QObject):
             if project:
                 new_path_obj = Path(new_path)
                 
-                project.file_path = new_path
-                project.name = new_path_obj.stem
-                
-                # Check if it moved to a different location
-                new_location_id = self._find_location(new_path)
-                if new_location_id and new_location_id != project.location_id:
-                    project.location_id = new_location_id
+                if new_path_obj.exists():
+                    stat = new_path_obj.stat()
+                    project.file_path = new_path
+                    project.name = new_path_obj.stem
+                    project.file_size = stat.st_size
+                    project.modified_date = datetime.fromtimestamp(stat.st_mtime)
+                    project.last_scanned = datetime.utcnow()
+                    
+                    # Recalculate hash for new location
+                    project.file_hash = self._calculate_file_hash(new_path_obj)
+                    
+                    # Check if it moved to a different location
+                    new_location_id = self._find_location(new_path)
+                    if new_location_id and new_location_id != project.location_id:
+                        project.location_id = new_location_id
+                    
+                    # Re-parse metadata in case file changed during move
+                    try:
+                        metadata = self._parser.parse(new_path_obj)
+                        if metadata:
+                            self._apply_metadata_to_project(project, metadata)
+                    except Exception as e:
+                        self.logger.warning(f"Failed to re-parse metadata for moved project {new_path}: {e}")
                 
                 session.commit()
-                
                 self.project_moved.emit(old_path, new_path)
                 
         except Exception as e:
             self.error_occurred.emit(f"Error handling moved project: {e}")
+            self.logger.error(f"Error handling moved project {old_path} -> {new_path}: {e}", exc_info=True)
         finally:
             session.close()
     
@@ -325,6 +379,73 @@ class FileWatcher(QObject):
     def is_watching(self) -> bool:
         """Check if currently watching."""
         return self._observer is not None and self._observer.is_alive()
+    
+    def _calculate_file_hash(self, path: Path) -> str:
+        """Calculate SHA256 hash of a file.
+        
+        Args:
+            path: Path to the file.
+            
+        Returns:
+            Hexadecimal hash string.
+        """
+        sha256 = hashlib.sha256()
+        try:
+            with open(path, 'rb') as f:
+                # Read in chunks to handle large files
+                for chunk in iter(lambda: f.read(8192), b''):
+                    sha256.update(chunk)
+            return sha256.hexdigest()
+        except Exception as e:
+            self.logger.warning(f"Failed to calculate hash for {path}: {e}")
+            return ""
+    
+    def _apply_metadata_to_project(self, project: Project, metadata) -> None:
+        """Apply parsed metadata to a project object.
+        
+        Args:
+            project: Project database object.
+            metadata: ProjectMetadata object from parser.
+        """
+        project.plugins = json.dumps(metadata.plugins) if metadata.plugins else '[]'
+        project.devices = json.dumps(metadata.devices) if metadata.devices else '[]'
+        project.tempo = metadata.tempo
+        project.time_signature = metadata.time_signature
+        project.track_count = metadata.track_count
+        project.audio_tracks = metadata.audio_tracks
+        project.midi_tracks = metadata.midi_tracks
+        project.return_tracks = metadata.return_tracks
+        project.has_master_track = metadata.master_track
+        project.arrangement_length = metadata.arrangement_length
+        # Calculate duration in seconds: bars * 4 beats/bar / tempo BPM * 60 sec/min
+        if metadata.arrangement_length and metadata.tempo and metadata.tempo > 0:
+            # bars * 4 beats/bar / tempo beats/min * 60 sec/min = seconds
+            project.arrangement_duration_seconds = (metadata.arrangement_length * 4.0 / metadata.tempo) * 60.0
+        else:
+            project.arrangement_duration_seconds = None
+        project.ableton_version = metadata.ableton_version
+        project.sample_references = json.dumps(metadata.sample_references) if metadata.sample_references else '[]'
+        project.has_automation = metadata.has_automation
+        project.last_parsed = datetime.utcnow()
+        
+        # Auto-populate export_song_name if not already set
+        # Priority: annotation > export filenames > master track name
+        if not project.export_song_name:
+            # Try annotation first (if it looks like a song name)
+            if metadata.annotation:
+                anno = metadata.annotation.strip()
+                # Only use if short and looks like a title (not a long note)
+                if len(anno) < 100 and '\n' not in anno:
+                    project.export_song_name = anno
+            
+            # Try export filenames found in project
+            if not project.export_song_name and metadata.export_filenames:
+                # Use the first export filename (most recent in Live)
+                project.export_song_name = metadata.export_filenames[0]
+            
+            # Try master track name if it's customized
+            if not project.export_song_name and metadata.master_track_name:
+                project.export_song_name = metadata.master_track_name
     
     @property
     def watched_locations(self) -> List[str]:

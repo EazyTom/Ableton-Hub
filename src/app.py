@@ -170,7 +170,7 @@ class AbletonHubApp:
     def _set_application_icon(self) -> None:
         """Set the application icon from resources."""
         try:
-            icon_path = get_resources_path() / "images" / "AProject.ico"
+            icon_path = get_resources_path() / "icons" / "AProject.ico"
             if not icon_path.exists():
                 # Fallback to png if ico not found
                 icon_path = get_resources_path() / "images" / "ableton-logo.png"

@@ -148,7 +148,7 @@ class ProjectCard(QFrame):
             logo_path = get_resources_path() / "images" / "ableton-logo.png"
         else:
             # Use AProject.ico for projects without exports
-            logo_path = get_resources_path() / "images" / "AProject.ico"
+            logo_path = get_resources_path() / "icons" / "AProject.ico"
             # Fallback to ableton-logo if ico doesn't exist
             if not logo_path.exists():
                 logo_path = get_resources_path() / "images" / "ableton-logo.png"

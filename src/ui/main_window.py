@@ -23,6 +23,7 @@ from .widgets.search_bar import SearchBar
 from .widgets.link_panel import LinkPanel
 from .theme import AbletonTheme
 from .controllers.scan_controller import ScanController
+from ..services.watcher import FileWatcher
 
 
 class MainWindow(QMainWindow):
@@ -73,7 +74,7 @@ class MainWindow(QMainWindow):
         """Set the window icon from resources."""
         try:
             # Use .ico file for better Windows taskbar support
-            icon_path = get_resources_path() / "images" / "AProject.ico"
+            icon_path = get_resources_path() / "icons" / "AProject.ico"
             if not icon_path.exists():
                 # Fallback to png if ico not found
                 icon_path = get_resources_path() / "images" / "ableton-logo.png"
@@ -425,6 +426,9 @@ class MainWindow(QMainWindow):
         self.scan_controller.scan_complete.connect(self._on_scan_complete)
         self.scan_controller.scan_error.connect(self._on_scan_error)
         self.scan_controller.project_found.connect(self._on_project_found)
+        
+        # Start file watcher for automatic updates
+        self._start_watcher()
     
     def _initial_load(self) -> None:
         """Load initial data on startup."""
@@ -433,6 +437,54 @@ class MainWindow(QMainWindow):
         
         # Note: Auto-scan on startup is disabled by default
         # Users must manually trigger scans using the Scan button
+        # File watcher is started automatically to detect changes
+    
+    def _start_watcher(self) -> None:
+        """Start the file system watcher for automatic project updates."""
+        try:
+            if self._watcher is None:
+                self._watcher = FileWatcher(self)
+                
+                # Connect watcher signals to refresh UI
+                self._watcher.project_created.connect(self._on_watcher_project_created)
+                self._watcher.project_modified.connect(self._on_watcher_project_modified)
+                self._watcher.project_deleted.connect(self._on_watcher_project_deleted)
+                self._watcher.project_moved.connect(self._on_watcher_project_moved)
+                self._watcher.error_occurred.connect(self._on_watcher_error)
+            
+            # Start watching all active locations
+            self._watcher.start()
+            self.logger.info("File watcher started")
+        except Exception as e:
+            self.logger.error(f"Failed to start file watcher: {e}", exc_info=True)
+    
+    def _on_watcher_project_created(self, path: str) -> None:
+        """Handle project created by watcher."""
+        self.logger.info(f"Watcher: Project created: {path}")
+        # Refresh UI to show new project
+        QTimer.singleShot(500, self._refresh_view)  # Small delay to ensure DB commit
+    
+    def _on_watcher_project_modified(self, path: str) -> None:
+        """Handle project modified by watcher."""
+        self.logger.info(f"Watcher: Project modified: {path}")
+        # Refresh UI to show updated metadata
+        QTimer.singleShot(500, self._refresh_view)  # Small delay to ensure DB commit
+    
+    def _on_watcher_project_deleted(self, path: str) -> None:
+        """Handle project deleted by watcher."""
+        self.logger.info(f"Watcher: Project deleted: {path}")
+        # Refresh UI to reflect deletion
+        QTimer.singleShot(500, self._refresh_view)
+    
+    def _on_watcher_project_moved(self, old_path: str, new_path: str) -> None:
+        """Handle project moved/renamed by watcher."""
+        self.logger.info(f"Watcher: Project moved: {old_path} -> {new_path}")
+        # Refresh UI to show updated path
+        QTimer.singleShot(500, self._refresh_view)
+    
+    def _on_watcher_error(self, error_msg: str) -> None:
+        """Handle watcher error."""
+        self.logger.warning(f"Watcher error: {error_msg}")
     
     def _refresh_sidebar(self) -> None:
         """Refresh the sidebar with current data."""
@@ -1630,6 +1682,9 @@ class MainWindow(QMainWindow):
         """Handle a new location being added."""
         self._refresh_sidebar()
         self._start_scan(location_id)
+        # Restart watcher to include new location
+        if self._watcher:
+            self._watcher.start()
     
     def closeEvent(self, event: QCloseEvent) -> None:
         """Handle window close event."""
