@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ableton-hub"
-version = "0.1.0"
+version = "0.3.0"
 description = "Cross-platform desktop application for organizing Ableton projects"
 readme = "README.md"
 license = {text = "MIT"}
@@ -78,3 +78,8 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+
+[tool.pyright]
+pythonVersion = "3.11"
+reportMissingImports = "none"
+reportMissingTypeStubs = "none"

@@ -1,0 +1,7 @@
+{
+  "include": ["src"],
+  "pythonVersion": "3.11",
+  "reportMissingImports": "none",
+  "reportMissingTypeStubs": "none",
+  "reportMissingModuleSource": "none"
+}

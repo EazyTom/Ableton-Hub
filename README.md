@@ -464,12 +464,20 @@ User preferences, window state, and settings are stored in a JSON configuration 
 
 ### Version Management
 
-> **Note**: The application version is defined in multiple places. When updating the version:
-> - Update `pyproject.toml` → `[project]` → `version`
-> - Update `src/app.py` → `setApplicationVersion()`
-> - Update `src/__init__.py` → `__version__`
-> - Update `README.md` → "What's New" section header
-> - Update `src/ui/main_window.py` → About dialog version display
+The application version uses a **single source of truth** pattern:
+
+**To release a new version:**
+1. Update `pyproject.toml` → `[project]` → `version`
+2. Update `src/__init__.py` → `WHATS_NEW` dictionary with new features
+3. Update `README.md` → "What's New" section (for documentation)
+
+**How it works:**
+- `pyproject.toml` defines the package version
+- `src/__init__.py` reads from `importlib.metadata` when installed, or uses fallback
+- `src/app.py` and `src/ui/main_window.py` import `__version__` from the package
+- The About dialog pulls "What's New" content from `src/__init__.py` → `get_whats_new_html()`
+
+> **Note**: The README "What's New" section is kept manually for documentation purposes, but the in-app About dialog auto-generates from `src/__init__.py`.
 
 ### Troubleshooting
 

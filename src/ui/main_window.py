@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QAction, QIcon, QKeySequence, QCloseEvent, QPixmap
 
+from .. import __version__, get_whats_new_html
 from ..config import Config, save_config
 from ..database import get_session, Location, Project
 from ..utils.paths import get_resources_path
@@ -888,25 +889,18 @@ class MainWindow(QMainWindow):
             }}
         """)
         
-        # Compact README content
-        about_html = """
+        # Generate What's New content from single source of truth
+        whats_new_html = get_whats_new_html()
+        
+        # About dialog content - version is imported from package
+        about_html = f"""
         <h1 style="color: #FF764D; margin-bottom: 5px;">Ableton Hub</h1>
-        <p style="color: #888; margin-top: 0;"><b>Version 0.3.0</b></p>
+        <p style="color: #888; margin-top: 0;"><b>Version {__version__}</b></p>
         
         <p>A comprehensive cross-platform desktop application for organizing, managing, and 
         discovering Ableton Live projects. Built with Python and PyQt6.</p>
         
-        <h2 style="color: #FF764D;">🆕 What's New</h2>
-        <ul>
-            <li><b>Tempo Filtering & Sorting</b> - Filter by tempo range with always-visible controls</li>
-            <li><b>Enhanced List View</b> - Click column headers to sort by Name, Location, Tempo, etc.</li>
-            <li><b>Audio Playback</b> - Play exports directly from project details</li>
-            <li><b>Backup & Archive</b> - Configure backup location and archive projects</li>
-            <li><b>Live Preferences Access</b> - Open Preferences folder or edit Options.txt</li>
-            <li><b>Packs Browser</b> - Quick access to Ableton library folders</li>
-            <li><b>Smart Collection Tempo Rules</b> - Filter collections by tempo range</li>
-            <li><b>Rainbow Tempo Colors</b> - Visual BPM indicator on project cards</li>
-        </ul>
+        {whats_new_html}
         
         <h2 style="color: #FF764D;">🎵 Key Features</h2>
         

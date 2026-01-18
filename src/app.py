@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt, QTimer, qInstallMessageHandler, QtMsgType
 from PyQt6.QtGui import QFont, QFontDatabase, QIcon
 
+from . import __version__
 from .config import get_config_manager, save_config
 from .database import init_database
 from .ui.main_window import MainWindow
@@ -34,7 +35,7 @@ class AbletonHubApp:
         
         self.app = QApplication(argv)
         self.app.setApplicationName("Ableton Hub")
-        self.app.setApplicationVersion("0.1.0")
+        self.app.setApplicationVersion(__version__)
         self.app.setOrganizationName("AbletonHub")
         self.app.setOrganizationDomain("abletonhub.local")
         
