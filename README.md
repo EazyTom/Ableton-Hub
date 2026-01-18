@@ -25,7 +25,7 @@ A comprehensive cross-platform desktop application for organizing, managing, and
 
 ## 🏗️ Architecture
 
-> **Note**: The diagram below uses Mermaid, which renders on GitHub's website but not in the mobile app. If viewing on mobile, expand the "View Diagram (Mobile)" section below for an image version.
+> If viewing on mobile, expand the "View Diagram (Mobile)" section below for an image version.
 
 ```mermaid
 graph TB
