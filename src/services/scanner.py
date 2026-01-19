@@ -10,10 +10,14 @@ import json
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
-from ..database import get_session, Location, Project, ProjectStatus
-from ..utils.paths import is_ableton_project, normalize_path
+from ..database import get_session, Location, Project, ProjectStatus, Export
+from ..utils.paths import is_ableton_project, normalize_path, find_export_folders
 from ..utils.logging import get_logger
+from ..utils.fuzzy_match import match_export_to_project, normalize_for_comparison
 from .als_parser import ALSParser
+
+# Audio file extensions for export detection
+AUDIO_EXTENSIONS = {'.wav', '.mp3', '.flac', '.aiff', '.aif', '.ogg', '.m4a'}
 
 
 class ScanWorker(QThread):
@@ -73,7 +77,7 @@ class ScanWorker(QThread):
                     self.logger.info(f"Scanning location: {location.name} ({location.path})")
                     try:
                         self._scan_location(location, session)
-                        self.logger.info(f"Completed location: {location.name} - Found {self._found_count} projects so far")
+                        self.logger.info(f"Completed location: {location.name} - Found {self._found_count} new project(s) so far")
                     except Exception as e:
                         self.logger.error(f"Error scanning location {location.name}: {e}", exc_info=True)
                         self.error.emit(f"Error scanning {location.name}: {e}")
@@ -82,7 +86,7 @@ class ScanWorker(QThread):
                     location.last_scan_time = datetime.utcnow()
                     session.commit()
                 
-                self.logger.info(f"Scan complete - Total projects found: {self._found_count}")
+                self.logger.info(f"Scan complete - Total new projects found: {self._found_count}")
                 self.scan_complete.emit(self._found_count)
             finally:
                 session.close()
@@ -151,6 +155,9 @@ class ScanWorker(QThread):
                 project.status = ProjectStatus.MISSING
         
         session.commit()
+        
+        # Auto-scan for exports in this location
+        self._scan_exports_for_location(location, session)
     
     def _calculate_file_hash(self, path: Path) -> Optional[str]:
         """Calculate MD5 hash of file for duplicate detection."""
@@ -288,6 +295,153 @@ class ScanWorker(QThread):
             # Try master track name if it's customized
             if not project.export_song_name and metadata.master_track_name:
                 project.export_song_name = metadata.master_track_name
+    
+    def _scan_exports_for_location(self, location: Location, session) -> None:
+        """Scan for audio exports in a location and link to projects.
+        
+        Args:
+            location: Location being scanned.
+            session: Database session.
+        """
+        self.logger.info(f"Scanning for exports in location: {location.name}")
+        
+        # Get all projects in this location with their names
+        projects = session.query(Project).filter(
+            Project.location_id == location.id
+        ).all()
+        
+        if not projects:
+            return
+        
+        project_names = [(p.id, p.name) for p in projects]
+        
+        # Build lookup dicts - both raw and normalized versions
+        project_name_to_id = {}
+        normalized_name_to_id = {}
+        
+        for p in projects:
+            # Raw name (lowercased)
+            project_name_to_id[p.name.lower()] = p.id
+            # Normalized name (strips "project", version numbers, etc.)
+            normalized = normalize_for_comparison(p.name)
+            if normalized:
+                normalized_name_to_id[normalized] = p.id
+            
+            # Also map by export_song_name if set
+            if p.export_song_name:
+                project_name_to_id[p.export_song_name.lower()] = p.id
+                normalized_export = normalize_for_comparison(p.export_song_name)
+                if normalized_export:
+                    normalized_name_to_id[normalized_export] = p.id
+        
+        # Get existing export paths to avoid duplicates
+        existing_exports = set()
+        for export in session.query(Export.export_path).all():
+            existing_exports.add(export.export_path)
+        
+        # Collect all folders to scan for exports
+        folders_to_scan: Set[Path] = set()
+        location_path = Path(location.path)
+        
+        # Add location root
+        folders_to_scan.add(location_path)
+        
+        # Add standard export folders at location level
+        for subdir in ['Exports', 'Renders', 'Bounces', 'Mixdowns']:
+            export_dir = location_path / subdir
+            if export_dir.exists():
+                folders_to_scan.add(export_dir)
+        
+        # Add export folders for each project
+        for project in projects:
+            project_folder = Path(project.file_path).parent
+            folders_to_scan.add(project_folder)  # Same folder as .als
+            
+            # Add nested export folders
+            for subdir in ['Exports', 'Renders', 'Bounces', 'Audio', 'Mixdowns']:
+                export_dir = project_folder / subdir
+                if export_dir.exists():
+                    folders_to_scan.add(export_dir)
+        
+        # Scan each folder for audio files
+        exports_found = 0
+        exports_linked = 0
+        
+        for folder in folders_to_scan:
+            if self._stop_requested:
+                break
+            
+            if not folder.exists():
+                continue
+            
+            try:
+                for item in folder.iterdir():
+                    if self._stop_requested:
+                        break
+                    
+                    if item.is_file() and item.suffix.lower() in AUDIO_EXTENSIONS:
+                        export_path_str = str(item)
+                        
+                        # Skip if already in database
+                        if export_path_str in existing_exports:
+                            continue
+                        
+                        exports_found += 1
+                        
+                        # Try to match to a project
+                        export_stem = item.stem
+                        matched_project_id = None
+                        
+                        # Try exact match first (case-insensitive)
+                        if export_stem.lower() in project_name_to_id:
+                            matched_project_id = project_name_to_id[export_stem.lower()]
+                        else:
+                            # Try normalized exact match (strips "project", version numbers, etc.)
+                            normalized_export = normalize_for_comparison(export_stem)
+                            if normalized_export in normalized_name_to_id:
+                                matched_project_id = normalized_name_to_id[normalized_export]
+                                self.logger.debug(f"Normalized match: '{export_stem}' -> '{normalized_export}'")
+                            else:
+                                # Try fuzzy matching as last resort
+                                names_list = [name for _, name in project_names]
+                                matches = match_export_to_project(export_stem, names_list, threshold=65.0)
+                                if matches:
+                                    best_match_name, best_score = matches[0]
+                                    # Find the project ID for this name
+                                    for pid, pname in project_names:
+                                        if pname == best_match_name:
+                                            matched_project_id = pid
+                                            self.logger.debug(f"Fuzzy matched '{export_stem}' to '{pname}' (score: {best_score:.1f})")
+                                            break
+                        
+                        # Create export record
+                        try:
+                            stat = item.stat()
+                            export = Export(
+                                project_id=matched_project_id,
+                                export_path=export_path_str,
+                                export_name=export_stem,
+                                export_date=datetime.fromtimestamp(stat.st_mtime),
+                                format=item.suffix.lower().lstrip('.'),
+                                file_size=stat.st_size,
+                                created_date=datetime.utcnow()
+                            )
+                            session.add(export)
+                            existing_exports.add(export_path_str)
+                            
+                            if matched_project_id:
+                                exports_linked += 1
+                        except Exception as e:
+                            self.logger.warning(f"Failed to add export {item}: {e}")
+                            
+            except PermissionError:
+                pass
+            except Exception as e:
+                self.logger.warning(f"Error scanning folder {folder}: {e}")
+        
+        if exports_found > 0:
+            session.commit()
+            self.logger.info(f"Found {exports_found} export(s), linked {exports_linked} to projects")
     
     def _is_excluded(self, path: Path) -> bool:
         """Check if a path should be excluded from scanning.

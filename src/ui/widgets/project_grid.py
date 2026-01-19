@@ -22,6 +22,7 @@ class ProjectGrid(QWidget):
     project_double_clicked = pyqtSignal(int)  # Project ID
     selection_changed = pyqtSignal(list)       # List of project IDs
     sort_requested = pyqtSignal(str, str)      # Column name, direction (asc/desc)
+    tags_modified = pyqtSignal()               # Emitted when tags are created/modified
     
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -30,7 +31,7 @@ class ProjectGrid(QWidget):
         self._selected_ids: Set[int] = set()
         self._view_mode = "grid"
         self._cards: dict = {}  # project_id -> ProjectCard
-        self._sort_column = 3  # Default: Modified (index 3)
+        self._sort_column = 5  # Default: Modified (index 5, after adding Size column)
         self._sort_order = Qt.SortOrder.DescendingOrder
         
         self._setup_ui()
@@ -61,9 +62,9 @@ class ProjectGrid(QWidget):
         
         # List view (table)
         self.table = QTableWidget()
-        self.table.setColumnCount(8)
+        self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels([
-            "Name", "Location", "Tempo", "Length", "Modified", "Tags", "Export", "Status"
+            "Name", "Location", "Tempo", "Length", "Size", "Modified", "Tags", "Export", "Status"
         ])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -79,10 +80,11 @@ class ProjectGrid(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Length
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Modified
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Tags
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Export
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Status
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Size
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Modified
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Tags
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Export
+        header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Status
         
         # Enable clickable headers for sorting
         header.setSectionsClickable(True)
@@ -226,16 +228,29 @@ class ProjectGrid(QWidget):
             length_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(row, 3, length_item)
             
+            # Size (file size in MB)
+            if project.file_size and project.file_size > 0:
+                size_mb = project.file_size / (1024 * 1024)  # Convert bytes to MB
+                if size_mb < 1:
+                    size_str = f"{size_mb * 1024:.0f} KB"
+                else:
+                    size_str = f"{size_mb:.1f} MB"
+            else:
+                size_str = ""
+            size_item = QTableWidgetItem(size_str)
+            size_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.table.setItem(row, 4, size_item)
+            
             # Modified date
             if project.modified_date:
                 date_str = project.modified_date.strftime("%Y-%m-%d %H:%M")
             else:
                 date_str = ""
-            self.table.setItem(row, 4, QTableWidgetItem(date_str))
+            self.table.setItem(row, 5, QTableWidgetItem(date_str))
             
             # Tags
-            tag_str = ", ".join(str(t) for t in (project.tags or []))
-            self.table.setItem(row, 5, QTableWidgetItem(tag_str))
+            tags_str = ", ".join([tag.name for tag in project.tags]) if project.tags else ""
+            self.table.setItem(row, 6, QTableWidgetItem(tags_str))
             
             # Export status
             # Access exports safely (may be detached)
@@ -244,11 +259,11 @@ class ProjectGrid(QWidget):
             except Exception:
                 has_exports = False
             export_str = "✓" if has_exports else ""
-            self.table.setItem(row, 6, QTableWidgetItem(export_str))
+            self.table.setItem(row, 7, QTableWidgetItem(export_str))
             
             # Status
             status_str = project.status.value if project.status else ""
-            self.table.setItem(row, 7, QTableWidgetItem(status_str))
+            self.table.setItem(row, 8, QTableWidgetItem(status_str))
     
     def _on_card_clicked(self, project_id: int) -> None:
         """Handle card click."""
@@ -295,10 +310,11 @@ class ProjectGrid(QWidget):
             1: "location",
             2: "tempo",
             3: "length",
-            4: "modified",
-            5: "tags",
-            6: "export",
-            7: "status"
+            4: "size",
+            5: "modified",
+            6: "tags",
+            7: "export",
+            8: "status"
         }
         
         sort_field = column_map.get(column)
@@ -313,8 +329,8 @@ class ProjectGrid(QWidget):
                 self._sort_order = Qt.SortOrder.AscendingOrder
         else:
             self._sort_column = column
-            # Default order: numeric columns (tempo, length, modified) default descending
-            if column in (2, 3, 4):  # Tempo, Length, Modified - default descending
+            # Default order: numeric columns (tempo, length, size, modified) default descending
+            if column in (2, 3, 4, 5):  # Tempo, Length, Size, Modified - default descending
                 self._sort_order = Qt.SortOrder.DescendingOrder
             else:
                 self._sort_order = Qt.SortOrder.AscendingOrder
@@ -415,6 +431,7 @@ class ProjectGrid(QWidget):
         """Show project properties dialog."""
         from ..dialogs.project_details import ProjectDetailsDialog
         dialog = ProjectDetailsDialog(project_id, self)
+        dialog.tags_modified.connect(self.tags_modified.emit)
         if dialog.exec():
             self._refresh_view()
     

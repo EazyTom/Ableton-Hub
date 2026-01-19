@@ -179,24 +179,48 @@ def get_project_folder(project_path: Path) -> Path:
     return project_path.parent
 
 
-def find_export_folders(project_path: Path) -> List[Path]:
+def find_export_folders(project_path: Path, location_path: Path = None) -> List[Path]:
     """Find common export folder locations relative to a project.
+    
+    Searches for audio exports in:
+    - The same folder as the .als file (for exports with matching names)
+    - Standard export subfolders (Exports, Renders, Bounces, Audio)
+    - Parent directory export folders
+    - Location root folder (if provided)
     
     Args:
         project_path: Path to the .als file.
+        location_path: Optional root location path to also search.
         
     Returns:
-        List of existing export folder paths.
+        List of existing export folder paths (may include the project folder itself).
     """
     project_folder = get_project_folder(project_path)
     possible_exports = [
+        # Same folder as the .als file (for "MySong.als" + "MySong.wav")
+        project_folder,
+        # Standard export subfolders
         project_folder / "Exports",
         project_folder / "Renders", 
         project_folder / "Bounces",
         project_folder / "Audio",
+        project_folder / "Mixdowns",
+        # Parent directory
         project_folder.parent / "Exports",
         project_folder.parent / "Renders",
+        project_folder.parent / "Bounces",
     ]
+    
+    # Include location root if provided
+    if location_path:
+        loc_path = Path(location_path) if isinstance(location_path, str) else location_path
+        if loc_path.exists():
+            possible_exports.extend([
+                loc_path,  # Location root itself
+                loc_path / "Exports",
+                loc_path / "Renders",
+                loc_path / "Bounces",
+            ])
     
     # Also check user's common export locations
     home = Path.home()
@@ -206,4 +230,12 @@ def find_export_folders(project_path: Path) -> List[Path]:
         home / "Documents" / "Exports",
     ])
     
-    return [folder for folder in possible_exports if folder.exists() and folder.is_dir()]
+    # Remove duplicates while preserving order, filter to existing
+    seen = set()
+    result = []
+    for folder in possible_exports:
+        if folder.exists() and folder not in seen:
+            seen.add(folder)
+            result.append(folder)
+    
+    return result

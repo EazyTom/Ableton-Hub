@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox, QMessageBox, QGroupBox, QCheckBox, QSlider,
     QWidget, QListWidget, QListWidgetItem, QCompleter
 )
-from PyQt6.QtCore import Qt, QStringListModel
+from PyQt6.QtCore import Qt, QStringListModel, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from ...database import get_session, Project, Location, Collection, ProjectCollection, Export
@@ -21,6 +21,8 @@ from ..theme import AbletonTheme
 
 class ProjectDetailsDialog(QDialog):
     """Dialog for viewing and editing project details."""
+    
+    tags_modified = pyqtSignal()  # Emitted when tags are created/modified
     
     def __init__(self, project_id: int, parent=None):
         super().__init__(parent)
@@ -113,6 +115,7 @@ class ProjectDetailsDialog(QDialog):
         tags_layout = QVBoxLayout(tags_group)
         
         self.tag_selector = ProjectTagSelector()
+        self.tag_selector.tag_created.connect(self.tags_modified.emit)
         tags_layout.addWidget(self.tag_selector)
         
         layout.addWidget(tags_group)
@@ -287,8 +290,8 @@ class ProjectDetailsDialog(QDialog):
             if self._project.exports:
                 for export in self._project.exports:
                     item = QListWidgetItem(f"🎵 {export.export_name}")
-                    item.setData(Qt.ItemDataRole.UserRole, export.file_path)
-                    item.setToolTip(export.file_path)
+                    item.setData(Qt.ItemDataRole.UserRole, export.export_path)
+                    item.setToolTip(export.export_path)
                     self.exports_list.addItem(item)
             else:
                 item = QListWidgetItem("No exports linked")
@@ -438,7 +441,7 @@ class ProjectDetailsDialog(QDialog):
         if not suggestion and self._project.exports:
             sorted_exports = sorted(
                 self._project.exports,
-                key=lambda e: e.modified_date or datetime.min,
+                key=lambda e: e.export_date or datetime.min,
                 reverse=True
             )
             if sorted_exports:

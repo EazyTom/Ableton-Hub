@@ -9,8 +9,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QMouseEvent, QContextMenuEvent, QColor, QPainter, QPen, QPixmap
 
-from ...database.models import Project, ProjectStatus
+from ...database.models import Project, ProjectStatus, Export
 from ...services.audio_preview import AudioPreviewGenerator
+from ...services.audio_player import AudioPlayer
 from ..theme import AbletonTheme
 
 
@@ -21,12 +22,23 @@ class ProjectCard(QFrame):
     clicked = pyqtSignal(int)          # Project ID
     double_clicked = pyqtSignal(int)   # Project ID
     context_menu = pyqtSignal(int, object)  # Project ID, QPoint
+    export_playing = pyqtSignal(int, str)  # Project ID, Export path
     
     def __init__(self, project: Project, parent: Optional[QWidget] = None):
         super().__init__(parent)
         
         self.project = project
         self._selected = False
+        
+        # Export playback state
+        self._exports: List[Export] = []
+        self._current_export_index = 0
+        self._load_exports()
+        
+        # Audio player instance
+        self._audio_player = AudioPlayer.instance()
+        self._audio_player.playback_finished.connect(self._on_playback_finished)
+        self._audio_player.playback_stopped.connect(self._on_playback_stopped)
         
         self._setup_ui()
         self._update_display()
@@ -53,6 +65,7 @@ class ProjectCard(QFrame):
                 border-radius: 4px;
             }}
         """)
+        # Tooltip will be set in _update_display
         layout.addWidget(self.preview_label)
         
         # Project name (centered)
@@ -67,6 +80,7 @@ class ProjectCard(QFrame):
         else:
             font.setPixelSize(15)
         self.name_label.setFont(font)
+        # Tooltip will be set in _update_display
         layout.addWidget(self.name_label)
         
         layout.addStretch()
@@ -104,11 +118,12 @@ class ProjectCard(QFrame):
         
         self.date_label = QLabel()
         self.date_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px;")
+        # Date tooltip will be set in _update_display
         bottom_row.addWidget(self.date_label)
         
-        self.bottom_sep = QLabel("•")
-        self.bottom_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 0 4px;")
-        bottom_row.addWidget(self.bottom_sep)
+        self.date_location_sep = QLabel("•")
+        self.date_location_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 0 4px;")
+        bottom_row.addWidget(self.date_location_sep)
         
         self.location_label = QLabel()
         self.location_label.setStyleSheet(f"""
@@ -232,7 +247,64 @@ class ProjectCard(QFrame):
         
         # Name
         self.name_label.setText(self.project.name)
-        self.name_label.setToolTip(self.project.name)
+        
+        # Unified tooltip for preview and name (small font, centered)
+        tooltip_html = f'<div style="font-size: 10px; text-align: center;">'
+        tooltip_html += f'<b>{self.project.name}</b><br/>'
+        
+        if self.project.file_path:
+            tooltip_html += f'Path: {self.project.file_path}<br/>'
+        
+        # Track count
+        if self.project.track_count and self.project.track_count > 0:
+            tooltip_html += f'Tracks: {self.project.track_count}<br/>'
+        
+        # Clip count (from custom_metadata if available, otherwise N/A)
+        clip_count = None
+        if self.project.custom_metadata and isinstance(self.project.custom_metadata, dict):
+            clip_count = self.project.custom_metadata.get('total_clip_count') or self.project.custom_metadata.get('clip_count')
+        if clip_count:
+            tooltip_html += f'Clips: {clip_count}<br/>'
+        
+        # Sample count
+        samples = self.project.get_sample_references_list()
+        sample_count = len(samples) if samples else 0
+        if sample_count > 0:
+            tooltip_html += f'Samples: {sample_count}<br/>'
+        
+        # Automation
+        automation_status = "Yes" if self.project.has_automation else "No"
+        tooltip_html += f'Automation: {automation_status}<br/>'
+        
+        # File size
+        if self.project.file_size and self.project.file_size > 0:
+            size_mb = self.project.file_size / (1024 * 1024)
+            if size_mb < 1:
+                size_str = f"{size_mb * 1024:.0f} KB"
+            else:
+                size_str = f"{size_mb:.1f} MB"
+            tooltip_html += f'Size: {size_str}<br/>'
+        
+        # Exports (with click hint)
+        export_count = len(self._exports)
+        if export_count > 0:
+            tooltip_html += f'<b style="color: #4CAF50;">Exports: {export_count} 🔊 (click to play)</b><br/>'
+        
+        # Dates
+        if self.project.created_date:
+            tooltip_html += f'Created: {self.project.created_date.strftime("%Y-%m-%d %H:%M")}<br/>'
+        if self.project.modified_date:
+            tooltip_html += f'Modified: {self.project.modified_date.strftime("%Y-%m-%d %H:%M")}<br/>'
+        if self.project.last_scanned:
+            tooltip_html += f'Scanned: {self.project.last_scanned.strftime("%Y-%m-%d %H:%M")}<br/>'
+        if self.project.last_parsed:
+            tooltip_html += f'Parsed: {self.project.last_parsed.strftime("%Y-%m-%d %H:%M")}<br/>'
+        
+        tooltip_html += '</div>'
+        
+        # Set tooltip on both preview and name
+        self.preview_label.setToolTip(tooltip_html)
+        self.name_label.setToolTip(tooltip_html)
         
         # Tempo with rainbow color based on BPM (purple=60 -> blue -> cyan -> green -> yellow -> orange -> red=200+)
         has_tempo = self.project.tempo and self.project.tempo > 0
@@ -241,7 +313,7 @@ class ProjectCard(QFrame):
         if has_tempo:
             tempo = self.project.tempo
             self.tempo_label.setText(f"{tempo:.0f}")
-            self.tempo_label.setToolTip(f"Tempo: {tempo:.1f} BPM")
+            # Remove individual tooltip - unified tooltip on name/preview
             
             # Calculate color based on tempo (60-200 BPM range mapped to rainbow)
             tempo_color = self._get_tempo_color(tempo)
@@ -263,7 +335,7 @@ class ProjectCard(QFrame):
         if has_length:
             bars = int(self.project.arrangement_length)
             self.length_label.setText(f"{bars} bars")
-            self.length_label.setToolTip(f"Arrangement length: {bars} bars")
+            # Remove individual tooltip - unified tooltip on name/preview
             self.length_label.setVisible(True)
         else:
             self.length_label.setVisible(False)
@@ -278,7 +350,7 @@ class ProjectCard(QFrame):
             seconds = duration_sec % 60
             duration_str = f"{minutes}:{seconds:02d}"
             self.duration_label.setText(duration_str)
-            self.duration_label.setToolTip(f"Duration: {duration_str} ({duration_sec} seconds)")
+            # Remove individual tooltip - unified tooltip on name/preview
             self.duration_label.setVisible(True)
         else:
             self.duration_label.setVisible(False)
@@ -286,10 +358,10 @@ class ProjectCard(QFrame):
         # Show separator only if both tempo and length are visible
         self.tempo_sep.setVisible(has_tempo and has_length)
         
-        # Show bottom separator only if both date and location are visible
+        # Show separator based on visibility
         has_date = bool(self.project.modified_date)
         has_location = self.location_label.isVisible()
-        self.bottom_sep.setVisible(has_date and has_location)
+        self.date_location_sep.setVisible(has_date and has_location)
         
         # Location
         # Access location safely (may be detached)
@@ -300,6 +372,7 @@ class ProjectCard(QFrame):
                 if len(loc_name) > 12:
                     loc_name = loc_name[:10] + "..."
                 self.location_label.setText(loc_name)
+                # Remove individual tooltip - unified tooltip on name/preview
                 self.location_label.setVisible(True)
             else:
                 self.location_label.setVisible(False)
@@ -326,11 +399,11 @@ class ProjectCard(QFrame):
                     font-weight: bold;
                 }}
             """)
-            self.export_indicator.setToolTip(f"Has {export_count} export(s)")
+            # Remove individual tooltip - unified tooltip on name/preview
         else:
             self.export_indicator.setText("")
             self.export_indicator.setStyleSheet("")
-            self.export_indicator.setToolTip("No exports")
+            # Remove individual tooltip - unified tooltip on name/preview
         
         # Favorite indicator
         self.favorite_indicator.setText("⭐" if self.project.is_favorite else "")
@@ -339,6 +412,7 @@ class ProjectCard(QFrame):
         if self.project.modified_date:
             date_str = self._format_date(self.project.modified_date)
             self.date_label.setText(date_str)
+            # Remove individual tooltip - unified tooltip on name/preview
         else:
             self.date_label.setText("")
     
@@ -418,14 +492,118 @@ class ProjectCard(QFrame):
         """Check if the card is selected."""
         return self._selected
     
+    def _load_exports(self) -> None:
+        """Load exports for this project from the database."""
+        from ...database import get_session
+        
+        session = get_session()
+        try:
+            # Get exports sorted by date (most recent first)
+            exports = session.query(Export).filter(
+                Export.project_id == self.project.id
+            ).order_by(Export.export_date.desc()).all()
+            
+            # Filter to only existing files
+            self._exports = [e for e in exports if Path(e.export_path).exists()]
+            self._current_export_index = 0
+        finally:
+            session.close()
+    
+    def has_exports(self) -> bool:
+        """Check if this project has playable exports."""
+        return len(self._exports) > 0
+    
+    def get_export_count(self) -> int:
+        """Get the number of playable exports."""
+        return len(self._exports)
+    
+    def _play_current_export(self) -> None:
+        """Play the current export in the cycle."""
+        if not self._exports:
+            return
+        
+        export = self._exports[self._current_export_index]
+        export_path = export.export_path
+        
+        if Path(export_path).exists():
+            # Stop any current playback first
+            self._audio_player.stop()
+            # Play the export
+            self._audio_player.play(export_path)
+            self.export_playing.emit(self.project.id, export_path)
+            
+            # Update visual indicator
+            self._update_playing_indicator(True)
+    
+    def _cycle_to_next_export(self) -> None:
+        """Move to the next export in the list."""
+        if self._exports:
+            self._current_export_index = (self._current_export_index + 1) % len(self._exports)
+    
+    def _on_playback_finished(self) -> None:
+        """Handle when playback finishes naturally."""
+        self._update_playing_indicator(False)
+    
+    def _on_playback_stopped(self) -> None:
+        """Handle when playback is stopped."""
+        self._update_playing_indicator(False)
+    
+    def _update_playing_indicator(self, playing: bool) -> None:
+        """Update visual indicator for playback state."""
+        if playing and self._exports:
+            export = self._exports[self._current_export_index]
+            export_name = Path(export.export_path).stem
+            # Truncate long names
+            if len(export_name) > 20:
+                export_name = export_name[:17] + "..."
+            idx = self._current_export_index + 1
+            total = len(self._exports)
+            self.name_label.setText(f"🔊 {export_name} ({idx}/{total})")
+            self.name_label.setStyleSheet(f"color: {AbletonTheme.COLORS['accent']}; font-weight: bold;")
+        else:
+            # Restore original name
+            name = self.project.name
+            if len(name) > 25:
+                name = name[:22] + "..."
+            self.name_label.setText(name)
+            self.name_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_primary']}; font-weight: bold;")
+    
+    def _is_this_card_playing(self) -> bool:
+        """Check if this card's export is currently playing."""
+        if not self._audio_player.is_playing or not self._exports:
+            return False
+        current_file = self._audio_player.current_file
+        if current_file:
+            # Check if current file matches any of this project's exports
+            for export in self._exports:
+                if export.export_path == current_file:
+                    return True
+        return False
+    
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        """Handle mouse press."""
+        """Handle mouse press - single click plays exports if available."""
         if event.button() == Qt.MouseButton.LeftButton:
+            if self._exports:
+                # If something is playing from this card
+                if self._is_this_card_playing():
+                    # If on last export, stop playback
+                    if self._current_export_index == len(self._exports) - 1:
+                        self._audio_player.stop()
+                        self._current_export_index = 0  # Reset for next time
+                    else:
+                        # Cycle to next export and play
+                        self._cycle_to_next_export()
+                        self._play_current_export()
+                else:
+                    # First click or returning to this card - play current export
+                    self._play_current_export()
+            
+            # Always emit clicked signal for selection
             self.clicked.emit(self.project.id)
         super().mousePressEvent(event)
     
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-        """Handle double click."""
+        """Handle double click - opens project details."""
         if event.button() == Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.project.id)
         super().mouseDoubleClickEvent(event)

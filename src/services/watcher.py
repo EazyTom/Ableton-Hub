@@ -68,6 +68,7 @@ class FileWatcher(QObject):
     project_deleted = pyqtSignal(str)   # Path
     project_moved = pyqtSignal(str, str)  # Old path, new path
     error_occurred = pyqtSignal(str)    # Error message
+    _event_received = pyqtSignal(str, str, str)  # Internal signal for thread-safe event handling
     
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -80,6 +81,9 @@ class FileWatcher(QObject):
         self._debounce_timer.timeout.connect(self._process_pending_events)
         self._pending_events: List[tuple] = []
         self._parser = ALSParser()  # Parser for extracting metadata
+        
+        # Connect internal signal for thread-safe event handling
+        self._event_received.connect(self._on_event_main_thread)
     
     def start(self) -> None:
         """Start watching all active locations."""
@@ -163,13 +167,18 @@ class FileWatcher(QObject):
             del self._watched_paths[path]
     
     def _on_event(self, event_type: str, path: str, dest_path: str = None) -> None:
-        """Handle a file system event.
+        """Handle a file system event from watchdog thread.
         
-        Uses debouncing to batch rapid events.
+        Emits signal to marshal to main thread.
         """
-        self._pending_events.append((event_type, path, dest_path))
+        # Emit signal to handle in main thread (thread-safe)
+        self._event_received.emit(event_type, path, dest_path or "")
+    
+    def _on_event_main_thread(self, event_type: str, path: str, dest_path: str) -> None:
+        """Handle event in main thread with debouncing."""
+        self._pending_events.append((event_type, path, dest_path if dest_path else None))
         
-        # Restart debounce timer
+        # Restart debounce timer (safe - we're in main thread now)
         self._debounce_timer.start(500)  # 500ms debounce
     
     def _process_pending_events(self) -> None:

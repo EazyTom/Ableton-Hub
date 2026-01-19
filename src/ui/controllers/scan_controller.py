@@ -84,7 +84,7 @@ class ScanController(QObject):
         Args:
             found_count: Number of projects found.
         """
-        self.logger.info(f"Scan complete: Found {found_count} projects")
+        self.logger.info(f"Scan complete: Found {found_count} new project(s)")
         self.scan_complete.emit(found_count)
         self._scanner = None
     

@@ -352,6 +352,7 @@ class MainWindow(QMainWindow):
         self.sidebar.collection_edit_requested.connect(self._on_edit_collection_from_sidebar)
         self.sidebar.collection_delete_requested.connect(self._on_delete_collection_from_sidebar)
         self.sidebar.tag_selected.connect(self._on_tag_filter)
+        self.sidebar.manage_tags_requested.connect(self._on_manage_tags)
         self.splitter.addWidget(self.sidebar)
         
         # Content stack
@@ -362,6 +363,7 @@ class MainWindow(QMainWindow):
         self.project_grid.project_selected.connect(self._on_project_selected)
         self.project_grid.project_double_clicked.connect(self._on_project_open)
         self.project_grid.sort_requested.connect(self._on_grid_sort_requested)
+        self.project_grid.tags_modified.connect(self._refresh_sidebar)
         # Store reference to main window for refresh
         self.project_grid._main_window = self
         self.content_stack.addWidget(self.project_grid)
@@ -399,6 +401,9 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         
+        # Track base project count for status updates
+        self._base_project_count = 0
+        
         # Project count label
         self.project_count_label = QLabel("0 projects")
         self.status_bar.addWidget(self.project_count_label)
@@ -417,6 +422,13 @@ class MainWindow(QMainWindow):
         # Scan status label
         self.scan_status_label = QLabel("")
         self.status_bar.addPermanentWidget(self.scan_status_label)
+        
+        # Connect audio player for playback status
+        from ..services.audio_player import AudioPlayer
+        self._audio_player = AudioPlayer.instance()
+        self._audio_player.playback_started.connect(self._on_audio_playback_started)
+        self._audio_player.playback_stopped.connect(self._on_audio_playback_stopped)
+        self._audio_player.playback_finished.connect(self._on_audio_playback_stopped)
     
     def _connect_signals(self) -> None:
         """Connect internal signals."""
@@ -497,7 +509,8 @@ class MainWindow(QMainWindow):
                        date_filter: Optional[str] = None,
                        tempo_min: Optional[int] = None,
                        tempo_max: Optional[int] = None,
-                       sort_by: Optional[str] = None) -> None:
+                       sort_by: Optional[str] = None,
+                       favorites_only: bool = False) -> None:
         """Load and display projects.
         
         Args:
@@ -534,6 +547,10 @@ class MainWindow(QMainWindow):
                 # Tags stored as JSON array of IDs
                 query = query.filter(Project.tags.contains([tag_id]))
             
+            # Apply favorites filter
+            if favorites_only:
+                query = query.filter(Project.is_favorite == True)
+            
             # Apply date filter
             date_filter_to_use = date_filter if date_filter is not None else self._current_date_filter
             if date_filter_to_use and date_filter_to_use != "clear":
@@ -551,9 +568,15 @@ class MainWindow(QMainWindow):
                     start_date = now - timedelta(days=30)
                     query = query.filter(Project.modified_date >= start_date)
                 elif date_filter_to_use == "7days":
-                    # Last 7 days
+                    # Last 7 days - modified OR created
+                    from sqlalchemy import or_
                     start_date = now - timedelta(days=7)
-                    query = query.filter(Project.modified_date >= start_date)
+                    query = query.filter(
+                        or_(
+                            Project.modified_date >= start_date,
+                            Project.created_date >= start_date
+                        )
+                    )
                 elif date_filter_to_use == "30days":
                     # Last 30 days
                     start_date = now - timedelta(days=30)
@@ -562,8 +585,17 @@ class MainWindow(QMainWindow):
                     # TODO: Implement custom date range dialog
                     pass
                 
-                # Only show projects that have a modified_date
-                query = query.filter(Project.modified_date.isnot(None))
+                # Only show projects that have a date (modified or created for 7days filter)
+                if date_filter_to_use == "7days":
+                    from sqlalchemy import or_
+                    query = query.filter(
+                        or_(
+                            Project.modified_date.isnot(None),
+                            Project.created_date.isnot(None)
+                        )
+                    )
+                else:
+                    query = query.filter(Project.modified_date.isnot(None))
             
             # Apply tempo filter
             tempo_min_to_use = tempo_min if tempo_min is not None else self._current_tempo_min
@@ -629,6 +661,12 @@ class MainWindow(QMainWindow):
             elif sort_field == "length_asc":
                 # Sort by arrangement length ascending, nulls last
                 query = query.order_by(nullslast(Project.arrangement_length.asc()))
+            elif sort_field == "size" or sort_field == "size_desc":
+                # Sort by file size descending, nulls last
+                query = query.order_by(nullslast(Project.file_size.desc()))
+            elif sort_field == "size_asc":
+                # Sort by file size ascending, nulls last
+                query = query.order_by(nullslast(Project.file_size.asc()))
             elif sort_field == "modified_asc":
                 query = query.order_by(Project.modified_date.asc())
             else:  # "modified" or "modified_desc" is default
@@ -637,13 +675,27 @@ class MainWindow(QMainWindow):
             projects = query.all()
             
             self.project_grid.set_projects(projects)
-            self.project_count_label.setText(f"{len(projects)} projects")
+            self._base_project_count = len(projects)
+            self.project_count_label.setText(f"{self._base_project_count} projects")
         finally:
             session.close()
     
     def _update_project_count(self, count: int) -> None:
         """Update the project count in status bar."""
+        self._base_project_count = count
         self.project_count_label.setText(f"{count} projects")
+    
+    def _on_audio_playback_started(self, file_path: str) -> None:
+        """Handle audio playback started - update status bar."""
+        from pathlib import Path
+        filename = Path(file_path).name
+        self.project_count_label.setText(f"{self._base_project_count} projects  🔊 Playing: {filename}")
+        self.project_count_label.setStyleSheet("color: #4CAF50;")  # Green when playing
+    
+    def _on_audio_playback_stopped(self) -> None:
+        """Handle audio playback stopped - restore status bar."""
+        self.project_count_label.setText(f"{self._base_project_count} projects")
+        self.project_count_label.setStyleSheet("")
     
     # Menu actions
     def _on_add_location(self) -> None:
@@ -683,7 +735,7 @@ class MainWindow(QMainWindow):
     def _on_scan_complete(self, found_count: int) -> None:
         """Handle scan completion."""
         self.progress_bar.setVisible(False)
-        status_msg = f"Scan complete: Found {found_count} projects"
+        status_msg = f"Scan complete: Found {found_count} new project(s)"
         self.scan_status_label.setText(status_msg)
         self._load_projects()
         self._refresh_sidebar()
@@ -1036,11 +1088,17 @@ class MainWindow(QMainWindow):
         """Handle sidebar navigation change.
         
         Args:
-            view: View to show ("projects", "collections", "locations", "link", "new_collection")
+            view: View to show ("projects", "collections", "locations", "link", "new_collection", "favorites", "recent")
         """
         if view == "projects":
             self.content_stack.setCurrentIndex(0)
             self._load_projects()
+        elif view == "favorites":
+            self.content_stack.setCurrentIndex(0)
+            self._load_projects(favorites_only=True)
+        elif view == "recent":
+            self.content_stack.setCurrentIndex(0)
+            self._load_projects(date_filter="7days")
         elif view == "collections":
             self.content_stack.setCurrentIndex(1)
             self.collection_view.refresh()
@@ -1339,6 +1397,14 @@ class MainWindow(QMainWindow):
         """Filter projects by tag."""
         self.content_stack.setCurrentIndex(0)
         self._load_projects(tag_id=tag_id)
+    
+    def _on_manage_tags(self) -> None:
+        """Show the manage tags dialog."""
+        from .widgets.tag_editor import ManageTagsDialog
+        
+        dialog = ManageTagsDialog(self)
+        dialog.tags_changed.connect(self._refresh_sidebar)
+        dialog.exec()
     
     def _on_search(self, query: str) -> None:
         """Handle search query change."""

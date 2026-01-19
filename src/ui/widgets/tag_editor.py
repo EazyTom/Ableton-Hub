@@ -341,10 +341,58 @@ class TagEditor(QWidget):
         return None
 
 
+class ManageTagsDialog(QDialog):
+    """Dialog for managing all tags with full CRUD operations."""
+    
+    tags_changed = pyqtSignal()  # Emitted when tags are modified
+    
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        
+        self.setWindowTitle("Manage Tags")
+        self.setMinimumSize(400, 500)
+        
+        self._setup_ui()
+    
+    def _setup_ui(self) -> None:
+        """Set up the dialog UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(16)
+        
+        # Instructions
+        instructions = QLabel(
+            "Create, edit, and delete tags. Right-click a tag for options, "
+            "or double-click to edit."
+        )
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
+        layout.addWidget(instructions)
+        
+        # Tag editor widget
+        self.tag_editor = TagEditor(self)
+        self.tag_editor.tags_changed.connect(self._on_tags_changed)
+        layout.addWidget(self.tag_editor, 1)  # stretch factor 1
+        
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        button_box.rejected.connect(self.accept)
+        layout.addWidget(button_box)
+    
+    def _on_tags_changed(self) -> None:
+        """Handle tags changed in the editor."""
+        self.tags_changed.emit()
+    
+    def refresh(self) -> None:
+        """Refresh the tag list."""
+        self.tag_editor.refresh()
+
+
 class ProjectTagSelector(QWidget):
     """Widget for selecting tags for a project."""
     
     tags_changed = pyqtSignal(list)  # List of tag IDs
+    tag_created = pyqtSignal()       # Emitted when a new tag is created
     
     def __init__(self, project_id: Optional[int] = None, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -468,8 +516,8 @@ class ProjectTagSelector(QWidget):
         """Show create tag dialog."""
         dialog = CreateTagDialog(self)
         if dialog.exec():
-            # Could auto-add the new tag
-            pass
+            # Notify that a new tag was created so sidebar can refresh
+            self.tag_created.emit()
     
     def get_selected_tags(self) -> List[int]:
         """Get the list of selected tag IDs."""

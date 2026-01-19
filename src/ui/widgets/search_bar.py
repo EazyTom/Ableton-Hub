@@ -213,6 +213,8 @@ class SearchBar(QWidget):
                 font-size: 12px;
             }}
         """)
+        # Connect Enter key to apply filter
+        self.tempo_min_spin.editingFinished.connect(self._apply_custom_tempo)
         self.row2_layout.addWidget(self.tempo_min_spin)
         
         self.tempo_max_spin = QSpinBox()
@@ -228,6 +230,8 @@ class SearchBar(QWidget):
                 font-size: 12px;
             }}
         """)
+        # Connect Enter key to apply filter
+        self.tempo_max_spin.editingFinished.connect(self._apply_custom_tempo)
         self.row2_layout.addWidget(self.tempo_max_spin)
         
         apply_btn = QPushButton("Go")
@@ -255,7 +259,7 @@ class SearchBar(QWidget):
         self.row2_layout.addWidget(sort_lbl)
         
         self.sort_combo = QComboBox()
-        self.sort_combo.addItems(["Modified ↓", "Modified ↑", "Name A-Z", "Name Z-A", "Tempo ↓", "Tempo ↑", "Length ↓", "Length ↑", "Location"])
+        self.sort_combo.addItems(["Modified ↓", "Modified ↑", "Name A-Z", "Name Z-A", "Tempo ↓", "Tempo ↑", "Length ↓", "Length ↑", "Size ↓", "Size ↑", "Location"])
         self.sort_combo.setFixedSize(100, h)
         self.sort_combo.currentTextChanged.connect(self._on_sort_changed)
         self.sort_combo.setStyleSheet(f"""
@@ -422,6 +426,7 @@ class SearchBar(QWidget):
             "Name A-Z": "name_asc", "Name Z-A": "name_desc",
             "Tempo ↓": "tempo_desc", "Tempo ↑": "tempo_asc",
             "Length ↓": "length_desc", "Length ↑": "length_asc",
+            "Size ↓": "size_desc", "Size ↑": "size_asc",
             "Location": "location_asc"
         }
         self._current_sort = sort_map.get(sort_text, "modified_desc")

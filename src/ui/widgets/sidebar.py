@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QScrollArea, QFrame, QTreeWidget, QTreeWidgetItem, QSizePolicy, QMenu
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QUrl
-from PyQt6.QtGui import QFont, QPixmap, QDesktopServices
+from PyQt6.QtGui import QFont, QPixmap, QDesktopServices, QMouseEvent
 
 from ...database import get_session, Location, Collection, Tag
 from ..theme import AbletonTheme
@@ -21,9 +21,9 @@ class SidebarSection(QWidget):
     context_menu_requested = pyqtSignal(QPoint)  # Position for context menu
     
     def __init__(self, title: str, parent: Optional[QWidget] = None, clickable_header: bool = False, 
-                 enable_context_menu: bool = False):
+                 enable_context_menu: bool = False, start_collapsed: bool = False):
         super().__init__(parent)
-        self._collapsed = False
+        self._collapsed = start_collapsed
         self._clickable_header = clickable_header
         self._enable_context_menu = enable_context_menu
         
@@ -56,7 +56,7 @@ class SidebarSection(QWidget):
         
         header_layout.addStretch()
         
-        self.toggle_btn = QPushButton("▼")
+        self.toggle_btn = QPushButton("▶" if start_collapsed else "▼")
         self.toggle_btn.setFixedSize(20, 20)
         self.toggle_btn.setFlat(True)
         self.toggle_btn.clicked.connect(self._toggle)
@@ -76,6 +76,7 @@ class SidebarSection(QWidget):
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(0, 0, 0, 8)
         self.content_layout.setSpacing(2)
+        self.content.setVisible(not start_collapsed)  # Set initial visibility
         layout.addWidget(self.content)
     
     def _toggle(self) -> None:
@@ -94,6 +95,7 @@ class SidebarItem(QPushButton):
     
     edit_requested = pyqtSignal(int)  # Item ID
     delete_requested = pyqtSignal(int)  # Item ID
+    double_clicked = pyqtSignal()  # Double-click signal
     
     def __init__(self, text: str, icon: str = "", color: Optional[str] = None,
                  count: Optional[int] = None, parent: Optional[QWidget] = None,
@@ -149,6 +151,12 @@ class SidebarItem(QPushButton):
                 }}
             """)
     
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        """Handle double-click events."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.double_clicked.emit()
+        super().mouseDoubleClickEvent(event)
+    
     def _on_context_menu(self, pos: QPoint) -> None:
         """Show context menu for item."""
         if self.item_type == "collection" and self.item_id:
@@ -186,6 +194,7 @@ class Sidebar(QWidget):
     collection_edit_requested = pyqtSignal(int)  # Collection ID
     collection_delete_requested = pyqtSignal(int)  # Collection ID
     tag_selected = pyqtSignal(int)        # Tag ID
+    manage_tags_requested = pyqtSignal()   # Request to open tag management dialog
     
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -278,7 +287,8 @@ class Sidebar(QWidget):
         content_layout.addWidget(sep2)
         
         # Tags section
-        self.tags_section = SidebarSection("TAGS")
+        self.tags_section = SidebarSection("TAGS", start_collapsed=True, enable_context_menu=True)
+        self.tags_section.context_menu_requested.connect(self._on_tags_context_menu)
         self.tags_container = QWidget()
         self.tags_layout = QVBoxLayout(self.tags_container)
         self.tags_layout.setContentsMargins(0, 0, 0, 0)
@@ -316,8 +326,124 @@ class Sidebar(QWidget):
         sep3.setFixedHeight(1)
         content_layout.addWidget(sep3)
         
+        # Learning section
+        learning_section = SidebarSection("LEARNING")
+        
+        # TODO: Built-in Lessons (hidden until paths and display are resolved)
+        # lessons_sep = QLabel("Built-in Lessons:")
+        # lessons_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
+        # learning_section.add_item(lessons_sep)
+        # 
+        # live_lessons = SidebarItem("Live Lessons", "📖")
+        # live_lessons.setCheckable(False)
+        # live_lessons.setToolTip("Open Ableton Live built-in lessons folder")
+        # live_lessons.clicked.connect(self._open_live_lessons)
+        # learning_section.add_item(live_lessons)
+        # 
+        # lessons_toc = SidebarItem("Lessons Index", "📋")
+        # lessons_toc.setCheckable(False)
+        # lessons_toc.setToolTip("View Lessons Table of Contents")
+        # lessons_toc.clicked.connect(self._open_lessons_toc)
+        # learning_section.add_item(lessons_toc)
+        
+        # Getting Started
+        getting_started_sep = QLabel("Getting Started:")
+        getting_started_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
+        learning_section.add_item(getting_started_sep)
+        
+        learning_music = SidebarItem("Learning Music", "🎵")
+        learning_music.setCheckable(False)  # Don't toggle, just click
+        learning_music.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://learningmusic.ableton.com/")))
+        learning_section.add_item(learning_music)
+        
+        ableton_official = SidebarItem("Ableton.com", "🌐")
+        ableton_official.setCheckable(False)  # Don't toggle, just click
+        ableton_official.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com")))
+        learning_section.add_item(ableton_official)
+        
+        learn_live = SidebarItem("Learn Live", "📚")
+        learn_live.setCheckable(False)  # Don't toggle, just click
+        learn_live.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/live/learn-live/")))
+        learning_section.add_item(learn_live)
+        
+        youtube_link = SidebarItem("Official YouTube", "▶️")
+        youtube_link.setCheckable(False)  # Don't toggle, just click
+        youtube_link.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://youtube.com/ableton")))
+        learning_section.add_item(youtube_link)
+        
+        # Community
+        community_sep = QLabel("Community:")
+        community_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px; margin-top: 8px;")
+        learning_section.add_item(community_sep)
+        
+        # Discord (moved to top)
+        discord_link = SidebarItem("Ableton Discord", "💬")
+        discord_link.setCheckable(False)  # Don't toggle, just click
+        # Try to launch Discord app first, fallback to web
+        def _launch_discord():
+            import subprocess
+            import sys
+            # Try discord:// protocol first (launches Discord app)
+            discord_url = QUrl("discord://discord.gg/ableton")
+            if not QDesktopServices.openUrl(discord_url):
+                # Fallback to web URL
+                QDesktopServices.openUrl(QUrl("https://discord.gg/ableton"))
+        discord_link.clicked.connect(_launch_discord)
+        learning_section.add_item(discord_link)
+        
+        # Certified Trainers (moved to top)
+        certified_trainers = SidebarItem("Certified Trainers", "🎓")
+        certified_trainers.setCheckable(False)  # Don't toggle, just click
+        certified_trainers.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/certified-training/")))
+        learning_section.add_item(certified_trainers)
+        
+        # User Groups
+        austin_group = SidebarItem("Austin User Group", "🤠")
+        austin_group.setCheckable(False)  # Don't toggle, just click
+        austin_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/abletonATX")))
+        learning_section.add_item(austin_group)
+        
+        chicago_group = SidebarItem("Chicago User Group", "🏙️")
+        chicago_group.setCheckable(False)  # Don't toggle, just click
+        chicago_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/chicagoableton")))
+        learning_section.add_item(chicago_group)
+        
+        sf_group = SidebarItem("San Francisco User Group", "🌉")
+        sf_group.setCheckable(False)  # Don't toggle, just click
+        sf_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/sfableton")))
+        learning_section.add_item(sf_group)
+        
+        # Reference Documentation
+        reference_sep = QLabel("Reference:")
+        reference_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px; margin-top: 8px;")
+        learning_section.add_item(reference_sep)
+        
+        live12_ref = SidebarItem("Live 12 Reference", "📖")
+        live12_ref.setCheckable(False)  # Don't toggle, just click
+        live12_ref.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/live-manual/12/")))
+        learning_section.add_item(live12_ref)
+        
+        live_api = SidebarItem("Live API Overview", "📘")
+        live_api.setCheckable(False)  # Don't toggle, just click
+        live_api.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/legacy/max8/vignettes/live_api_overview")))
+        learning_section.add_item(live_api)
+        
+        lom_api = SidebarItem("LOM API Reference", "🔧")
+        lom_api.setCheckable(False)  # Don't toggle, just click
+        lom_api.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/legacy/max8/vignettes/live_object_model")))
+        learning_section.add_item(lom_api)
+        
+        content_layout.addWidget(learning_section)
+        
+        # Separator
+        sep_learning = QFrame()
+        sep_learning.setFrameShape(QFrame.Shape.HLine)
+        sep_learning.setStyleSheet(f"background-color: {AbletonTheme.COLORS['border']};")
+        sep_learning.setFixedHeight(1)
+        content_layout.addWidget(sep_learning)
+        
         # Backups section
-        backups_section = SidebarSection("BACKUPS")
+        backups_section = SidebarSection("BACKUPS", start_collapsed=True)
         
         self.backup_location_label = QLabel("No backup location set")
         self.backup_location_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
@@ -367,7 +493,7 @@ class Sidebar(QWidget):
         content_layout.addWidget(sep_live)
         
         # Packs section
-        self.packs_section = SidebarSection("PACKS")
+        self.packs_section = SidebarSection("PACKS", start_collapsed=True)
         
         # Pack location info
         packs_intro = QLabel("Ableton Packs:")
@@ -411,131 +537,8 @@ class Sidebar(QWidget):
         sep_packs.setFixedHeight(1)
         content_layout.addWidget(sep_packs)
         
-        # Learning section
-        learning_section = SidebarSection("LEARNING")
-        
-        # TODO: Built-in Lessons (hidden until paths and display are resolved)
-        # lessons_sep = QLabel("Built-in Lessons:")
-        # lessons_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
-        # learning_section.add_item(lessons_sep)
-        # 
-        # live_lessons = SidebarItem("Live Lessons", "📖")
-        # live_lessons.setCheckable(False)
-        # live_lessons.setToolTip("Open Ableton Live built-in lessons folder")
-        # live_lessons.clicked.connect(self._open_live_lessons)
-        # learning_section.add_item(live_lessons)
-        # 
-        # lessons_toc = SidebarItem("Lessons Index", "📋")
-        # lessons_toc.setCheckable(False)
-        # lessons_toc.setToolTip("View Lessons Table of Contents")
-        # lessons_toc.clicked.connect(self._open_lessons_toc)
-        # learning_section.add_item(lessons_toc)
-        
-        # Getting Started
-        getting_started_sep = QLabel("Getting Started:")
-        getting_started_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
-        learning_section.add_item(getting_started_sep)
-        
-        learning_music = SidebarItem("Learning Music", "🎵")
-        learning_music.setCheckable(False)  # Don't toggle, just click
-        learning_music.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://learningmusic.ableton.com/")))
-        learning_section.add_item(learning_music)
-        
-        ableton_official = SidebarItem("Ableton.com", "🌐")
-        ableton_official.setCheckable(False)  # Don't toggle, just click
-        ableton_official.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com")))
-        learning_section.add_item(ableton_official)
-        
-        learn_live = SidebarItem("Learn Live", "📚")
-        learn_live.setCheckable(False)  # Don't toggle, just click
-        learn_live.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/live/learn-live/")))
-        learning_section.add_item(learn_live)
-        
-        youtube_link = SidebarItem("Official YouTube", "▶️")
-        youtube_link.setCheckable(False)  # Don't toggle, just click
-        youtube_link.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://youtube.com/ableton")))
-        learning_section.add_item(youtube_link)
-        
-        # Reference Documentation
-        reference_sep = QLabel("Reference:")
-        reference_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px; margin-top: 8px;")
-        learning_section.add_item(reference_sep)
-        
-        live12_ref = SidebarItem("Live 12 Reference", "📖")
-        live12_ref.setCheckable(False)  # Don't toggle, just click
-        live12_ref.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/live-manual/12/")))
-        learning_section.add_item(live12_ref)
-        
-        live_api = SidebarItem("Live API Overview", "📘")
-        live_api.setCheckable(False)  # Don't toggle, just click
-        live_api.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/legacy/max8/vignettes/live_api_overview")))
-        learning_section.add_item(live_api)
-        
-        lom_api = SidebarItem("LOM API Reference", "🔧")
-        lom_api.setCheckable(False)  # Don't toggle, just click
-        lom_api.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/legacy/max8/vignettes/live_object_model")))
-        learning_section.add_item(lom_api)
-        
-        # Training
-        training_sep = QLabel("Training:")
-        training_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px; margin-top: 8px;")
-        learning_section.add_item(training_sep)
-        
-        certified_trainers = SidebarItem("Certified Trainers", "🎓")
-        certified_trainers.setCheckable(False)  # Don't toggle, just click
-        certified_trainers.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/certified-training/")))
-        learning_section.add_item(certified_trainers)
-        
-        # User Groups
-        user_groups_sep = QLabel("User Groups:")
-        user_groups_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
-        learning_section.add_item(user_groups_sep)
-        
-        austin_group = SidebarItem("Austin User Group", "🤠")
-        austin_group.setCheckable(False)  # Don't toggle, just click
-        austin_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/abletonATX")))
-        learning_section.add_item(austin_group)
-        
-        chicago_group = SidebarItem("Chicago User Group", "🏙️")
-        chicago_group.setCheckable(False)  # Don't toggle, just click
-        chicago_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/chicagoableton")))
-        learning_section.add_item(chicago_group)
-        
-        sf_group = SidebarItem("San Francisco User Group", "🌉")
-        sf_group.setCheckable(False)  # Don't toggle, just click
-        sf_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/sfableton")))
-        learning_section.add_item(sf_group)
-        
-        # Discord
-        discord_sep = QLabel("Community:")
-        discord_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px; margin-top: 8px;")
-        learning_section.add_item(discord_sep)
-        
-        discord_link = SidebarItem("Ableton Discord", "💬")
-        discord_link.setCheckable(False)  # Don't toggle, just click
-        # Try to launch Discord app first, fallback to web
-        def _launch_discord():
-            import subprocess
-            import sys
-            # Try discord:// protocol first (launches Discord app)
-            discord_url = QUrl("discord://discord.gg/ableton")
-            if not QDesktopServices.openUrl(discord_url):
-                # Fallback to web URL
-                QDesktopServices.openUrl(QUrl("https://discord.gg/ableton"))
-        discord_link.clicked.connect(_launch_discord)
-        learning_section.add_item(discord_link)
-        
-        content_layout.addWidget(learning_section)
-        
-        # Separator
-        sep_mcp = QFrame()
-        sep_mcp.setFrameShape(QFrame.Shape.HLine)
-        sep_mcp.setStyleSheet(f"background-color: {AbletonTheme.COLORS['border']};")
-        sep_mcp.setFixedHeight(1)
-        content_layout.addWidget(sep_mcp)
-        
         # MCP Servers section (Ableton MCP integrations)
-        mcp_section = SidebarSection("MCP SERVERS")
+        mcp_section = SidebarSection("MCP SERVERS", start_collapsed=True)
         
         mcp_intro = QLabel("AI Integration Tools:")
         mcp_intro.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
@@ -557,7 +560,7 @@ class Sidebar(QWidget):
         live_api_mcp = SidebarItem("Live API MCP", "🔌")
         live_api_mcp.setCheckable(False)
         live_api_mcp.setToolTip("MCP server for Ableton Live API access")
-        live_api_mcp.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/Simon-Kansara/ableton-live-mcp")))
+        live_api_mcp.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/Simon-Kansara/ableton-live-mcp-server")))
         mcp_section.add_item(live_api_mcp)
         
         mcp_docs = SidebarItem("MCP Documentation", "📖")
@@ -662,6 +665,15 @@ class Sidebar(QWidget):
         if action == cleanup_action:
             self.cleanup_orphaned_projects_requested.emit()
     
+    def _on_tags_context_menu(self, pos: QPoint) -> None:
+        """Show context menu for Tags section."""
+        menu = QMenu(self)
+        manage_action = menu.addAction("Manage Tags...")
+        
+        action = menu.exec(pos)
+        if action == manage_action:
+            self.manage_tags_requested.emit()
+    
     def refresh(self) -> None:
         """Refresh sidebar data from database."""
         # Clear current selection before refreshing
@@ -709,7 +721,8 @@ class Sidebar(QWidget):
                     item = SidebarItem(display_text, icon)
                     item.item_id = install.id
                     item.item_type = "live_install"
-                    item.setToolTip(f"Path: {install.executable_path}\nVersion: {install.version}\n{'Favorite' if install.is_favorite else 'Not favorite'}")
+                    item.setToolTip(f"Path: {install.executable_path}\nVersion: {install.version}\n{'Favorite' if install.is_favorite else 'Not favorite'}\nDouble-click to launch Live")
+                    item.setCheckable(False)  # Don't allow single-click toggling
                     
                     # Right-click context menu for each installation
                     item.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -717,9 +730,9 @@ class Sidebar(QWidget):
                         lambda pos, iid=install.id: self._on_install_item_context_menu(pos, iid)
                     )
                     
-                    # Click to launch Live (without a project)
-                    item.clicked.connect(
-                        lambda checked, v=install: self._launch_live_version(v)
+                    # Double-click to launch Live (without a project)
+                    item.double_clicked.connect(
+                        lambda v=install: self._launch_live_version(v)
                     )
                     
                     self.live_versions_layout.addWidget(item)

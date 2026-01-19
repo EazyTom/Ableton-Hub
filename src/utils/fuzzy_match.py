@@ -63,10 +63,15 @@ def normalize_for_comparison(text: str) -> str:
     suffixes = [
         r'_final$', r'_master$', r'_mix$', r'_bounce$', r'_export$',
         r' final$', r' master$', r' mix$', r' bounce$', r' export$',
+        r'_project$', r' project$',  # "project" suffix
         r'_v\d+$', r' v\d+$', r'_\d+$',  # Version numbers
+        r'[-_]\d{4}[-_]\d{2}[-_]\d{2}.*$',  # Date stamps like _2024-01-15
     ]
     for suffix in suffixes:
         result = re.sub(suffix, '', result, flags=re.IGNORECASE)
+    
+    # Remove "project" anywhere in the string (common in Ableton naming)
+    result = re.sub(r'\bproject\b', '', result, flags=re.IGNORECASE)
     
     # Standardize separators
     result = re.sub(r'[-_\s]+', ' ', result)

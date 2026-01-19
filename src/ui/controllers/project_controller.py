@@ -97,6 +97,8 @@ class ProjectController(QObject):
                     order_by = Project.tempo.desc() if direction == "desc" else Project.tempo.asc()
                 elif field == "length":
                     order_by = Project.arrangement_length.desc() if direction == "desc" else Project.arrangement_length.asc()
+                elif field == "size":
+                    order_by = Project.file_size.desc() if direction == "desc" else Project.file_size.asc()
                 elif field == "location":
                     order_by = Location.name.asc()
                     query = query.join(Location)
