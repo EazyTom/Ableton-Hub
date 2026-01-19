@@ -39,12 +39,31 @@ class AbletonHubApp:
         self.app.setOrganizationName("AbletonHub")
         self.app.setOrganizationDomain("abletonhub.local")
         
-        # Setup logging
-        setup_logging(log_level=logging.INFO, log_to_file=False)
+        # Suppress Qt debug/info messages (like qt.multimedia.ffmpeg messages)
+        self._install_qt_message_handler()
+        
+        # Setup logging - use WARNING level to suppress INFO messages in console
+        setup_logging(log_level=logging.WARNING, log_to_file=False)
         self.logger = get_logger(__name__)
         
         # Set application icon
         self._set_application_icon()
+    
+    def _install_qt_message_handler(self) -> None:
+        """Install a Qt message handler to suppress debug/info messages."""
+        def qt_message_handler(msg_type, context, message):
+            """Filter Qt messages - only show warnings and critical errors."""
+            # Suppress QtDebugMsg (0) and QtInfoMsg (4) messages
+            # Only show QtWarningMsg (1), QtCriticalMsg (2), and QtFatalMsg (3)
+            if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtInfoMsg):
+                return  # Suppress debug and info messages
+            # For warnings and critical errors, print them
+            if msg_type == QtMsgType.QtWarningMsg:
+                print(f"Qt Warning: {message}", file=sys.stderr)
+            elif msg_type in (QtMsgType.QtCriticalMsg, QtMsgType.QtFatalMsg):
+                print(f"Qt Critical: {message}", file=sys.stderr)
+        
+        qInstallMessageHandler(qt_message_handler)
         
         # Load configuration
         self.config_manager = get_config_manager()

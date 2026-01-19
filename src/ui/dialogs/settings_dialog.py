@@ -99,6 +99,38 @@ class SettingsDialog(QDialog):
         
         layout.addWidget(theme_group)
         
+        # Waveform color mode selection
+        waveform_group = QGroupBox("Waveform Color")
+        waveform_layout = QVBoxLayout(waveform_group)
+        
+        self.waveform_group = QButtonGroup(self)
+        
+        # Get current waveform color mode
+        current_waveform_mode = getattr(self.config.ui, 'waveform_color_mode', 'rainbow')
+        
+        # Waveform color mode options
+        waveform_modes = {
+            "rainbow": "Rainbow (Gradient)",
+            "random": "Random (Per Project)",
+            "accent": "Accent (Green)"
+        }
+        
+        self.waveform_radios = {}
+        for idx, (mode_id, mode_name) in enumerate(waveform_modes.items()):
+            radio = QRadioButton(mode_name)
+            radio.setChecked(current_waveform_mode == mode_id)
+            self.waveform_group.addButton(radio, idx)
+            self.waveform_radios[mode_id] = radio
+            waveform_layout.addWidget(radio)
+        
+        # Info label
+        info_label = QLabel("Note: Existing thumbnails will keep their current colors.\nUse 'Clear Thumbnail Cache' in Tools menu to regenerate.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #888; font-size: 10px;")
+        waveform_layout.addWidget(info_label)
+        
+        layout.addWidget(waveform_group)
+        
         # View settings
         view_group = QGroupBox("Default View")
         view_layout = QVBoxLayout(view_group)
@@ -258,6 +290,12 @@ class SettingsDialog(QDialog):
         for theme_id, radio in self.theme_radios.items():
             if radio.isChecked():
                 self.config.ui.theme = theme_id
+                break
+        
+        # Waveform color mode selection
+        for mode_id, radio in self.waveform_radios.items():
+            if radio.isChecked():
+                self.config.ui.waveform_color_mode = mode_id
                 break
         
         # General settings

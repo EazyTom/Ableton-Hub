@@ -406,7 +406,7 @@ class ProjectCard(QFrame):
             # Remove individual tooltip - unified tooltip on name/preview
         
         # Favorite indicator
-        self.favorite_indicator.setText("⭐" if self.project.is_favorite else "")
+        self.favorite_indicator.setText("💎" if self.project.is_favorite else "")
         
         # Modified date
         if self.project.modified_date:

@@ -14,13 +14,16 @@ from ..theme import AbletonTheme
 class TempoButton(QPushButton):
     """Toggle button for tempo range selection."""
     
+    # Consistent width for all tempo buttons and Go button
+    BUTTON_WIDTH = 60
+    
     def __init__(self, text: str, min_tempo: int, max_tempo: int, parent=None):
         super().__init__(text, parent)
         self.min_tempo = min_tempo
         self.max_tempo = max_tempo
         self.setCheckable(True)
         self.setFixedHeight(24)
-        self.setFixedWidth(55)  # Fixed width to ensure text fits
+        self.setFixedWidth(TempoButton.BUTTON_WIDTH)  # Fixed width to ensure text fits
         self._update_style()
     
     def _update_style(self):
@@ -33,6 +36,7 @@ class TempoButton(QPushButton):
                     border-radius: 3px;
                     padding: 2px 4px;
                     font-size: 11px;
+                    text-align: center;
                 }}
                 QPushButton:hover {{
                     background-color: {AbletonTheme.COLORS['accent_hover']};
@@ -47,6 +51,7 @@ class TempoButton(QPushButton):
                     border-radius: 3px;
                     padding: 2px 4px;
                     font-size: 11px;
+                    text-align: center;
                 }}
                 QPushButton:hover {{
                     background-color: {AbletonTheme.COLORS['surface_hover']};
@@ -235,7 +240,7 @@ class SearchBar(QWidget):
         self.row2_layout.addWidget(self.tempo_max_spin)
         
         apply_btn = QPushButton("Go")
-        apply_btn.setFixedSize(26, h)
+        apply_btn.setFixedSize(TempoButton.BUTTON_WIDTH, h)  # Match tempo button width
         apply_btn.clicked.connect(self._apply_custom_tempo)
         apply_btn.setStyleSheet(f"""
             QPushButton {{
@@ -245,6 +250,7 @@ class SearchBar(QWidget):
                 border-radius: 3px;
                 font-size: 10px;
                 font-weight: bold;
+                text-align: center;
             }}
             QPushButton:hover {{ background-color: {AbletonTheme.COLORS['accent_hover']}; }}
         """)

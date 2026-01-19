@@ -49,6 +49,8 @@ def setup_logging(
     # Suppress verbose logging from third-party libraries
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
     logging.getLogger('PyQt6').setLevel(logging.WARNING)
+    logging.getLogger('qt.multimedia').setLevel(logging.WARNING)
+    logging.getLogger('qt.multimedia.ffmpeg').setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> logging.Logger:

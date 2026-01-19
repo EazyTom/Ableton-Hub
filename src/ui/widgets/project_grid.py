@@ -421,8 +421,17 @@ class ProjectGrid(QWidget):
         try:
             project = session.query(Project).get(project_id)
             if project:
-                project.is_favorite = not project.is_favorite
+                new_favorite_status = not project.is_favorite
+                project.is_favorite = new_favorite_status
                 session.commit()
+                
+                # Update the project object in the list with the new favorite status
+                for idx, p in enumerate(self._projects):
+                    if p.id == project_id:
+                        # Update the favorite status on the existing project object
+                        self._projects[idx].is_favorite = new_favorite_status
+                        break
+                
                 self._refresh_view()
         finally:
             session.close()

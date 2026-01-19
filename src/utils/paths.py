@@ -179,6 +179,44 @@ def get_project_folder(project_path: Path) -> Path:
     return project_path.parent
 
 
+def find_backup_files(project_path: Path) -> List[Path]:
+    """Find all backup .als files for a project.
+    
+    Searches for backup files in:
+    - Backup folder within the project folder
+    - Any .als files with 'backup' in the name or timestamp patterns
+    
+    Args:
+        project_path: Path to the main .als project file.
+        
+    Returns:
+        List of backup .als file paths, sorted by modification time (newest first).
+    """
+    backups = []
+    project_folder = get_project_folder(project_path)
+    
+    # Look in Backup folder
+    backup_dir = project_folder / 'Backup'
+    if backup_dir.exists() and backup_dir.is_dir():
+        for backup_file in backup_dir.glob('*.als'):
+            if backup_file.is_file():
+                backups.append(backup_file)
+    
+    # Also check for .als files with backup indicators in the project folder
+    # (but not in subdirectories to avoid duplicates)
+    for als_file in project_folder.glob('*.als'):
+        if als_file == project_path:
+            continue  # Skip the main project file
+        # Check if filename suggests it's a backup
+        name_lower = als_file.name.lower()
+        if 'backup' in name_lower or '[' in als_file.name:
+            if als_file not in backups:
+                backups.append(als_file)
+    
+    # Sort by modification time (newest first)
+    return sorted(backups, key=lambda p: p.stat().st_mtime, reverse=True)
+
+
 def find_export_folders(project_path: Path, location_path: Path = None) -> List[Path]:
     """Find common export folder locations relative to a project.
     

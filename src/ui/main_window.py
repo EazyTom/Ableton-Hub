@@ -12,7 +12,7 @@ from PyQt6.QtGui import QAction, QIcon, QKeySequence, QCloseEvent, QPixmap
 
 from .. import __version__, get_whats_new_html
 from ..config import Config, save_config
-from ..database import get_session, Location, Project
+from ..database import get_session, Location, Project, ProjectStatus
 from ..utils.paths import get_resources_path
 from ..utils.logging import get_logger
 from .widgets.sidebar import Sidebar
@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
         self._scanner = None
         self._watcher = None
         self._link_scanner = None
+        self._show_missing_projects = False
         
         # Initialize controllers
         self.scan_controller = ScanController(self)
@@ -112,13 +113,6 @@ class MainWindow(QMainWindow):
         
         file_menu.addSeparator()
         
-        reset_db_action = QAction("Reset Database...", self)
-        reset_db_action.setToolTip("Delete all data and start fresh (use with caution!)")
-        reset_db_action.triggered.connect(self._on_reset_database)
-        file_menu.addAction(reset_db_action)
-        
-        file_menu.addSeparator()
-        
         settings_action = QAction("Settings...", self)
         settings_action.setShortcut(QKeySequence("Ctrl+,"))
         settings_action.triggered.connect(self._on_settings)
@@ -170,6 +164,14 @@ class MainWindow(QMainWindow):
         
         view_menu.addSeparator()
         
+        self.show_missing_action = QAction("Show Missing Projects", self)
+        self.show_missing_action.setCheckable(True)
+        self.show_missing_action.setChecked(False)
+        self.show_missing_action.triggered.connect(self._toggle_show_missing)
+        view_menu.addAction(self.show_missing_action)
+        
+        view_menu.addSeparator()
+        
         refresh_action = QAction("Refresh", self)
         refresh_action.setShortcut(QKeySequence("F5"))
         refresh_action.triggered.connect(self._refresh_view)
@@ -193,7 +195,7 @@ class MainWindow(QMainWindow):
         
         tools_menu.addSeparator()
         
-        link_panel_action = QAction("Link Network...", self)
+        link_panel_action = QAction("Ableton Link WiFi...", self)
         link_panel_action.triggered.connect(self._show_link_panel)
         tools_menu.addAction(link_panel_action)
         
@@ -203,6 +205,23 @@ class MainWindow(QMainWindow):
         rescan_metadata_action.setToolTip("Clear parse timestamps and re-extract all project metadata on next scan")
         rescan_metadata_action.triggered.connect(self._on_force_rescan_metadata)
         tools_menu.addAction(rescan_metadata_action)
+        
+        clear_cache_action = QAction("Clear Thumbnail Cache...", self)
+        clear_cache_action.setToolTip("Delete all generated waveform thumbnails and regenerate them")
+        clear_cache_action.triggered.connect(self._on_clear_thumbnail_cache)
+        tools_menu.addAction(clear_cache_action)
+        
+        tools_menu.addSeparator()
+        
+        cleanup_missing_action = QAction("Clean Up Missing Projects...", self)
+        cleanup_missing_action.setToolTip("Remove MISSING projects from database (including backup projects)")
+        cleanup_missing_action.triggered.connect(self._on_cleanup_missing_projects)
+        tools_menu.addAction(cleanup_missing_action)
+        
+        reset_db_action = QAction("Reset Database...", self)
+        reset_db_action.setToolTip("Delete all data and start fresh (use with caution!)")
+        reset_db_action.triggered.connect(self._on_reset_database)
+        tools_menu.addAction(reset_db_action)
         
         # Help menu
         help_menu = menubar.addMenu("&Help")
@@ -534,6 +553,12 @@ class MainWindow(QMainWindow):
                 joinedload(Project.exports)
             )
             
+            # Conditionally exclude MISSING projects based on view setting
+            # When "Show Missing Projects" is unchecked, exclude MISSING projects
+            # When checked, include all projects (both normal and MISSING)
+            if not self._show_missing_projects:
+                query = query.filter(Project.status != ProjectStatus.MISSING)
+            
             if location_id:
                 query = query.filter(Project.location_id == location_id)
             
@@ -825,6 +850,95 @@ class MainWindow(QMainWindow):
                 "Please check the console for error messages."
             )
     
+    def _on_cleanup_missing_projects(self) -> None:
+        """Clean up MISSING projects from the database."""
+        from ..database import get_session, Project, ProjectCollection, ProjectStatus
+        
+        session = get_session()
+        try:
+            # Find all MISSING projects
+            missing_projects = session.query(Project).filter(
+                Project.status == ProjectStatus.MISSING
+            ).all()
+            
+            if not missing_projects:
+                QMessageBox.information(
+                    self,
+                    "No Missing Projects",
+                    "There are no MISSING projects to clean up."
+                )
+                return
+            
+            # Separate projects into those in collections and those not
+            projects_in_collections = []
+            projects_not_in_collections = []
+            
+            for project in missing_projects:
+                # Check if project is in any collection
+                in_collection = session.query(ProjectCollection).filter(
+                    ProjectCollection.project_id == project.id
+                ).first() is not None
+                
+                if in_collection:
+                    projects_in_collections.append(project)
+                else:
+                    projects_not_in_collections.append(project)
+            
+            # Confirm deletion
+            message = "Remove MISSING projects from database?\n\n"
+            message += f"Found {len(missing_projects)} MISSING project(s):\n\n"
+            if projects_not_in_collections:
+                message += f"• {len(projects_not_in_collections)} project(s) will be removed from database (not in collections)\n"
+            if projects_in_collections:
+                message += f"• {len(projects_in_collections)} project(s) will be KEPT (in collections)\n"
+            message += "\n⚠️ IMPORTANT: This only removes database records. Your actual project files (.als) will NOT be deleted.\n\n"
+            message += "This action cannot be undone. Are you sure?"
+            
+            reply = QMessageBox.question(
+                self,
+                "Clean Up Missing Projects",
+                message,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            
+            # Delete projects not in collections
+            deleted_count = 0
+            for project in projects_not_in_collections:
+                session.delete(project)
+                deleted_count += 1
+            
+            # Keep projects in collections (they remain MISSING but are preserved)
+            kept_count = len(projects_in_collections)
+            
+            session.commit()
+            
+            self.logger.info(f"Removed {deleted_count} MISSING project(s) not in collections")
+            if kept_count > 0:
+                self.logger.info(f"Kept {kept_count} MISSING project(s) that are in collections")
+            
+            # Refresh UI
+            self._refresh_sidebar()
+            self._load_projects()
+            
+            # Show summary message
+            summary = f"Cleanup complete.\n\n"
+            if deleted_count > 0:
+                summary += f"Removed {deleted_count} MISSING project(s) from database.\n"
+            if kept_count > 0:
+                summary += f"Kept {kept_count} MISSING project(s) that are in collections."
+            
+            QMessageBox.information(
+                self,
+                "Cleanup Complete",
+                summary
+            )
+        finally:
+            session.close()
+    
     def _on_settings(self) -> None:
         """Show settings dialog."""
         from .dialogs.settings_dialog import SettingsDialog
@@ -862,6 +976,12 @@ class MainWindow(QMainWindow):
         self.list_btn.setChecked(mode == "list")
         self.config.ui.default_view = mode
         save_config()
+    
+    def _toggle_show_missing(self) -> None:
+        """Toggle showing/hiding MISSING projects."""
+        self._show_missing_projects = self.show_missing_action.isChecked()
+        # Reload projects with the new filter
+        self._load_projects()
     
     def _toggle_sidebar(self) -> None:
         """Toggle sidebar visibility."""
@@ -967,6 +1087,78 @@ class MainWindow(QMainWindow):
         finally:
             session.close()
     
+    def _on_clear_thumbnail_cache(self) -> None:
+        """Clear all thumbnail cache files and database references."""
+        from ..database import get_session, Project
+        from ..utils.paths import get_thumbnail_cache_dir
+        from pathlib import Path
+        
+        # Confirm with user
+        reply = QMessageBox.question(
+            self,
+            "Clear Thumbnail Cache",
+            "This will delete all generated waveform thumbnails.\n\n"
+            "Thumbnails will be regenerated automatically when you view projects.\n\n"
+            "This action cannot be undone. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        try:
+            # Get thumbnail cache directory
+            cache_dir = get_thumbnail_cache_dir()
+            
+            # Count files before deletion
+            thumbnail_files = list(cache_dir.glob("*.png"))
+            file_count = len(thumbnail_files)
+            
+            # Delete all thumbnail files
+            deleted_count = 0
+            for thumbnail_file in thumbnail_files:
+                try:
+                    thumbnail_file.unlink()
+                    deleted_count += 1
+                except Exception as e:
+                    self.logger.warning(f"Failed to delete thumbnail {thumbnail_file}: {e}")
+            
+            # Clear thumbnail_path references from database
+            session = get_session()
+            try:
+                projects_updated = session.query(Project).filter(
+                    Project.thumbnail_path.isnot(None)
+                ).update({Project.thumbnail_path: None})
+                session.commit()
+                self.logger.info(f"Cleared thumbnail_path for {projects_updated} projects")
+            except Exception as e:
+                session.rollback()
+                self.logger.error(f"Failed to clear thumbnail_path references: {e}", exc_info=True)
+            finally:
+                session.close()
+            
+            # Refresh UI to show default logos
+            self._load_projects()
+            
+            # Show success message
+            QMessageBox.information(
+                self,
+                "Cache Cleared",
+                f"Successfully cleared thumbnail cache.\n\n"
+                f"• Deleted {deleted_count} thumbnail file(s)\n"
+                f"• Cleared {projects_updated} database reference(s)\n\n"
+                f"Thumbnails will be regenerated with new colors when you view projects."
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear thumbnail cache: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to clear thumbnail cache:\n{str(e)}"
+            )
+    
     def _show_about(self) -> None:
         """Show about dialog with compact README content."""
         from PyQt6.QtWidgets import QTextBrowser, QVBoxLayout, QPushButton
@@ -1006,36 +1198,74 @@ class MainWindow(QMainWindow):
         
         {whats_new_html}
         
-        <h2 style="color: #FF764D;">🎵 Key Features</h2>
+        <h2 style="color: #FF764D;">🎵 Complete Feature List</h2>
         
-        <h3>Project Management</h3>
+        <h3>Project Discovery & Management</h3>
         <ul>
-            <li>Multi-location scanning of .als project files</li>
+            <li>Multi-location scanning (local, network, cloud, USB)</li>
             <li>Automatic file watching for real-time updates</li>
-            <li>Rich metadata extraction (plugins, tempo, tracks, samples)</li>
+            <li>Rich metadata extraction (plugins, tempo, tracks, samples, automation)</li>
+            <li>File hash tracking for duplicate detection</li>
             <li>Project health dashboard</li>
+            <li>Backup project exclusion (Backup folders automatically filtered)</li>
+            <li>Missing project detection and cleanup</li>
+            <li>Duplicate detection with hash comparison</li>
         </ul>
         
         <h3>Collections & Organization</h3>
         <ul>
-            <li>Static collections for albums, EPs, sessions</li>
-            <li>Smart collections with dynamic rules (tags, dates, tempo, plugins)</li>
-            <li>Flexible tagging system with colors</li>
+            <li>Static collections (albums, EPs, sessions, compilations)</li>
+            <li>Smart collections with dynamic rules (tags, dates, tempo, plugins, metadata)</li>
+            <li>Track management with custom names and artwork</li>
+            <li>Flexible tagging system with color coding</li>
+            <li>Drag-and-drop reordering</li>
         </ul>
         
         <h3>Search & Discovery</h3>
         <ul>
-            <li>Full-text search (FTS5) across projects, exports, notes</li>
-            <li>Advanced filtering by date, location, tags, tempo</li>
+            <li>Full-text search (FTS5) across names, exports, notes, plugins, devices</li>
+            <li>Advanced filtering (date, location, tags, tempo range, plugins)</li>
             <li>Grid and sortable list views</li>
+            <li>Real-time debounced search</li>
+            <li>View Missing Projects toggle</li>
         </ul>
         
-        <h3>Ableton Integration</h3>
+        <h3>Export Tracking & Playback</h3>
         <ul>
-            <li>Live version detection and launcher</li>
-            <li>Export tracking and audio playback</li>
-            <li>Ableton Link network monitoring</li>
-            <li>Preferences and Options.txt access</li>
+            <li>Automatic export detection during scanning</li>
+            <li>Smart fuzzy matching (exact → normalized → fuzzy)</li>
+            <li>Click-to-play on project cards (cycle through multiple exports)</li>
+            <li>In-app audio playback with transport controls</li>
+            <li>Waveform thumbnails</li>
+            <li>Export metadata tracking (format, bit depth, sample rate)</li>
+        </ul>
+        
+        <h3>Ableton Live Integration</h3>
+        <ul>
+            <li>Live version auto-detection</li>
+            <li>Project launcher with version selection</li>
+            <li>Version management in sidebar</li>
+            <li>Preferences folder access</li>
+            <li>Options.txt editor</li>
+            <li>Backup project launch from Properties dialog</li>
+        </ul>
+        
+        <h3>Backup & Archive</h3>
+        <ul>
+            <li>Backup location management</li>
+            <li>View all project backups in Properties</li>
+            <li>Launch backup versions with double-click</li>
+            <li>Archive service (ZIP backups)</li>
+            <li>One-click archiving</li>
+        </ul>
+        
+        <h3>Additional Features</h3>
+        <ul>
+            <li>Ableton Link WiFi network monitoring</li>
+            <li>MCP Agents integration links</li>
+            <li>Learning resources (Making Music, Learning Music, Max for Live docs)</li>
+            <li>Multiple themes (Orange, Cool Blue, Green, Rainbow)</li>
+            <li>Database cleanup tools</li>
         </ul>
         
         <h2 style="color: #FF764D;">📋 Requirements</h2>
@@ -1090,6 +1320,11 @@ class MainWindow(QMainWindow):
         Args:
             view: View to show ("projects", "collections", "locations", "link", "new_collection", "favorites", "recent")
         """
+        # Reset missing projects view when navigating away from projects view
+        if view != "projects" and self._show_missing_projects:
+            self._show_missing_projects = False
+            self.show_missing_action.setChecked(False)
+        
         if view == "projects":
             self.content_stack.setCurrentIndex(0)
             self._load_projects()

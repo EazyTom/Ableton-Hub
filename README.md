@@ -98,6 +98,13 @@ A comprehensive cross-platform desktop application for organizing, managing, and
 - **Duplicate Reports**: View and manage duplicate projects
 - **Smart Merging**: Options to merge or remove duplicates
 
+#### Project Status & Cleanup
+- **Missing Project Detection**: Automatically marks projects as MISSING when files are deleted or moved
+- **Backup Project Exclusion**: Backup .als files in Backup folders are automatically excluded from project grid
+- **Backup Project Access**: View and launch backup project versions from Project Properties dialog
+- **Missing Projects View**: Toggle to view MISSING projects in the View menu
+- **Database Cleanup**: Tools menu options to clean up MISSING projects or reset the entire database
+
 #### Ableton Live Integration
 - **Live Version Detection**: Automatically detect installed Ableton Live versions
 - **Live Launcher**: Launch projects with a specific Live version
@@ -109,7 +116,9 @@ A comprehensive cross-platform desktop application for organizing, managing, and
 
 #### Backup & Archive
 - **Backup Location Management**: Configure a dedicated backup folder from the sidebar
-- **Project Backups View**: See all backup copies of a project in the details dialog
+- **Project Backups View**: See all backup copies of a project in the Project Properties dialog
+- **Backup Project Launch**: Double-click any backup in the list to launch it with Ableton Live
+- **Automatic Backup Detection**: Finds backup .als files in Backup folders and timestamped filenames
 - **Archive Service**: Create compressed (ZIP) backups of projects with all assets
 - **One-Click Archive**: Archive projects directly to your configured backup location
 
@@ -149,34 +158,12 @@ A comprehensive cross-platform desktop application for organizing, managing, and
   - Tempo (low to high / high to low)
   - Modified date (newest / oldest)
   - Tags, Export status, and more
-- **Rainbow Tempo Colors**: Visual BPM indicator on project cards with color gradient (purple for 60 BPM → red for 200+ BPM)
-- **Responsive Layout**: Resizable sidebar and content areas
-- **Keyboard Shortcuts**: Efficient keyboard navigation
-- **Context Menus**: Right-click actions throughout the interface
-- **High DPI Support**: Automatic scaling for high-resolution displays
 - **Learning Resources**: Built-in links to:
   - Official Ableton documentation
   - Certified trainers directory
   - Regional user groups (Austin, Chicago, San Francisco)
   - Ableton Discord community
 
-### Advanced Features
-
-#### Project Health Monitoring
-- **Health Metrics**: Track project health indicators
-- **Issue Detection**: Identify projects with missing files, outdated metadata, or other issues
-- **Health Dashboard**: Visual dashboard showing project health statistics
-
-#### Database Management
-- **SQLite Database**: Lightweight, local database for all project metadata
-- **Database Migrations**: Automatic schema migrations for updates
-- **Database Reset**: Option to reset database and start fresh
-- **Data Integrity**: Foreign key constraints and referential integrity
-
-#### Configuration
-- **User Preferences**: Persistent configuration storage
-- **Window State**: Remembers window size, position, and sidebar state
-- **View Preferences**: Default view mode (grid/list) and other UI settings
 
 ## 🏗️ Architecture
 
@@ -556,14 +543,6 @@ The application can automatically detect default Ableton project folders (only e
 
 > **Note**: Live installation detection (for launching projects) searches different locations than project folders. The application automatically detects installed Live versions from standard installation paths.
 
-## 📚 Documentation
-
-Additional documentation is available in the `docs/` folder:
-
-- **REMAINING_PHASES_PLAN.md**: Comprehensive plan for Phases 4-7 with deep project analysis, AI/ML features, and Live integration
-- **NEW_FEATURES.md**: Feature ideas and upcoming enhancements
-- **FEATURE_RECOMMENDATIONS.md**: Future feature recommendations and ideas
-- **PHASE_25_IMPLEMENTATION.md**: Details on Phase 2.5 features (Smart Collections, Duplicate Detection, Health Dashboard)
 
 ## 🔍 For Ableton Developers & Engineers
 
@@ -642,13 +621,6 @@ Contributions are welcome! Please follow these guidelines:
 - Write docstrings for all public functions and classes
 - Keep functions focused and single-purpose
 
-## 🐛 Known Issues
-
-- Font warnings may appear in console (cosmetic only, doesn't affect functionality)
-- PNG icons may not display in Windows taskbar (application uses .ico format for better compatibility)
-- Large project libraries may take time to scan initially (scanning runs in background)
-- Some audio formats may require additional codecs on Linux (install gstreamer plugins)
-- Database migrations run automatically on startup (may take a moment on first update)
 
 ## 🔮 Roadmap
 
@@ -661,6 +633,10 @@ Contributions are welcome! Please follow these guidelines:
 - ✅ Sortable list view with column headers
 - ✅ In-app audio playback for exports
 - ✅ Project backup and archive system
+- ✅ Backup project detection and exclusion from grid
+- ✅ Backup project access and launch from Project Properties
+- ✅ Missing project detection and cleanup tools
+- ✅ View Missing Projects toggle in View menu
 - ✅ Live preferences and Options.txt access
 - ✅ MCP servers integration links
 - ✅ Smart collection tempo rules
@@ -688,7 +664,6 @@ Contributions are welcome! Please follow these guidelines:
 - Plugin usage dashboard
 - Project similarity detection
 
-See `docs/REMAINING_PHASES_PLAN.md` for detailed implementation plans.
 
 ## 📝 License
 

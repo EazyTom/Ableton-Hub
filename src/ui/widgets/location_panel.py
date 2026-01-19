@@ -123,7 +123,7 @@ class LocationPanel(QWidget):
         
         for row, loc in enumerate(self._locations):
             # Favorite indicator
-            fav_item = QTableWidgetItem("⭐" if loc.is_favorite else "")
+            fav_item = QTableWidgetItem("💎" if loc.is_favorite else "")
             fav_item.setData(Qt.ItemDataRole.UserRole, loc.id)
             fav_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table.setItem(row, 0, fav_item)

@@ -63,6 +63,7 @@ class UIConfig:
     show_status_bar: bool = True
     confirm_delete: bool = True
     date_format: str = "%Y-%m-%d %H:%M"
+    waveform_color_mode: str = "rainbow"  # "rainbow", "random", or "accent"
 
 
 @dataclass

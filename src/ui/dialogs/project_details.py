@@ -15,6 +15,7 @@ from PyQt6.QtGui import QColor
 from ...database import get_session, Project, Location, Collection, ProjectCollection, Export
 from ...services.audio_player import AudioPlayer, format_duration
 from ...utils.fuzzy_match import extract_song_name
+from ...utils.paths import find_backup_files
 from ..widgets.tag_editor import ProjectTagSelector
 from ..theme import AbletonTheme
 
@@ -200,6 +201,17 @@ class ProjectDetailsDialog(QDialog):
         
         layout.addWidget(exports_group)
         
+        # Available Project Backups
+        backups_group = QGroupBox("Available Project Backups")
+        backups_layout = QVBoxLayout(backups_group)
+        
+        self.backups_list = QListWidget()
+        self.backups_list.setMaximumHeight(120)
+        self.backups_list.itemDoubleClicked.connect(self._on_backup_double_click)
+        backups_layout.addWidget(self.backups_list)
+        
+        layout.addWidget(backups_group)
+        
         # Connect audio player signals
         self._audio_player = AudioPlayer.instance()
         self._audio_player.position_changed.connect(self._on_position_changed)
@@ -297,6 +309,9 @@ class ProjectDetailsDialog(QDialog):
                 item = QListWidgetItem("No exports linked")
                 item.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.exports_list.addItem(item)
+            
+            # Backups
+            self._load_backups()
         finally:
             session.close()
     
@@ -610,6 +625,105 @@ class ProjectDetailsDialog(QDialog):
         """Handle playback error."""
         QMessageBox.warning(self, "Playback Error", error)
         self._on_playback_stopped()
+    
+    def _load_backups(self) -> None:
+        """Load and display backup files for the project."""
+        if not self._project:
+            return
+        
+        self.backups_list.clear()
+        project_path = Path(self._project.file_path)
+        
+        try:
+            backup_files = find_backup_files(project_path)
+            if backup_files:
+                for backup_path in backup_files:
+                    # Format backup name with modification date
+                    mod_time = datetime.fromtimestamp(backup_path.stat().st_mtime)
+                    date_str = mod_time.strftime("%Y-%m-%d %H:%M")
+                    item = QListWidgetItem(f"💾 {backup_path.name} ({date_str})")
+                    item.setData(Qt.ItemDataRole.UserRole, str(backup_path))
+                    item.setToolTip(str(backup_path))
+                    self.backups_list.addItem(item)
+            else:
+                item = QListWidgetItem("No backup files found")
+                item.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.backups_list.addItem(item)
+        except Exception as e:
+            item = QListWidgetItem(f"Error loading backups: {str(e)}")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.backups_list.addItem(item)
+    
+    def _on_backup_double_click(self, item: QListWidgetItem) -> None:
+        """Handle double-click on backup item to launch it."""
+        backup_path_str = item.data(Qt.ItemDataRole.UserRole)
+        if not backup_path_str:
+            return
+        
+        backup_path = Path(backup_path_str)
+        if not backup_path.exists():
+            QMessageBox.warning(
+                self,
+                "Backup Not Found",
+                f"The backup file could not be found:\n{backup_path}"
+            )
+            return
+        
+        # Launch the backup project using the same mechanism as regular projects
+        from ...services.live_launcher import LiveLauncher
+        from ...services.live_detector import LiveVersion
+        from ...database import LiveInstallation
+        
+        session = get_session()
+        try:
+            # Check for favorite installation first
+            favorite_install = session.query(LiveInstallation).filter(
+                LiveInstallation.is_favorite == True
+            ).first()
+            
+            launcher = LiveLauncher()
+            
+            if favorite_install:
+                exe_path = Path(favorite_install.executable_path)
+                if exe_path.exists():
+                    live_version = LiveVersion(
+                        version=favorite_install.version,
+                        path=exe_path,
+                        build=favorite_install.build,
+                        is_suite=favorite_install.is_suite
+                    )
+                    success = launcher.launch_project(backup_path, live_version)
+                    if success:
+                        QMessageBox.information(
+                            self,
+                            "Backup Launched",
+                            f"Opening backup:\n{backup_path.name}\n\nwith {favorite_install.name}"
+                        )
+                        return
+                    else:
+                        QMessageBox.critical(
+                            self,
+                            "Launch Failed",
+                            f"Failed to launch {favorite_install.name} with backup:\n{backup_path.name}"
+                        )
+                        return
+            
+            # No favorite - show dialog to select Live version
+            from .live_version_dialog import LiveVersionDialog
+            dialog = LiveVersionDialog(backup_path.name, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_version = dialog.get_selected_version()
+                if selected_version:
+                    success = launcher.launch_project(backup_path, selected_version)
+                    if not success:
+                        QMessageBox.critical(
+                            self,
+                            "Launch Failed",
+                            f"Failed to launch Ableton Live with this backup.\n\n"
+                            f"Please check that Live is installed and try again."
+                        )
+        finally:
+            session.close()
     
     def _find_exports(self) -> None:
         """Find and link exports for this project."""

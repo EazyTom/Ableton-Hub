@@ -245,7 +245,7 @@ class Sidebar(QWidget):
         self._nav_items["recent"] = recent
         nav_section.add_item(recent)
         
-        favorites = SidebarItem("Favorites", "⭐")
+        favorites = SidebarItem("Favorites", "💎")
         favorites.clicked.connect(lambda: self._on_nav_click("favorites"))
         self._nav_items["favorites"] = favorites
         nav_section.add_item(favorites)
@@ -356,10 +356,20 @@ class Sidebar(QWidget):
         learning_music.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://learningmusic.ableton.com/")))
         learning_section.add_item(learning_music)
         
+        making_music = SidebarItem("Making Music", "📝")
+        making_music.setCheckable(False)  # Don't toggle, just click
+        making_music.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://makingmusic.ableton.com/")))
+        learning_section.add_item(making_music)
+        
         ableton_official = SidebarItem("Ableton.com", "🌐")
         ableton_official.setCheckable(False)  # Don't toggle, just click
         ableton_official.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com")))
         learning_section.add_item(ableton_official)
+        
+        ableton_help = SidebarItem("Ableton Help", "🛟")
+        ableton_help.setCheckable(False)  # Don't toggle, just click
+        ableton_help.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/help/")))
+        learning_section.add_item(ableton_help)
         
         learn_live = SidebarItem("Learn Live", "📚")
         learn_live.setCheckable(False)  # Don't toggle, just click
@@ -398,37 +408,32 @@ class Sidebar(QWidget):
         learning_section.add_item(certified_trainers)
         
         # User Groups
-        austin_group = SidebarItem("Austin User Group", "🤠")
-        austin_group.setCheckable(False)  # Don't toggle, just click
-        austin_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/abletonATX")))
-        learning_section.add_item(austin_group)
-        
-        chicago_group = SidebarItem("Chicago User Group", "🏙️")
-        chicago_group.setCheckable(False)  # Don't toggle, just click
-        chicago_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/chicagoableton")))
-        learning_section.add_item(chicago_group)
-        
-        sf_group = SidebarItem("San Francisco User Group", "🌉")
-        sf_group.setCheckable(False)  # Don't toggle, just click
-        sf_group.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.facebook.com/groups/sfableton")))
-        learning_section.add_item(sf_group)
+        user_groups = SidebarItem("Ableton User Groups", "👥")
+        user_groups.setCheckable(False)  # Don't toggle, just click
+        user_groups.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/community/user-groups")))
+        learning_section.add_item(user_groups)
         
         # Reference Documentation
         reference_sep = QLabel("Reference:")
         reference_sep.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px; margin-top: 8px;")
         learning_section.add_item(reference_sep)
         
-        live12_ref = SidebarItem("Live 12 Reference", "📖")
+        live12_ref = SidebarItem("Live Manual", "📖")
         live12_ref.setCheckable(False)  # Don't toggle, just click
         live12_ref.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/live-manual/12/")))
         learning_section.add_item(live12_ref)
+        
+        move_manual = SidebarItem("Move Manual", "🎛️")
+        move_manual.setCheckable(False)  # Don't toggle, just click
+        move_manual.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/move/manual/")))
+        learning_section.add_item(move_manual)
         
         live_api = SidebarItem("Live API Overview", "📘")
         live_api.setCheckable(False)  # Don't toggle, just click
         live_api.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/legacy/max8/vignettes/live_api_overview")))
         learning_section.add_item(live_api)
         
-        lom_api = SidebarItem("LOM API Reference", "🔧")
+        lom_api = SidebarItem("Live Object Model", "🔧")
         lom_api.setCheckable(False)  # Don't toggle, just click
         lom_api.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/legacy/max8/vignettes/live_object_model")))
         learning_section.add_item(lom_api)
@@ -441,6 +446,38 @@ class Sidebar(QWidget):
         sep_learning.setStyleSheet(f"background-color: {AbletonTheme.COLORS['border']};")
         sep_learning.setFixedHeight(1)
         content_layout.addWidget(sep_learning)
+        
+        # Max for Live section
+        max_for_live_section = SidebarSection("MAX for LIVE", start_collapsed=True)
+        
+        learn_max = SidebarItem("Learn Max", "📚")
+        learn_max.setCheckable(False)  # Don't toggle, just click
+        learn_max.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://cycling74.com/learn")))
+        max_for_live_section.add_item(learn_max)
+        
+        max_docs = SidebarItem("Max Documentation", "📖")
+        max_docs.setCheckable(False)  # Don't toggle, just click
+        max_docs.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://docs.cycling74.com/")))
+        max_for_live_section.add_item(max_docs)
+        
+        building_max_devices = SidebarItem("Building Max Devices", "🔨")
+        building_max_devices.setCheckable(False)  # Don't toggle, just click
+        building_max_devices.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/packs/building-max-devices/")))
+        max_for_live_section.add_item(building_max_devices)
+        
+        m4l_guidelines = SidebarItem("M4L Production Guidelines", "📋")
+        m4l_guidelines.setCheckable(False)  # Don't toggle, just click
+        m4l_guidelines.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/Ableton/maxdevtools/blob/main/m4l-production-guidelines/m4l-production-guidelines.md")))
+        max_for_live_section.add_item(m4l_guidelines)
+        
+        content_layout.addWidget(max_for_live_section)
+        
+        # Separator
+        sep_max = QFrame()
+        sep_max.setFrameShape(QFrame.Shape.HLine)
+        sep_max.setStyleSheet(f"background-color: {AbletonTheme.COLORS['border']};")
+        sep_max.setFixedHeight(1)
+        content_layout.addWidget(sep_max)
         
         # Backups section
         backups_section = SidebarSection("BACKUPS", start_collapsed=True)
@@ -538,7 +575,7 @@ class Sidebar(QWidget):
         content_layout.addWidget(sep_packs)
         
         # MCP Servers section (Ableton MCP integrations)
-        mcp_section = SidebarSection("MCP SERVERS", start_collapsed=True)
+        mcp_section = SidebarSection("MCP AGENTS", start_collapsed=True)
         
         mcp_intro = QLabel("AI Integration Tools:")
         mcp_intro.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
@@ -595,7 +632,7 @@ class Sidebar(QWidget):
         move_local_item.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("http://move.local")))
         bottom_links_layout.addWidget(move_local_item)
         
-        link_item = SidebarItem("Link Network", "📡")
+        link_item = SidebarItem("Ableton Link WiFi", "📡")
         link_item.clicked.connect(lambda: self._on_nav_click("link"))
         self._nav_items["link"] = link_item
         bottom_links_layout.addWidget(link_item)
@@ -714,9 +751,9 @@ class Sidebar(QWidget):
                 
                 for install in installations:
                     # Create display text
-                    favorite_marker = "⭐ " if install.is_favorite else ""
+                    favorite_marker = "💎 " if install.is_favorite else ""
                     display_text = f"{favorite_marker}{install.name}"
-                    icon = "🎵" if install.is_suite else "🎶"
+                    icon = "🎧" if install.is_suite else "🎧"
                     
                     item = SidebarItem(display_text, icon)
                     item.item_id = install.id

@@ -111,9 +111,10 @@ class ScanWorker(QThread):
         
         # Get existing projects for this location
         existing_paths: Set[str] = set()
-        for project in session.query(Project).filter(
+        existing_projects = session.query(Project).filter(
             Project.location_id == location.id
-        ).all():
+        ).all()
+        for project in existing_projects:
             existing_paths.add(project.file_path)
         
         # Walk the directory tree
@@ -133,6 +134,10 @@ class ScanWorker(QThread):
                 file_path = Path(root) / filename
                 
                 if is_ableton_project(file_path):
+                    # Skip .als files in Backup folders
+                    if self._is_backup_file(file_path):
+                        continue
+                    
                     normalized_path = normalize_path(file_path)
                     found_paths.add(str(file_path))
                     
@@ -145,14 +150,24 @@ class ScanWorker(QThread):
                         # Update existing project
                         self._update_project(file_path, session)
         
-        # Mark missing projects
+        # Mark missing projects and backup projects that should be excluded
         missing = existing_paths - found_paths
-        for path_str in missing:
-            project = session.query(Project).filter(
-                Project.file_path == path_str
-            ).first()
-            if project:
+        backup_projects_marked = 0
+        
+        for project in existing_projects:
+            path_str = project.file_path
+            project_path = Path(path_str)
+            
+            # Check if this existing project is a backup file (should be excluded)
+            if project_path.exists() and self._is_backup_file(project_path):
                 project.status = ProjectStatus.MISSING
+                backup_projects_marked += 1
+            # Check if project is missing (not found in scan)
+            elif path_str in missing:
+                project.status = ProjectStatus.MISSING
+        
+        if backup_projects_marked > 0:
+            self.logger.info(f"Marked {backup_projects_marked} backup project(s) as missing in location: {location.name}")
         
         session.commit()
         
@@ -442,6 +457,21 @@ class ScanWorker(QThread):
         if exports_found > 0:
             session.commit()
             self.logger.info(f"Found {exports_found} export(s), linked {exports_linked} to projects")
+    
+    def _is_backup_file(self, file_path: Path) -> bool:
+        """Check if an .als file is in a Backup folder.
+        
+        Args:
+            file_path: Path to the .als file.
+            
+        Returns:
+            True if the file is in a Backup folder.
+        """
+        # Check if any parent directory is named "Backup" (case-insensitive)
+        for parent in file_path.parents:
+            if parent.name.lower() == "backup":
+                return True
+        return False
     
     def _is_excluded(self, path: Path) -> bool:
         """Check if a path should be excluded from scanning.
