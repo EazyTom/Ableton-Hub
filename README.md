@@ -81,10 +81,14 @@ A comprehensive cross-platform desktop application for organizing, managing, and
 - **Tag Filtering**: Filter projects by one or more tags
 
 #### Export Tracking
-- **Automatic Export Detection**: Automatically discover exported audio files associated with projects
-- **Export Metadata**: Track export formats, bit depths, sample rates
-- **Export-to-Project Mapping**: Link exports back to source projects
-- **Export Status Indicators**: Visual indicators for projects with/without exports
+- **Automatic Export Detection**: Scans for exported audio files during project scanning:
+  - Searches project folders, location roots, and common export directories (Exports, Renders, Bounces, Mixdowns)
+  - Smart fuzzy matching handles renamed exports (strips "project" suffix, version numbers, date stamps)
+  - Three-tier matching: exact match → normalized match → fuzzy match (65% threshold)
+- **Export Metadata**: Track export formats, bit depths, sample rates, file sizes
+- **Export-to-Project Mapping**: Link exports back to source projects with confidence scoring
+- **Export Status Indicators**: Green border and 🔊 icon for projects with playable exports
+- **Export Song Name**: Set custom export names to improve matching accuracy
 
 #### Duplicate Detection
 - **Multiple Detection Methods**:
@@ -124,6 +128,11 @@ A comprehensive cross-platform desktop application for organizing, managing, and
 - **Waveform Thumbnails**: Generate visual waveform previews from exported audio files
 - **Automatic Generation**: Thumbnails created automatically during export tracking
 - **Default Artwork**: Uses Ableton logo as default thumbnail when preview unavailable
+- **Click-to-Play on Project Cards**: Single-click any project card with exports to instantly play audio
+  - Click again to cycle through multiple exports
+  - Click on last export to stop playback
+  - Visual feedback shows current export name and position (e.g., "🔊 MySong (2/3)")
+- **Status Bar Playback Display**: Shows currently playing filename in the status bar with green highlight
 - **In-App Audio Playback**: Play exported audio files directly from the project details:
   - Play/Pause and Stop controls
   - Seek slider with time display
@@ -644,6 +653,10 @@ Contributions are welcome! Please follow these guidelines:
 ## 🔮 Roadmap
 
 ### Recently Completed
+- ✅ Click-to-play exports on project cards
+- ✅ Automatic export detection during scanning
+- ✅ Smart fuzzy matching for export-to-project linking
+- ✅ Status bar playback display
 - ✅ Tempo filtering and sorting
 - ✅ Sortable list view with column headers
 - ✅ In-app audio playback for exports
