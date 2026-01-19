@@ -4,7 +4,18 @@
 
 # Ableton Hub
 
-A comprehensive cross-platform desktop application for organizing, managing, and discovering Ableton Live projects across multiple locations. Built with Python and PyQt6, Ableton Hub provides powerful tools for music producers to maintain their project libraries, create collections, track exports, and seamlessly integrate with their Ableton Live workflow.
+## What is Ableton Hub?
+
+Ableton Hub is a desktop application that helps you organize, manage, and discover your Ableton Live projects across multiple locations. Whether your projects are on your computer, external drives, network shares, or cloud storage, Ableton Hub scans and indexes them all in one place. Creating collections of your projects and mapping exports to projects with deep learning of your project stats.
+
+**Key Benefits:**
+- **Find projects quickly** - Search across all your projects by name, tempo, plugins, or tags
+- **Organize with collections** - Create albums, EPs, or custom collections to group related projects
+- **Track your exports** - Automatically find and link exported audio files to their source projects
+- **Launch with Live** - Open any project directly in Ableton Live with your preferred version
+- **Discover patterns** - See which plugins and devices you use most across your projects
+
+Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub provides powerful tools for music producers to maintain their project libraries and seamlessly integrate with their Ableton Live workflow.
 
 <div align="center">
   <img src="resources/images/ableton-hub-screenshot.png" alt="Ableton Hub Logo" />
@@ -43,7 +54,7 @@ A comprehensive cross-platform desktop application for organizing, managing, and
 - **Collection Types**: Support for albums, EPs, sessions, compilations, and custom types
 
 #### Search & Discovery
-- **Full-Text Search**: Powerful FTS5-based search across:
+- **Full-Text Search**: Powerful search (using FTS5 - Full-Text Search engine) across:
   - Project names
   - Export song names
   - Notes and tags
@@ -164,8 +175,135 @@ A comprehensive cross-platform desktop application for organizing, managing, and
   - Regional user groups (Austin, Chicago, San Francisco)
   - Ableton Discord community
 
+## 📋 Requirements
 
-## 🏗️ Architecture
+- **Python** (programming language): Version 3.11 or higher
+- **Operating System**: 
+  - macOS 10.15+ (Catalina or later)
+  - Windows 10/11
+  - Linux (with Qt6 support)
+
+## 🚀 Installation
+
+Choose the installation method that works best for you. If you're new to Python or command-line tools, see the detailed platform-specific guides below.
+
+### Method 1: Install from GitHub (Recommended)
+
+This is the easiest method - pip (Python package installer) will automatically download and install everything you need.
+
+**macOS:**
+```bash
+pip install git+https://github.com/yourusername/ableton-hub.git
+ableton-hub
+```
+
+**Windows:**
+```bash
+pip install git+https://github.com/yourusername/ableton-hub.git
+ableton-hub
+```
+
+This method will:
+- ✅ Automatically install all dependencies (PyQt6, SQLAlchemy, ML libraries, etc.)
+- ✅ Create the `ableton-hub` command in your PATH (system path)
+- ✅ Work on Windows, macOS, and Linux
+- ✅ Allow easy updates: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`
+
+> **Note**: This method requires Python 3.11+ to be installed. Most macOS users already have Python installed. See platform-specific guides below if you need help checking or installing Python.
+
+### Method 2: Download Source and Install
+
+If you prefer to download the source code and install manually:
+
+1. **Download the source code**:
+   - Go to the GitHub repository and click "Code" → "Download ZIP"
+   - Extract the ZIP file to a folder on your computer
+
+2. **Open Terminal (macOS) or Command Prompt/PowerShell (Windows)**:
+   - macOS: Press `Cmd + Space`, type "Terminal", and press Enter
+   - Windows: Press `Win + R`, type "cmd" or "powershell", and press Enter
+
+3. **Navigate to the extracted folder**:
+   ```bash
+   # macOS
+   cd ~/Downloads/ableton-hub-ableton_hub
+   
+   # Windows (adjust path as needed)
+   cd C:\Users\YourName\Downloads\ableton-hub-ableton_hub
+   ```
+
+4. **Set up a virtual environment** (recommended - keeps dependencies isolated):
+   ```bash
+   # macOS
+   python3 -m venv .venv
+   source .venv/bin/activate
+   
+   # Windows
+   python -m venv .venv
+   .venv\Scripts\activate.bat
+   ```
+
+5. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+6. **Run the application**:
+   ```bash
+   python -m src.main
+   ```
+
+### Platform-Specific Installation Guides
+
+For detailed step-by-step instructions with troubleshooting help:
+
+- **[macOS Installation Guide](docs/INSTALLATION_MAC.md)** - Complete Mac setup instructions
+- **[Windows Installation Guide](docs/INSTALLATION_WINDOWS.md)** - Complete Windows setup instructions
+
+These guides include:
+- How to check if Python is installed
+- How to install Python if needed
+- How to verify your installation worked
+- Common issues and solutions
+
+## 🎯 First Time Setup
+
+New to Ableton Hub? Check out the **[First Time Setup Guide](docs/FIRST_TIME_SETUP.md)** for a detailed walkthrough of what to expect on your first launch and how to get started.
+
+**Quick Overview:**
+1. **Launch the application** using one of the installation methods above
+2. **Add your first location**:
+   - Click "Add Location" in the sidebar
+   - Select a folder containing Ableton projects
+   - Choose location type (Local, Network, Cloud, etc.)
+3. **Scan for projects**:
+   - Click the "Scan" button in the toolbar
+   - Wait for the scan to complete (this may take a few minutes depending on how many projects you have)
+   - Projects will appear in the main view
+4. **Explore your projects**:
+   - Double-click any project to open it in Ableton Live
+   - Use the search bar to find projects by name, tempo, or plugins
+   - Click project cards to see details and play exports
+
+**Next Steps:**
+- Create collections to organize related projects
+- Add tags to categorize your projects
+- Explore the search and filtering options
+- Check out the Health Dashboard to see project statistics
+
+## 📚 Additional Resources
+
+- **[First Time Setup Guide](docs/FIRST_TIME_SETUP.md)** - Detailed walkthrough for new users
+- **[macOS Installation Guide](docs/INSTALLATION_MAC.md)** - Step-by-step Mac installation
+- **[Windows Installation Guide](docs/INSTALLATION_WINDOWS.md)** - Step-by-step Windows installation
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Common tasks and keyboard shortcuts
+- **[FAQ](docs/FAQ.md)** - Frequently asked questions
+
+## 🛠️ For Developers
+
+This section contains technical information for developers who want to contribute to or modify Ableton Hub.
+
+### Architecture
 
 > If viewing on mobile, expand the "View Diagram (Mobile)" section below for an image version.
 
@@ -262,7 +400,7 @@ If the Mermaid diagram above doesn't render (e.g., on GitHub mobile app), view t
 
 The application follows a layered architecture:
 
-**UI Layer (PyQt6)**
+**UI Layer (PyQt6 - GUI framework)**
 - Main Window orchestrates all UI components
 - Sidebar Navigation provides access to locations, collections, and Live installations
 - Project Grid/List View displays projects with multiple view modes
@@ -285,7 +423,7 @@ The application follows a layered architecture:
 - Archive Service handles project backup and archiving
 
 **Data Storage**
-- SQLite Database (with FTS5) stores all project metadata and enables full-text search
+- SQLite Database (file-based database) with FTS5 (Full-Text Search engine) stores all project metadata and enables full-text search
 - Configuration stores user preferences and settings
 - Thumbnail Cache stores generated waveform previews
 
@@ -301,120 +439,45 @@ The application follows a layered architecture:
 - Services like Export Tracker and Archive Service interact with both files and database
 - All user preferences and window state are persisted in configuration
 
-## 📋 Requirements
+### Setup Development Environment
 
-- **Python**: 3.11 or higher
-- **Operating System**: 
-  - Windows 10/11
-  - macOS 10.15+ (Catalina or later)
-  - Linux (with Qt6 support)
-
-## 🚀 Installation
-
-### From Source
-
-1. **Clone the repository**:
+1. **Clone the repository** (using git - version control system):
    ```bash
    git clone https://github.com/yourusername/ableton-hub.git
    cd ableton-hub/ableton_hub
    ```
 
-2. **Create a virtual environment**:
+2. **Create a virtual environment** (isolated Python environment):
    ```bash
+   # macOS
+   python3 -m venv venv
+   source venv/bin/activate
+   
    # Windows
    python -m venv venv
    venv\Scripts\activate
-
-   # macOS/Linux
-   python3 -m venv venv
-   source venv/bin/activate
    ```
 
-3. **Install dependencies**:
+3. **Install with dev dependencies**:
    ```bash
-   pip install -r requirements.txt
+   pip install -e ".[dev]"
    ```
 
-4. **Run the application**:
-   
-   **Option A: Command Line**
+4. **Run tests**:
    ```bash
-   python -m src.main
+   pytest
    ```
-   
-   **Option B: Double-Click Launcher (Windows)**
-   - Double-click `run_ableton_hub.bat` to run with console output
-   - Or double-click `run_ableton_hub.pyw` to run without console window
-   
-   **Option C: Create Standalone Executable (Optional)**
+
+5. **Format code**:
    ```bash
-   pip install pyinstaller
-   pyinstaller --name="Ableton Hub" --windowed --icon=resources/icons/AProject.ico --add-data "resources;resources" --add-data "src;src" src/main.py
+   black src tests
+   ruff check src tests --fix
    ```
-   This creates a standalone executable in the `dist` folder that can be run without Python installed.
-   
-   > **Note**: The executable will include all dependencies, so the first build may take several minutes.
 
-### Using pip (Recommended)
-
-**Option 1: Install from GitHub (Current)**
-```bash
-pip install git+https://github.com/yourusername/ableton-hub.git
-ableton-hub
-```
-
-**Option 2: Install from PyPI (When Published)**
-```bash
-pip install ableton-hub
-ableton-hub
-```
-
-Both methods will:
-- ✅ Automatically install all dependencies (PyQt6, SQLAlchemy, ML libraries, etc.)
-- ✅ Create the `ableton-hub` command in your PATH
-- ✅ Work on Windows, macOS, and Linux
-- ✅ Allow easy updates: `pip install --upgrade ableton-hub`
-
-> **Note**: The pip method requires Python 3.11+ to be installed. For users without Python, use the standalone executable (see "From Source" → Option C).
-
-## 🎯 Quick Start
-
-1. **Launch the application** using one of the methods above
-2. **Add your first location**:
-   - Click "Add Location" in the sidebar
-   - Select a folder containing Ableton projects
-   - Choose location type (Local, Network, Cloud, etc.)
-3. **Scan for projects**:
-   - Click the "Scan" button in the toolbar
-   - Wait for the scan to complete
-   - Projects will appear in the main view
-4. **Create a collection**:
-   - Click "New Collection" in the sidebar
-   - Name your collection and choose a type
-   - Drag projects into the collection
-5. **Search and filter**:
-   - Use the search bar to find projects
-   - Use date filters, location filters, or tag filters
-   - Search for specific plugins or devices
-
-## 🛠️ Development
-
-### Setup Development Environment
-
-```bash
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Format code
-black src tests
-ruff check src tests --fix
-
-# Type checking
-mypy src
-```
+6. **Type checking**:
+   ```bash
+   mypy src
+   ```
 
 ### Application Data Locations
 
@@ -456,25 +519,54 @@ The application version uses a **single source of truth** pattern:
 
 > **Note**: The "What's New" section is maintained in `src/__init__.py` and displayed in the in-app About dialog. Feature lists in the README are updated as needed for documentation.
 
-### Troubleshooting
+## 🔧 Troubleshooting
 
-**Application won't start:**
-- Ensure Python 3.11+ is installed and in PATH
-- Check that all dependencies are installed: `pip install -r requirements.txt`
-- Verify PyQt6 is properly installed (may require system libraries on Linux)
+Having issues? Here are solutions to common problems:
 
-**Projects not appearing:**
+### I can't install Python or pip isn't working
+
+**macOS:**
+- Most Macs come with Python installed. Check by opening Terminal and typing: `python3 --version`
+- If Python isn't installed, download it from [python.org](https://www.python.org/downloads/) or use Homebrew: `brew install python3`
+- See the [macOS Installation Guide](docs/INSTALLATION_MAC.md) for detailed help
+
+**Windows:**
+- Download Python from [python.org](https://www.python.org/downloads/)
+- During installation, make sure to check "Add Python to PATH"
+- See the [Windows Installation Guide](docs/INSTALLATION_WINDOWS.md) for detailed help
+
+### The app won't start
+
+- Ensure Python 3.11+ is installed (check with `python --version` or `python3 --version`)
+- If you used Method 2 (source installation), make sure you activated the virtual environment (`.venv`)
+- Try reinstalling: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`
+- On Linux, you may need additional system libraries for PyQt6 (GUI framework)
+
+### I don't see my projects
+
 - Check that locations are added and active in the sidebar
-- Verify the scan completed successfully (check the status bar)
-- Ensure `.als` files are in the scanned directories
+- Verify the scan completed successfully (check the status bar at the bottom)
+- Make sure `.als` files are in the folders you're scanning
+- Try clicking "Scan All Locations" in the toolbar
+- Check the "View" menu → "Show Missing Projects" to see if projects were marked as missing
 
-**Audio playback not working:**
-- Verify audio codecs are available (Qt Multimedia backends)
-- On Linux, may need `gstreamer` plugins: `sudo apt-get install gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
+### Audio playback isn't working
 
-**Database issues:**
-- Database can be reset from Settings (this will delete all indexed projects)
-- Database file can be manually backed up from the application data directory
+- Make sure you have exported audio files (WAV, MP3, etc.) in your project folders
+- On Linux, you may need to install audio codecs: `sudo apt-get install gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
+- Try clearing the thumbnail cache: Tools → Clear Thumbnail Cache
+
+### I'm confused by the interface
+
+- Check out the [First Time Setup Guide](docs/FIRST_TIME_SETUP.md) for a walkthrough
+- See the [Quick Reference](docs/QUICK_REFERENCE.md) for common tasks
+- Browse the [FAQ](docs/FAQ.md) for answers to common questions
+
+### Something went wrong
+
+- Check the status bar at the bottom of the window for error messages
+- Try resetting the database: Tools → Reset Database (⚠️ This will delete all your indexed projects)
+- If the problem persists, open an issue on GitHub with details about what happened
 
 ### Project Structure
 
@@ -525,17 +617,17 @@ ableton_hub/
 
 The application can automatically detect default Ableton project folders (only existing directories are suggested):
 
-**Windows:**
-- `%USERPROFILE%\Documents\Ableton\`
-- `%USERPROFILE%\Music\Ableton\`
-- `%APPDATA%\Ableton\`
-- `%USERPROFILE%\Documents\Ableton\User Library\`
-
 **macOS:**
 - `~/Music/Ableton/`
 - `~/Documents/Ableton/`
 - `~/Library/Application Support/Ableton/`
 - `~/Music/Ableton/User Library/`
+
+**Windows:**
+- `%USERPROFILE%\Documents\Ableton\`
+- `%USERPROFILE%\Music\Ableton\`
+- `%APPDATA%\Ableton\`
+- `%USERPROFILE%\Documents\Ableton\User Library\`
 
 **Linux:**
 - `~/Music/Ableton/`
@@ -543,12 +635,9 @@ The application can automatically detect default Ableton project folders (only e
 
 > **Note**: Live installation detection (for launching projects) searches different locations than project folders. The application automatically detects installed Live versions from standard installation paths.
 
+### Technical Details
 
-## 🔍 For Ableton Developers & Engineers
-
-This section provides technical details that may be of interest to Ableton developers.
-
-### .als File Parsing
+#### .als File Parsing
 
 The application parses Ableton Live Set (`.als`) files to extract metadata. The parser reads:
 - **Project Information**: Name, Live version, creation/modification dates
@@ -558,44 +647,44 @@ The application parses Ableton Live Set (`.als`) files to extract metadata. The 
 - **Arrangement Data**: Arrangement length (bars), automation status
 - **Sample References**: Linked audio files and samples
 
-The parser handles `.als` files from Live 9.x through Live 12.x. The `.als` format is XML-based, and the parser uses standard XML parsing with error handling for malformed files.
+The parser handles `.als` files from Live 9.x through Live 12.x. The `.als` format is XML-based (eXtensible Markup Language), and the parser uses standard XML parsing with error handling for malformed files.
 
-### Live Version Compatibility
+#### Live Version Compatibility
 
 - **Detected Versions**: Automatically detects Live 9.x, 10.x, 11.x, and 12.x installations
 - **Launch Support**: Can launch projects with any detected Live version
 - **Version-Specific Features**: Some metadata extraction may vary by Live version
 
-### Ableton Link Integration
+#### Ableton Link Integration
 
-The application includes Ableton Link network discovery using the `zeroconf` library. It can:
+The application includes Ableton Link network discovery using the `zeroconf` library (zero-configuration networking). It can:
 - Discover devices on the Link network
 - Monitor Link network status
 - Display device information (name, IP address)
 
 This does not interfere with Live's Link functionality and operates in read-only mode.
 
-### Data Privacy & Security
+#### Data Privacy & Security
 
 - **Local-Only Storage**: All data is stored locally; no cloud sync or external services
 - **No Network Communication**: The application does not send any data to external servers
 - **Read-Only Access**: The application only reads `.als` files and does not modify them
-- **Export Detection**: Uses fuzzy matching to link exported audio files to projects (no modification of export files)
+- **Export Detection**: Uses fuzzy matching (approximate string matching) to link exported audio files to projects (no modification of export files)
 
-### Technical Stack
+#### Technical Stack
 
-- **UI Framework**: PyQt6 (Qt 6.6+) for cross-platform GUI
-- **Database**: SQLite with FTS5 for full-text search
-- **Async Operations**: `qasync` for async/await support with Qt event loop
-- **File Watching**: `watchdog` for real-time file system monitoring
+- **UI Framework**: PyQt6 (Qt 6.6+) for cross-platform GUI (Graphical User Interface)
+- **Database**: SQLite (file-based database) with FTS5 (Full-Text Search engine) for full-text search
+- **Async Operations**: `qasync` (async/await support library) for async/await support with Qt event loop
+- **File Watching**: `watchdog` (file system monitoring library) for real-time file system monitoring
 - **Audio Playback**: Qt Multimedia (QMediaPlayer) for cross-platform audio preview
 
-### Project Structure & Architecture
+#### Project Structure & Architecture
 
 The application follows a clean architecture pattern:
-- **UI Layer**: PyQt6 widgets and dialogs (presentation)
+- **UI Layer**: PyQt6 widgets and dialogs (presentation layer)
 - **Service Layer**: Business logic and domain services
-- **Data Layer**: SQLAlchemy ORM with repository pattern
+- **Data Layer**: SQLAlchemy ORM (Object-Relational Mapping) with repository pattern
 - **Utils**: Cross-platform utilities and helpers
 
 This separation allows for easy testing and future enhancements without major refactoring.
