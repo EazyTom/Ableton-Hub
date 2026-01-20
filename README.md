@@ -197,20 +197,22 @@ This is the easiest method - pip (Python package installer) will automatically d
 **macOS:**
 ```bash
 pip install git+https://github.com/yourusername/ableton-hub.git
-ableton-hub
+ableton-hub  # Run the application (this is the command, not a directory)
 ```
 
 **Windows:**
 ```bash
 pip install git+https://github.com/yourusername/ableton-hub.git
-ableton-hub
+ableton-hub  # Run the application (this is the command, not a directory)
 ```
 
 This method will:
 - ✅ Automatically install all dependencies (PyQt6, SQLAlchemy, ML libraries, etc.)
-- ✅ Create the `ableton-hub` command in your PATH (system path)
+- ✅ Create the `ableton-hub` command in your PATH (system path) - you can run it from anywhere
 - ✅ Work on Windows, macOS, and Linux
 - ✅ Allow easy updates: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`
+
+> **Note**: `ableton-hub` is the executable command created by pip installation. You don't need to navigate to any directory - just run `ableton-hub` from anywhere in your terminal after installation.
 
 > **Note**: This method requires Python 3.11+ to be installed. Most macOS users already have Python installed. See platform-specific guides below if you need help checking or installing Python.
 
