@@ -407,6 +407,12 @@ class MainWindow(QMainWindow):
         self.health_dashboard.project_selected.connect(self._on_project_selected)
         self.content_stack.addWidget(self.health_dashboard)
         
+        # Recommendations panel (index 5)
+        from .widgets.recommendations_panel import RecommendationsPanel
+        self.recommendations_panel = RecommendationsPanel()
+        self.recommendations_panel.project_selected.connect(self._on_project_selected)
+        self.content_stack.addWidget(self.recommendations_panel)
+        
         self.splitter.addWidget(self.content_stack)
         
         # Set initial sizes
@@ -1404,6 +1410,12 @@ class MainWindow(QMainWindow):
         elif view == "health":
             self.content_stack.setCurrentIndex(4)
             self.health_dashboard.refresh()
+        elif view == "recommendations":
+            self.content_stack.setCurrentIndex(5)
+            # If a project is selected, set it in recommendations panel
+            selected_ids = self.project_grid.get_selected_ids()
+            if selected_ids and len(selected_ids) == 1:
+                self.recommendations_panel.set_project(selected_ids[0])
         elif view == "new_collection":
             # Show new collection dialog
             self._on_new_collection()
@@ -1783,7 +1795,10 @@ class MainWindow(QMainWindow):
     # Project handlers
     def _on_project_selected(self, project_id: int) -> None:
         """Handle project selection."""
-        pass  # Could show details panel
+        # Update recommendations panel if it's visible
+        if self.content_stack.currentIndex() == 5:  # Recommendations panel
+            self.recommendations_panel.set_project(project_id)
+        # Could show details panel
     
     def _on_project_open(self, project_id: int) -> None:
         """Open a project with Ableton Live."""

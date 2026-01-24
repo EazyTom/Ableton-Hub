@@ -10,6 +10,7 @@ Ableton Hub is a desktop application that helps you organize, manage, and discov
 
 **Key Benefits:**
 - **Find projects quickly** - Search across all your projects by name, tempo, plugins, or tags
+- **Discover similar projects** - Find projects with similar plugins, devices, tempo, and structure using advanced similarity analysis
 - **Organize with collections** - Create albums, EPs, or custom collections to group related projects
 - **Track your exports** - Automatically find and link exported audio files to their source projects
 - **Launch with Live** - Open any project directly in Ableton Live with your preferred version
@@ -48,6 +49,7 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - Filter by plugins, devices, or project metadata
   - Filter by rating, favorites, or export status
   - Filter by tempo range (min/max BPM)
+  - **Filter by similarity**: Find projects similar to a reference project (with configurable similarity threshold)
 - **Track Management**: Organize projects within collections as tracks with:
   - Custom track names
   - Per-track artwork
@@ -69,6 +71,25 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
 - **Search Modes**: Filter by name, export name, tags, or notes
 - **Real-time Results**: Debounced search with instant results
 - **Always-Visible Tempo Filter**: Quick-access tempo range buttons in the search bar
+
+#### Project Similarity & Discovery ⭐
+- **Intelligent Similarity Analysis**: Find projects similar to any reference project using advanced algorithms:
+  - **Jaccard Similarity Algorithm**: Measures plugin and device overlap between projects
+  - **Multi-Metric Comparison**: Combines plugin similarity, device similarity, tempo proximity, structural similarity, and feature vector analysis
+  - **Weighted Scoring**: Overall similarity score (0-100%) with detailed breakdowns
+- **Multiple Discovery Methods**:
+  - **Project Details Dialog**: View similar projects directly in project properties
+  - **Context Menu**: Right-click any project to "Find Similar Projects"
+  - **Recommendations Panel**: Dedicated sidebar panel showing similar projects and recommendations
+  - **Smart Collections**: Filter collections by similarity to a reference project
+  - **Visual Indicators**: Similarity badges on project cards when similar projects exist
+- **Similarity Metrics**:
+  - Plugin overlap (Jaccard similarity on plugin sets)
+  - Device overlap (Jaccard similarity on device sets)
+  - Tempo proximity (±5 BPM tolerance)
+  - Structural similarity (track counts, arrangement length)
+  - Feature vector cosine similarity
+- **Detailed Explanations**: Tooltips and explanations show why projects are similar (shared plugins, devices, tempo, etc.)
 
 #### Location Management
 - **Multiple Location Types**:
@@ -345,6 +366,8 @@ graph TB
         SmartCollections["Smart Collections"]
         DuplicateDetector["Duplicate Detector"]
         HealthCalculator["Health Calculator"]
+        SimilarityAnalyzer["Similarity Analyzer"]
+        RecommendationEngine["Recommendation Engine"]
         AudioPlayer["Audio Player"]
         ArchiveService["Archive Service"]
     end
@@ -373,6 +396,8 @@ graph TB
     SearchBar --> SQLite
     CollectionView --> SmartCollections
     HealthDashboard --> HealthCalculator
+    MainWindow --> SimilarityAnalyzer
+    MainWindow --> RecommendationEngine
     
     Scanner --> ALSParser
     Scanner --> ProjectFiles
@@ -391,8 +416,12 @@ graph TB
     ExportTracker --> SQLite
     
     SmartCollections --> SQLite
+    SmartCollections --> SimilarityAnalyzer
     DuplicateDetector --> SQLite
     HealthCalculator --> SQLite
+    SimilarityAnalyzer --> SQLite
+    RecommendationEngine --> SimilarityAnalyzer
+    RecommendationEngine --> SQLite
     AudioPlayer --> ExportedAudio
     ArchiveService --> ProjectFiles
     ArchiveService --> SQLite
@@ -435,6 +464,8 @@ The application follows a layered architecture:
 - Smart Collections creates rule-based dynamic collections
 - Duplicate Detector finds duplicate projects using hash comparison
 - Health Calculator computes project health metrics
+- **Similarity Analyzer** finds similar projects using Jaccard similarity and multi-metric analysis
+- **Recommendation Engine** provides project recommendations based on similarity
 - Audio Player provides in-app playback of exported audio
 - Archive Service handles project backup and archiving
 
@@ -715,6 +746,12 @@ Contributions are welcome! Please follow these guidelines:
 ## 🔮 Roadmap
 
 ### Recently Completed
+- ✅ **Project Similarity & Discovery** - Find similar projects using Jaccard similarity algorithm and multi-metric analysis
+- ✅ Similar projects in Project Details Dialog
+- ✅ "Find Similar Projects" context menu option
+- ✅ Recommendations Panel with similarity-based recommendations
+- ✅ Smart Collections similarity filter rule
+- ✅ Visual similarity indicators on project cards
 - ✅ Click-to-play exports on project cards
 - ✅ Automatic export detection during scanning
 - ✅ Smart fuzzy matching for export-to-project linking
@@ -734,9 +771,6 @@ Contributions are welcome! Please follow these guidelines:
 - ✅ Smart collection tempo rules
 - ✅ Visual project export indicators
 
-### In Progress
-- 🔄 Deep project analysis (plugin patterns, similarity detection)
-
 ### Planned
 - **Pack Management & Browsing**:
   - Full pack browser with installed pack detection
@@ -754,7 +788,6 @@ Contributions are welcome! Please follow these guidelines:
 - AI/ML project clustering and recommendations
 - Real-time Ableton Live integration (OSC)
 - Plugin usage dashboard
-- Project similarity detection
 
 
 ## 📝 License

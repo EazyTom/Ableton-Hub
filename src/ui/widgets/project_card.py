@@ -92,6 +92,21 @@ class ProjectCard(QFrame):
         self.favorite_indicator.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 12px;")
         name_row.addWidget(self.favorite_indicator)
         
+        # Similarity indicator (shows if similar projects exist)
+        self.similarity_indicator = QLabel()
+        self.similarity_indicator.setStyleSheet(f"""
+            QLabel {{
+                color: {AbletonTheme.COLORS['accent']};
+                font-size: 10px;
+                padding: 2px 4px;
+                background-color: {AbletonTheme.COLORS['surface_light']};
+                border-radius: 3px;
+            }}
+        """)
+        self.similarity_indicator.setToolTip("Has similar projects - right-click for options")
+        self.similarity_indicator.setVisible(False)  # Hidden by default, shown when similar projects found
+        name_row.addWidget(self.similarity_indicator)
+        
         layout.addLayout(name_row)
         
         layout.addStretch()
@@ -462,6 +477,9 @@ class ProjectCard(QFrame):
         # Favorite indicator
         self.favorite_indicator.setText("💎" if self.project.is_favorite else "")
         
+        # Similarity indicator - check if similar projects exist (async, don't block)
+        self._check_similar_projects()
+        
         # Modified date
         if self.project.modified_date:
             date_str = self._format_date(self.project.modified_date)
@@ -664,6 +682,28 @@ class ProjectCard(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.project.id)
         super().mouseDoubleClickEvent(event)
+    
+    def _check_similar_projects(self) -> None:
+        """Check if this project has similar projects (non-blocking check)."""
+        # Only check if we have enough data for similarity
+        if not (self.project.plugins or self.project.devices or self.project.tempo):
+            self.similarity_indicator.setVisible(False)
+            return
+        
+        # Quick check: if project has plugins/devices, likely has similar projects
+        # Full similarity check would be expensive, so we just show indicator if project has metadata
+        has_metadata = bool(
+            (self.project.plugins and len(self.project.plugins) > 0) or
+            (self.project.devices and len(self.project.devices) > 0) or
+            self.project.tempo
+        )
+        
+        if has_metadata:
+            # Show indicator - user can right-click to find similar projects
+            self.similarity_indicator.setText("🔗")
+            self.similarity_indicator.setVisible(True)
+        else:
+            self.similarity_indicator.setVisible(False)
     
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         """Handle context menu request."""

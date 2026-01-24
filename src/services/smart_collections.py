@@ -131,9 +131,68 @@ class SmartCollectionService:
             ).subquery()
             query = query.filter(~Project.id.in_(session.query(existing_pc_ids.c.project_id)))
             
-            # Execute query
-            result = query.all()
-            return [row[0] for row in result]
+            # Execute query to get base results
+            base_result = query.all()
+            base_project_ids = [row[0] for row in base_result]
+            
+            # Similarity filter (applied after base query)
+            if 'similar_to_project' in rules and 'min_similarity' in rules:
+                reference_project_id = rules['similar_to_project']
+                min_similarity = rules['min_similarity']
+                
+                # Get reference project
+                reference_project = session.query(Project).get(reference_project_id)
+                if reference_project:
+                    # Convert to dict format
+                    from ..services.similarity_analyzer import SimilarityAnalyzer
+                    analyzer = SimilarityAnalyzer()
+                    
+                    ref_dict = {
+                        'id': reference_project.id,
+                        'name': reference_project.name,
+                        'plugins': reference_project.plugins or [],
+                        'devices': reference_project.devices or [],
+                        'tempo': reference_project.tempo,
+                        'track_count': reference_project.track_count,
+                        'audio_tracks': getattr(reference_project, 'audio_tracks', 0),
+                        'midi_tracks': getattr(reference_project, 'midi_tracks', 0),
+                        'arrangement_length': reference_project.arrangement_length,
+                        'als_path': reference_project.file_path
+                    }
+                    
+                    # Get candidate projects from base results
+                    candidate_projects = session.query(Project).filter(
+                        Project.id.in_(base_project_ids)
+                    ).all()
+                    
+                    candidate_dicts = []
+                    for p in candidate_projects:
+                        candidate_dicts.append({
+                            'id': p.id,
+                            'name': p.name,
+                            'plugins': p.plugins or [],
+                            'devices': p.devices or [],
+                            'tempo': p.tempo,
+                            'track_count': p.track_count,
+                            'audio_tracks': getattr(p, 'audio_tracks', 0),
+                            'midi_tracks': getattr(p, 'midi_tracks', 0),
+                            'arrangement_length': p.arrangement_length,
+                            'als_path': p.file_path
+                        })
+                    
+                    # Find similar projects
+                    similar = analyzer.find_similar_projects(
+                        reference_project=ref_dict,
+                        candidate_projects=candidate_dicts,
+                        top_n=1000,  # Get all matches
+                        min_similarity=min_similarity
+                    )
+                    
+                    # Return only IDs of similar projects
+                    similar_ids = [sp.project_id for sp in similar]
+                    return similar_ids
+            
+            return base_project_ids
             
         finally:
             session.close()

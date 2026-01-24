@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QDate
 
-from ...database import get_session, Collection, CollectionType, Tag, Location
+from ...database import get_session, Collection, CollectionType, Tag, Location, Project
 from ..theme import AbletonTheme
 from PyQt6.QtGui import QFont
 
@@ -174,6 +174,24 @@ class SmartCollectionDialog(QDialog):
         tempo_layout.addWidget(self.use_tempo_filter)
         rules_layout.addLayout(tempo_layout)
         
+        # Similarity filter
+        similarity_layout = QHBoxLayout()
+        similarity_layout.addWidget(QLabel("Similar to project:"))
+        self.similar_project_combo = QComboBox()
+        self.similar_project_combo.setEditable(False)
+        self._populate_projects()
+        similarity_layout.addWidget(self.similar_project_combo)
+        similarity_layout.addWidget(QLabel("Min similarity:"))
+        self.similarity_min_spin = QSpinBox()
+        self.similarity_min_spin.setMinimum(20)
+        self.similarity_min_spin.setMaximum(100)
+        self.similarity_min_spin.setValue(50)
+        self.similarity_min_spin.setSuffix("%")
+        similarity_layout.addWidget(self.similarity_min_spin)
+        self.use_similarity_filter = QCheckBox("Use similarity filter")
+        similarity_layout.addWidget(self.use_similarity_filter)
+        rules_layout.addLayout(similarity_layout)
+        
         layout.addWidget(rules_group)
         
         # Buttons
@@ -211,6 +229,17 @@ class SmartCollectionDialog(QDialog):
             self.locations_combo.addItem("(All)")
             for location in locations:
                 self.locations_combo.addItem(location.name, location.id)
+        finally:
+            session.close()
+    
+    def _populate_projects(self) -> None:
+        """Populate projects combo box for similarity filter."""
+        session = get_session()
+        try:
+            projects = session.query(Project).order_by(Project.name).all()
+            self.similar_project_combo.addItem("(Select project)")
+            for project in projects:
+                self.similar_project_combo.addItem(project.name, project.id)
         finally:
             session.close()
     
@@ -267,6 +296,17 @@ class SmartCollectionDialog(QDialog):
             self.tempo_max_spin.setValue(self._rules['tempo_max'])
             self.use_tempo_filter.setChecked(True)
         
+        if 'similar_to_project' in self._rules:
+            project_id = self._rules['similar_to_project']
+            for i in range(self.similar_project_combo.count()):
+                if self.similar_project_combo.itemData(i) == project_id:
+                    self.similar_project_combo.setCurrentIndex(i)
+                    break
+        
+        if 'min_similarity' in self._rules:
+            self.similarity_min_spin.setValue(int(self._rules['min_similarity'] * 100))
+            self.use_similarity_filter.setChecked(True)
+        
         # Absolute date range
         if 'date_range' in self._rules:
             date_range = self._rules['date_range']
@@ -322,6 +362,13 @@ class SmartCollectionDialog(QDialog):
                 'start_date': self.start_date.date().toString("yyyy-MM-dd"),
                 'end_date': self.end_date.date().toString("yyyy-MM-dd")
             }
+        
+        # Similarity filter
+        if self.use_similarity_filter.isChecked():
+            project_id = self.similar_project_combo.currentData()
+            if project_id:
+                rules['similar_to_project'] = project_id
+                rules['min_similarity'] = self.similarity_min_spin.value() / 100.0
         
         return rules
     

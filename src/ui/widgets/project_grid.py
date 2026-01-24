@@ -439,6 +439,12 @@ class ProjectGrid(QWidget):
         
         menu.addSeparator()
         
+        # Find similar projects
+        similar_action = menu.addAction("Find Similar Projects...")
+        similar_action.triggered.connect(lambda: self._find_similar_projects(project_id))
+        
+        menu.addSeparator()
+        
         properties_action = menu.addAction("Properties...")
         properties_action.triggered.connect(lambda: self._show_properties(project_id))
         
@@ -466,6 +472,12 @@ class ProjectGrid(QWidget):
                 self._refresh_view()
         finally:
             session.close()
+    
+    def _find_similar_projects(self, project_id: int) -> None:
+        """Show dialog with similar projects."""
+        from ..dialogs.similar_projects_dialog import SimilarProjectsDialog
+        dialog = SimilarProjectsDialog(project_id, self)
+        dialog.exec()
     
     def _show_properties(self, project_id: int) -> None:
         """Show project properties dialog."""

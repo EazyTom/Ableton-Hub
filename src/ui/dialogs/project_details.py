@@ -212,6 +212,21 @@ class ProjectDetailsDialog(QDialog):
         
         layout.addWidget(backups_group)
         
+        # Similar Projects section
+        similar_group = QGroupBox("Similar Projects")
+        similar_layout = QVBoxLayout(similar_group)
+        
+        self.similar_projects_list = QListWidget()
+        self.similar_projects_list.setMaximumHeight(150)
+        self.similar_projects_list.itemDoubleClicked.connect(self._on_similar_project_double_click)
+        similar_layout.addWidget(self.similar_projects_list)
+        
+        refresh_similar_btn = QPushButton("Refresh Similar Projects")
+        refresh_similar_btn.clicked.connect(self._load_similar_projects)
+        similar_layout.addWidget(refresh_similar_btn)
+        
+        layout.addWidget(similar_group)
+        
         # Connect audio player signals
         self._audio_player = AudioPlayer.instance()
         self._audio_player.position_changed.connect(self._on_position_changed)
@@ -312,6 +327,9 @@ class ProjectDetailsDialog(QDialog):
             
             # Backups
             self._load_backups()
+            
+            # Similar projects
+            self._load_similar_projects()
         finally:
             session.close()
     
@@ -724,6 +742,107 @@ class ProjectDetailsDialog(QDialog):
                         )
         finally:
             session.close()
+    
+    def _load_similar_projects(self) -> None:
+        """Load and display similar projects."""
+        if not self._project:
+            return
+        
+        self.similar_projects_list.clear()
+        
+        try:
+            from ...services.similarity_analyzer import SimilarityAnalyzer
+            from ...database import Project as ProjectModel
+            
+            analyzer = SimilarityAnalyzer()
+            
+            # Get all projects except current one
+            session = get_session()
+            try:
+                all_projects = session.query(ProjectModel).filter(
+                    ProjectModel.id != self.project_id
+                ).all()
+                
+                if not all_projects:
+                    item = QListWidgetItem("No other projects found")
+                    item.setFlags(Qt.ItemFlag.NoItemFlags)
+                    self.similar_projects_list.addItem(item)
+                    return
+                
+                # Convert current project to dict format
+                project_dict = {
+                    'id': self._project.id,
+                    'name': self._project.name,
+                    'plugins': self._project.plugins or [],
+                    'devices': self._project.devices or [],
+                    'tempo': self._project.tempo,
+                    'track_count': self._project.track_count,
+                    'audio_tracks': getattr(self._project, 'audio_tracks', 0),
+                    'midi_tracks': getattr(self._project, 'midi_tracks', 0),
+                    'arrangement_length': self._project.arrangement_length,
+                    'als_path': self._project.file_path
+                }
+                
+                # Convert all projects to dict format
+                candidate_dicts = []
+                for p in all_projects:
+                    candidate_dicts.append({
+                        'id': p.id,
+                        'name': p.name,
+                        'plugins': p.plugins or [],
+                        'devices': p.devices or [],
+                        'tempo': p.tempo,
+                        'track_count': p.track_count,
+                        'audio_tracks': getattr(p, 'audio_tracks', 0),
+                        'midi_tracks': getattr(p, 'midi_tracks', 0),
+                        'arrangement_length': p.arrangement_length,
+                        'als_path': p.file_path
+                    })
+                
+                # Find similar projects
+                similar = analyzer.find_similar_projects(
+                    reference_project=project_dict,
+                    candidate_projects=candidate_dicts,
+                    top_n=10,
+                    min_similarity=0.3
+                )
+                
+                if not similar:
+                    item = QListWidgetItem("No similar projects found (min similarity: 30%)")
+                    item.setFlags(Qt.ItemFlag.NoItemFlags)
+                    self.similar_projects_list.addItem(item)
+                    return
+                
+                # Display similar projects
+                for sim_project in similar:
+                    score_percent = int(sim_project.similarity_score * 100)
+                    explanation = ""
+                    if sim_project.similarity_result:
+                        explanation = analyzer.get_similarity_explanation(sim_project.similarity_result)
+                    
+                    item_text = f"{sim_project.project_name} ({score_percent}%)"
+                    item = QListWidgetItem(item_text)
+                    item.setData(Qt.ItemDataRole.UserRole, sim_project.project_id)
+                    item.setToolTip(explanation or f"Similarity: {score_percent}%")
+                    self.similar_projects_list.addItem(item)
+                    
+            finally:
+                session.close()
+        except Exception as e:
+            item = QListWidgetItem(f"Error loading similar projects: {str(e)}")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.similar_projects_list.addItem(item)
+    
+    def _on_similar_project_double_click(self, item: QListWidgetItem) -> None:
+        """Handle double-click on similar project - open its details."""
+        project_id = item.data(Qt.ItemDataRole.UserRole)
+        if project_id:
+            # Close current dialog and open new one
+            self.accept()  # Close current dialog
+            # Emit signal to open new project details (if parent handles it)
+            # Or create new dialog
+            dialog = ProjectDetailsDialog(project_id, self.parent())
+            dialog.exec()
     
     def _find_exports(self) -> None:
         """Find and link exports for this project."""
