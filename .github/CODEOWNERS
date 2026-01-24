@@ -1,0 +1,27 @@
+# CODEOWNERS file for Ableton Hub
+# This file defines code owners for automatic PR review requests
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for all files
+* @EazyTom
+
+# Documentation
+/docs/ @EazyTom
+*.md @EazyTom
+CONTRIBUTING.md @EazyTom
+README.md @EazyTom
+
+# Configuration files
+pyproject.toml @EazyTom
+requirements.txt @EazyTom
+.gitignore @EazyTom
+
+# Source code
+/src/ @EazyTom
+/tests/ @EazyTom
+
+# Resources
+/resources/ @EazyTom
+
+# GitHub workflows and templates
+/.github/ @EazyTom

@@ -1,0 +1,418 @@
+# Ableton Hub - Planned Features Roadmap
+
+This document contains detailed implementation plans for future features.
+
+---
+
+## Phase 5 Completion: UI Components
+
+### 5.1 Plugin Usage Dashboard
+
+**Priority**: High  
+**Estimated Effort**: 2-3 weeks  
+**Dependencies**: ML Feature Extractor (complete), ALS Parser (complete)
+
+**Goal**: Provide visibility into plugin usage patterns across the project library.
+
+**Features**:
+1. Most used plugins across all projects (bar chart)
+2. Plugin usage frequency per project
+3. Plugin combinations (which plugins are used together)
+4. Missing plugin warnings (detect unavailable plugins)
+5. "Projects using this plugin" quick filter
+
+**Implementation**:
+
+```
+src/ui/widgets/plugin_dashboard.py
+├── PluginDashboard(QWidget)
+│   ├── _setup_ui()
+│   ├── _load_plugin_stats()
+│   ├── _create_usage_chart()
+│   ├── _create_combinations_view()
+│   └── _filter_by_plugin()
+```
+
+**Database Additions** (optional optimization):
+```python
+class PluginUsage(Base):
+    plugin_name = Column(String(255), primary_key=True)
+    usage_count = Column(Integer, default=0)
+    projects_using = Column(JSON, default=list)
+    last_used = Column(DateTime)
+```
+
+**UI Layout**:
+- Header with "Plugin Usage" title
+- Stats cards: Total plugins, Most used, Least used
+- Bar chart of top 20 plugins
+- Table view of all plugins with counts
+- Click plugin → Filter projects grid
+
+---
+
+### 5.2 Workflow Analytics Dashboard
+
+**Priority**: High  
+**Estimated Effort**: 2-3 weeks  
+**Dependencies**: Health Calculator (complete), Project metadata (complete)
+
+**Goal**: Visualize project creation patterns, modification frequency, and productivity metrics.
+
+**Features**:
+1. Project creation timeline (projects per month/year)
+2. Modification frequency heatmap
+3. Average time from creation to first export
+4. Projects by status (active, stale, archived)
+5. Collection completion rates
+6. Tag usage trends
+
+**Implementation**:
+
+```
+src/ui/widgets/workflow_dashboard.py
+├── WorkflowDashboard(QWidget)
+│   ├── _setup_ui()
+│   ├── _load_metrics()
+│   ├── _create_timeline_chart()
+│   ├── _create_activity_heatmap()
+│   └── _create_status_breakdown()
+```
+
+**Metrics to Calculate**:
+- Projects created per week/month/year
+- Average project age
+- Export rate (% of projects with exports)
+- Stale project count (not modified in 365+ days)
+- Collection fill rates
+
+**UI Layout**:
+- Date range selector
+- Key metrics cards (total projects, exports, avg age)
+- Timeline chart (projects over time)
+- Activity heatmap (modifications by day/week)
+- Status pie chart
+
+---
+
+### 5.3 ML Cluster Visualization
+
+**Priority**: Medium  
+**Estimated Effort**: 2 weeks  
+**Dependencies**: ML Clustering Service (complete)
+
+**Goal**: Visualize project clusters and enable smart organization.
+
+**Features**:
+1. 2D scatter plot of clustered projects (PCA reduction)
+2. Cluster labels with characteristics (avg tempo, common devices)
+3. Click cluster → View projects in cluster
+4. "Create Smart Collection from Cluster" action
+5. Re-cluster with different algorithms
+
+**Implementation**:
+
+```
+src/ui/widgets/cluster_view.py
+├── ClusterVisualization(QWidget)
+│   ├── _setup_ui()
+│   ├── _run_clustering()
+│   ├── _create_scatter_plot()
+│   ├── _show_cluster_details()
+│   └── _create_collection_from_cluster()
+```
+
+**UI Layout**:
+- Algorithm selector (K-means, DBSCAN, Hierarchical)
+- Parameter controls (n_clusters, eps, etc.)
+- 2D scatter plot with colored clusters
+- Cluster details panel (hover/click)
+- Action buttons (create collection, re-cluster)
+
+---
+
+## Phase 6: Advanced Features
+
+### 6.1 Project Versioning & History
+
+**Priority**: Medium  
+**Estimated Effort**: 3-4 weeks  
+**Dependencies**: None
+
+**Goal**: Track project versions and enable comparison between versions.
+
+**Features**:
+1. Automatic version detection from filenames (v1, v2, final, remix)
+2. Manual version linking (mark as version of another project)
+3. Version timeline view
+4. Quick switch between versions
+5. Version comparison (what changed)
+
+**Database Schema**:
+```python
+class ProjectVersion(Base):
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    version_number = Column(Integer)
+    version_label = Column(String(50))  # "draft", "final", "remix"
+    parent_version_id = Column(Integer, ForeignKey("project_versions.id"), nullable=True)
+    notes = Column(Text)
+    created_date = Column(DateTime, default=datetime.utcnow)
+```
+
+**Implementation Tasks**:
+1. Add version detection to scanner
+2. Create version linking UI
+3. Build version timeline widget
+4. Implement version comparison
+
+---
+
+### 6.2 Project Templates
+
+**Priority**: Medium  
+**Estimated Effort**: 2-3 weeks  
+**Dependencies**: None
+
+**Goal**: Save and reuse common project setups.
+
+**Features**:
+1. Save current project as template
+2. Template library with categories
+3. Template preview (track structure, devices)
+4. Create new project from template
+5. Recently used templates
+
+**Database Schema**:
+```python
+class ProjectTemplate(Base):
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    template_path = Column(String(1024))  # Path to .als file
+    category = Column(String(100))
+    preview_data = Column(JSON)  # Cached track/device info
+    usage_count = Column(Integer, default=0)
+    created_date = Column(DateTime, default=datetime.utcnow)
+```
+
+**Implementation Tasks**:
+1. Create template save dialog
+2. Build template browser UI
+3. Implement template preview
+4. Add template creation workflow
+
+---
+
+### 6.3 Time Tracking
+
+**Priority**: Lower  
+**Estimated Effort**: 2-3 weeks  
+**Dependencies**: None
+
+**Goal**: Track time spent on projects for productivity insights.
+
+**Features**:
+1. Manual time entry per project
+2. Time reports (total per project, collection, tag)
+3. Session type labels (production, mixing, mastering)
+4. Export time logs
+5. Productivity insights
+
+**Database Schema**:
+```python
+class TimeEntry(Base):
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime)
+    duration_minutes = Column(Integer)
+    session_type = Column(String(50))  # "production", "mixing", "mastering"
+    notes = Column(Text)
+```
+
+**Implementation Tasks**:
+1. Create time entry dialog
+2. Build time tracking widget in project details
+3. Implement time reports view
+4. Add time-based filtering
+
+---
+
+### 6.4 Export Presets
+
+**Priority**: Lower  
+**Estimated Effort**: 1-2 weeks  
+**Dependencies**: Export Tracker (complete)
+
+**Goal**: Save and reuse export settings.
+
+**Features**:
+1. Save export settings as named presets
+2. Apply preset to multiple projects
+3. Preset management (edit, delete)
+4. Default preset setting
+
+**Database Schema**:
+```python
+class ExportPreset(Base):
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    format = Column(String(50))  # "WAV", "MP3", "FLAC"
+    bit_depth = Column(Integer)
+    sample_rate = Column(Integer)
+    normalize = Column(Boolean, default=False)
+    settings_json = Column(JSON)
+    is_default = Column(Boolean, default=False)
+```
+
+---
+
+## Phase 7: Analytics & Automation
+
+### 7.1 Statistics Dashboard
+
+**Priority**: Medium  
+**Estimated Effort**: 2-3 weeks  
+**Dependencies**: Workflow Analytics (recommended first)
+
+**Goal**: Comprehensive analytics about the project library.
+
+**Features**:
+1. Project counts by location, collection, tag
+2. File size distribution
+3. Live version distribution
+4. Tempo distribution histogram
+5. Key/scale distribution
+6. Export format breakdown
+7. Exportable reports (CSV, PDF)
+
+**UI Components**:
+- Dashboard with multiple chart widgets
+- Date range filters
+- Export report button
+- Drill-down on click
+
+---
+
+### 7.2 Custom Metadata Fields
+
+**Priority**: Lower  
+**Estimated Effort**: 3-4 weeks  
+**Dependencies**: None
+
+**Goal**: Allow users to define custom metadata fields.
+
+**Features**:
+1. User-defined field types (text, number, date, dropdown, checkbox)
+2. Custom field management UI
+3. Search/filter by custom fields
+4. Import/export custom field definitions
+
+**Database Schema**:
+```python
+class CustomField(Base):
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    field_type = Column(String(50))  # "text", "number", "date", "dropdown", "checkbox"
+    options = Column(JSON)  # For dropdowns
+    default_value = Column(Text)
+    sort_order = Column(Integer, default=0)
+
+class ProjectCustomValue(Base):
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    field_id = Column(Integer, ForeignKey("custom_fields.id"))
+    value = Column(Text)
+```
+
+---
+
+### 7.3 Project Archiving
+
+**Priority**: Lower  
+**Estimated Effort**: 2 weeks  
+**Dependencies**: Archive Service (complete)
+
+**Goal**: Systematic project archiving with policies.
+
+**Features**:
+1. Archive status for projects
+2. Archive policies (auto-archive after X days inactive)
+3. Archive location management
+4. Restore from archive
+5. Archive size reports
+
+**Implementation Tasks**:
+1. Add archived status to Project model
+2. Create archive policy settings
+3. Build archive management UI
+4. Implement scheduled archive jobs
+
+---
+
+### 7.4 Workflow Automation
+
+**Priority**: Future  
+**Estimated Effort**: 4-6 weeks  
+**Dependencies**: Multiple features
+
+**Goal**: Automate repetitive tasks.
+
+**Features**:
+1. Bulk rename projects
+2. Auto-tag based on location/date
+3. Auto-create collections from folder structure
+4. Scheduled scans
+5. Action history/log
+
+**Implementation**:
+- Action system with registered handlers
+- Batch operation queue
+- Scheduler integration
+- Undo/redo support
+
+---
+
+## Implementation Priority Order
+
+### Near-term (Next 1-2 months)
+1. **Plugin Usage Dashboard** - High value, completes Phase 5
+2. **Workflow Analytics Dashboard** - High value, completes Phase 5
+3. **ML Cluster Visualization** - Medium value, completes Phase 5
+
+### Mid-term (2-4 months)
+4. **Statistics Dashboard** - Medium value, builds on workflow analytics
+5. **Project Versioning** - Medium value, common workflow need
+
+### Long-term (4-6+ months)
+6. **Project Templates** - Lower priority
+7. **Time Tracking** - Lower priority
+8. **Export Presets** - Lower priority
+9. **Custom Metadata Fields** - Lower priority
+10. **Project Archiving** - Lower priority
+11. **Workflow Automation** - Future consideration
+
+---
+
+## Technical Considerations
+
+### Performance
+- Lazy loading for large dashboards
+- Background calculation for analytics
+- Caching of computed metrics
+- Virtual scrolling for large lists
+
+### Database
+- Add indexes for analytics queries
+- Consider materialized views for complex stats
+- Periodic cleanup of stale cache data
+
+### Testing
+- Unit tests for calculation logic
+- Integration tests for database queries
+- UI tests for dashboard interactions
+
+---
+
+*Last updated: January 2026*

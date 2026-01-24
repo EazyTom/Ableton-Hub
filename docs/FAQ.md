@@ -166,7 +166,7 @@ Yes! The database file is in your application data directory (see above). You ca
 - Check that Python 3.11+ is installed: `python --version` or `python3 --version`
 - If using source installation, make sure virtual environment is activated
 - Check Terminal/Command Prompt for error messages
-- Try reinstalling: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`
+- Try reinstalling: `pip install --upgrade git+https://github.com/EazyTom/ableton-hub.git`
 
 ### Projects aren't appearing after scan
 

@@ -57,12 +57,12 @@ This method uses pip (Python package installer) to automatically download and in
 
 2. **Install Ableton Hub**:
    ```bash
-   pip install git+https://github.com/yourusername/ableton-hub.git
+   pip install git+https://github.com/EazyTom/ableton-hub.git
    ```
 
    **Expected output:**
    ```
-   Collecting git+https://github.com/yourusername/ableton-hub.git
+   Collecting git+https://github.com/EazyTom/ableton-hub.git
    Installing collected packages: ...
    Successfully installed ableton-hub-0.3.0
    ```
@@ -79,7 +79,7 @@ This method uses pip (Python package installer) to automatically download and in
 If you prefer to download the source code and install manually:
 
 1. **Download the source code**:
-   - Go to the GitHub repository: https://github.com/yourusername/ableton-hub
+   - Go to the GitHub repository: https://github.com/EazyTom/ableton-hub
    - Click the green "Code" button
    - Click "Download ZIP"
    - Extract the ZIP file (usually goes to your Downloads folder)
@@ -139,14 +139,14 @@ After installation, you should see the Ableton Hub window open. If it doesn't ap
 
 This means pip (Python package installer) isn't available. Try:
 ```bash
-python3 -m pip install git+https://github.com/yourusername/ableton-hub.git
+python3 -m pip install git+https://github.com/EazyTom/ableton-hub.git
 ```
 
 ### "Permission denied" errors
 
 You may need to use `sudo` (superuser do - administrator privileges), but this is not recommended. Instead, try:
 ```bash
-pip install --user git+https://github.com/yourusername/ableton-hub.git
+pip install --user git+https://github.com/EazyTom/ableton-hub.git
 ```
 
 ### "Command 'ableton-hub' not found"
@@ -154,7 +154,7 @@ pip install --user git+https://github.com/yourusername/ableton-hub.git
 If you installed using Method 1 but can't run `ableton-hub`:
 - Make sure the installation completed successfully
 - Try using the full path: `python3 -m ableton_hub.main`
-- Or reinstall: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`
+- Or reinstall: `pip install --upgrade git+https://github.com/EazyTom/ableton-hub.git`
 
 ### Virtual environment not activating
 
@@ -188,7 +188,7 @@ Once Ableton Hub is installed and running:
 
 **If you used Method 1 (pip install):**
 ```bash
-pip install --upgrade git+https://github.com/yourusername/ableton-hub.git
+pip install --upgrade git+https://github.com/EazyTom/ableton-hub.git
 ```
 
 **If you used Method 2 (source installation):**

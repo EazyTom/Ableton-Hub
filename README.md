@@ -217,13 +217,13 @@ This is the easiest method - pip (Python package installer) will automatically d
 
 **macOS:**
 ```bash
-pip install git+https://github.com/yourusername/ableton-hub.git
+pip install git+https://github.com/EazyTom/ableton-hub.git
 ableton-hub  # Run the application (this is the command, not a directory)
 ```
 
 **Windows:**
 ```bash
-pip install git+https://github.com/yourusername/ableton-hub.git
+pip install git+https://github.com/EazyTom/ableton-hub.git
 ableton-hub  # Run the application (this is the command, not a directory)
 ```
 
@@ -338,215 +338,13 @@ New to Ableton Hub? Check out the **[First Time Setup Guide](docs/FIRST_TIME_SET
 
 ## 🛠️ For Developers
 
-This section contains technical information for developers who want to contribute to or modify Ableton Hub.
+Interested in contributing or understanding how Ableton Hub works? Check out the **[Contributing Guide](CONTRIBUTING.md)** for:
 
-### Architecture
-
-> If viewing on mobile, expand the "View Diagram (Mobile)" section below for an image version.
-
-```mermaid
-graph TB
-    subgraph ui["UI Layer - PyQt6"]
-        MainWindow["Main Window"]
-        Sidebar["Sidebar Navigation"]
-        ProjectGrid["Project Grid/List View"]
-        SearchBar["Search & Filter Bar"]
-        CollectionView["Collection View"]
-        HealthDashboard["Health Dashboard"]
-    end
-    
-    subgraph services["Service Layer"]
-        Scanner["Project Scanner"]
-        Watcher["File System Watcher"]
-        ALSParser["ALS Parser"]
-        LiveDetector["Live Version Detector"]
-        LiveLauncher["Live Launcher"]
-        LinkScanner["Link Network Scanner"]
-        ExportTracker["Export Tracker"]
-        SmartCollections["Smart Collections"]
-        DuplicateDetector["Duplicate Detector"]
-        HealthCalculator["Health Calculator"]
-        SimilarityAnalyzer["Similarity Analyzer"]
-        RecommendationEngine["Recommendation Engine"]
-        AudioPlayer["Audio Player"]
-        ArchiveService["Archive Service"]
-    end
-    
-    subgraph storage["Data Storage"]
-        SQLite[("SQLite Database with FTS5")]
-        Config["Configuration"]
-        Cache["Thumbnail Cache"]
-    end
-    
-    subgraph external["External Resources"]
-        ProjectFiles[".als Project Files"]
-        ExportedAudio["Exported Audio Files"]
-        LiveInstallations["Ableton Live Installations"]
-        LinkNetwork["Ableton Link Network"]
-    end
-    
-    MainWindow --> Sidebar
-    MainWindow --> ProjectGrid
-    MainWindow --> SearchBar
-    MainWindow --> CollectionView
-    MainWindow --> HealthDashboard
-    
-    Sidebar --> Scanner
-    ProjectGrid --> SQLite
-    SearchBar --> SQLite
-    CollectionView --> SmartCollections
-    HealthDashboard --> HealthCalculator
-    MainWindow --> SimilarityAnalyzer
-    MainWindow --> RecommendationEngine
-    
-    Scanner --> ALSParser
-    Scanner --> ProjectFiles
-    Scanner --> SQLite
-    Watcher --> ProjectFiles
-    Watcher --> SQLite
-    ALSParser --> ProjectFiles
-    
-    LiveDetector --> LiveInstallations
-    LiveLauncher --> LiveInstallations
-    LiveLauncher --> ProjectFiles
-    
-    LinkScanner --> LinkNetwork
-    
-    ExportTracker --> ExportedAudio
-    ExportTracker --> SQLite
-    
-    SmartCollections --> SQLite
-    SmartCollections --> SimilarityAnalyzer
-    DuplicateDetector --> SQLite
-    HealthCalculator --> SQLite
-    SimilarityAnalyzer --> SQLite
-    RecommendationEngine --> SimilarityAnalyzer
-    RecommendationEngine --> SQLite
-    AudioPlayer --> ExportedAudio
-    ArchiveService --> ProjectFiles
-    ArchiveService --> SQLite
-    
-    MainWindow --> Config
-    ProjectGrid --> Cache
-```
-
-<details>
-<summary><strong>View Diagram (Mobile)</strong></summary>
-
-If the Mermaid diagram above doesn't render (e.g., on GitHub mobile app), view the architecture diagram below:
-
-<div align="center">
-  <img src="resources/images/system-diagram.png" alt="Ableton Hub System Architecture Diagram" width="100%"/>
-</div>
-
-</details>
-
-### Architecture Overview
-
-The application follows a layered architecture:
-
-**UI Layer (PyQt6 - GUI framework)**
-- Main Window orchestrates all UI components
-- Sidebar Navigation provides access to locations, collections, and Live installations
-- Project Grid/List View displays projects with multiple view modes
-- Search & Filter Bar enables full-text search and advanced filtering
-- Collection View manages static and smart collections
-- Health Dashboard visualizes project health metrics
-
-**Service Layer**
-- Project Scanner discovers and indexes `.als` files
-- File System Watcher monitors for real-time changes
-- ALS Parser extracts metadata from project files
-- Live Version Detector finds installed Ableton Live versions
-- Live Launcher opens projects with specific Live versions
-- Link Network Scanner discovers Ableton Link devices
-- Export Tracker identifies and links exported audio files
-- Smart Collections creates rule-based dynamic collections
-- Duplicate Detector finds duplicate projects using hash comparison
-- Health Calculator computes project health metrics
-- **Similarity Analyzer** finds similar projects using Jaccard similarity and multi-metric analysis
-- **Recommendation Engine** provides project recommendations based on similarity
-- Audio Player provides in-app playback of exported audio
-- Archive Service handles project backup and archiving
-
-**Data Storage**
-- SQLite Database (file-based database) with FTS5 (Full-Text Search engine) stores all project metadata and enables full-text search
-- Configuration stores user preferences and settings
-- Thumbnail Cache stores generated waveform previews
-
-**External Resources**
-- `.als` Project Files are read-only parsed for metadata
-- Exported Audio Files are linked to projects and can be played
-- Ableton Live Installations are detected and used for launching projects
-- Ableton Link Network is monitored for device discovery
-
-**Data Flow**
-- UI components interact with services, which read/write to the database
-- Scanner and Watcher monitor project files and update the database
-- Services like Export Tracker and Archive Service interact with both files and database
-- All user preferences and window state are persisted in configuration
-
-### Setup Development Environment
-
-1. **Clone the repository** (using git - version control system):
-   ```bash
-   git clone https://github.com/yourusername/ableton-hub.git
-   cd ableton-hub
-   ```
-   
-   **Note**: If downloading as ZIP instead of using git clone, extract the ZIP and navigate to the `Ableton-Hub-main` folder (the folder name when downloading from GitHub).
-
-2. **Create a virtual environment** (isolated Python environment):
-   ```bash
-   # macOS
-   python3 -m venv venv
-   source venv/bin/activate
-   
-   # Windows
-   python -m venv venv
-   venv\Scripts\activate
-   ```
-
-
-### Application Data Locations
-
-The application stores data in platform-specific locations:
-
-**Windows:**
-- Config & Database: `%APPDATA%\AbletonHub\`
-- Thumbnail Cache: `%LOCALAPPDATA%\AbletonHub\cache\`
-
-**macOS:**
-- Config & Database: `~/Library/Application Support/AbletonHub/`
-- Thumbnail Cache: `~/Library/Caches/AbletonHub/`
-
-**Linux:**
-- Config & Database: `~/.local/share/AbletonHub/`
-- Thumbnail Cache: `~/.cache/AbletonHub/`
-
-### Database
-
-The application uses SQLite with FTS5 (Full-Text Search) for project metadata. The database file is located in the application data directory (see above) and is automatically created and migrated on first run.
-
-### Configuration
-
-User preferences, window state, and settings are stored in a JSON configuration file in the application data directory. The configuration is automatically loaded and saved.
-
-### Version Management
-
-The application version uses a **single source of truth** pattern:
-
-**To release a new version:**
-1. Update `pyproject.toml` → `[project]` → `version`
-2. Update `src/__init__.py` → `WHATS_NEW` dictionary with new features
-
-**How it works:**
-- `pyproject.toml` defines the package version
-- `src/__init__.py` reads from `importlib.metadata` when installed, or uses fallback
-- `src/app.py` and `src/ui/main_window.py` import `__version__` from the package
-- The About dialog pulls "What's New" content from `src/__init__.py` → `get_whats_new_html()`
-
-> **Note**: The "What's New" section is maintained in `src/__init__.py` and displayed in the in-app About dialog. Feature lists in the README are updated as needed for documentation.
+- Development environment setup
+- Architecture overview and project structure
+- Code style guidelines
+- Testing instructions
+- Technical details about `.als` file parsing, database structure, and more
 
 ## 🔧 Troubleshooting
 
@@ -568,7 +366,7 @@ Having issues? Here are solutions to common problems:
 
 - Ensure Python 3.11+ is installed (check with `python --version` or `python3 --version`)
 - If you used Method 2 (source installation), make sure you activated the virtual environment (`.venv`)
-- Try reinstalling: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`
+- Try reinstalling: `pip install --upgrade git+https://github.com/EazyTom/ableton-hub.git`
 - On Linux, you may need additional system libraries for PyQt6 (GUI framework)
 
 ### I don't see my projects
@@ -597,150 +395,15 @@ Having issues? Here are solutions to common problems:
 - Try resetting the database: Tools → Reset Database (⚠️ This will delete all your indexed projects)
 - If the problem persists, open an issue on GitHub with details about what happened
 
-### Project Structure
-
-```
-ableton_hub/
-├── src/
-│   ├── main.py                     # Application entry point
-│   ├── app.py                      # Main QApplication setup
-│   ├── config.py                   # Configuration manager
-│   ├── database/                   # SQLAlchemy models and migrations
-│   │   ├── models.py               # ORM models
-│   │   ├── db.py                   # Database connection and setup
-│   │   └── migrations.py           # Schema migrations
-│   ├── services/                   # Business logic
-│   │   ├── scanner.py              # File system scanner
-│   │   ├── watcher.py              # File system watcher
-│   │   ├── als_parser.py           # .als file parser
-│   │   ├── live_detector.py        # Live version detection
-│   │   ├── live_launcher.py        # Live launcher
-│   │   ├── link_scanner.py         # Ableton Link discovery
-│   │   ├── export_tracker.py       # Export tracking
-│   │   ├── smart_collections.py    # Smart collection rules
-│   │   ├── duplicate_detector.py   # Duplicate detection
-│   │   ├── health_calculator.py    # Health metrics
-│   │   ├── audio_preview.py        # Audio preview generation
-│   │   ├── audio_player.py         # In-app audio playback
-│   │   └── archive_service.py      # Project backup/archive
-│   ├── ui/                         # PyQt6 UI components
-│   │   ├── main_window.py          # Main application window
-│   │   ├── theme.py                # Dark Ableton theme
-│   │   ├── widgets/                # Reusable UI widgets
-│   │   └── dialogs/                # Modal dialogs
-│   └── utils/                      # Utility functions
-├── tests/                          # Test suite
-├── resources/                      # Icons, images, styles
-│   ├── images/                     # Application images
-│   ├── icons/                      # Application icons
-│   └── styles/                     # Stylesheets
-├── docs/                           # Documentation
-│   ├── FEATURE_RECOMMENDATIONS.md
-│   └── PHASE_25_IMPLEMENTATION.md
-├── requirements.txt                # Python dependencies
-├── pyproject.toml                  # Project configuration
-└── README.md                       # This file
-```
-
-### Default Project Locations
-
-The application can automatically detect default Ableton project folders (only existing directories are suggested):
-
-**macOS:**
-- `~/Music/Ableton/`
-- `~/Documents/Ableton/`
-- `~/Library/Application Support/Ableton/`
-- `~/Music/Ableton/User Library/`
-
-**Windows:**
-- `%USERPROFILE%\Documents\Ableton\`
-- `%USERPROFILE%\Music\Ableton\`
-- `%APPDATA%\Ableton\`
-- `%USERPROFILE%\Documents\Ableton\User Library\`
-
-**Linux:**
-- `~/Music/Ableton/`
-- `~/Documents/Ableton/`
-
-> **Note**: Live installation detection (for launching projects) searches different locations than project folders. The application automatically detects installed Live versions from standard installation paths.
-
-### Technical Details
-
-#### .als File Parsing
-
-The application parses Ableton Live Set (`.als`) files to extract metadata. The parser reads:
-- **Project Information**: Name, Live version, creation/modification dates
-- **Tempo & Time Signature**: Current song tempo and time signature
-- **Musical Key & Scale**: Global project key/scale and clip-level key/scale information
-- **Track Information**: Audio tracks, MIDI tracks, return tracks, master track
-- **Device & Plugin Data**: All devices and plugins used in the project
-- **Arrangement Data**: Arrangement length (bars), automation status
-- **Sample References**: Linked audio files and samples
-
-The parser handles `.als` files from Live 9.x through Live 12.x. The `.als` format is XML-based (eXtensible Markup Language), and the parser uses standard XML parsing with error handling for malformed files.
-
-**Key/Scale Detection**: The parser extracts musical key and scale information from both global project settings and clip-level settings. Priority is given to the global key/scale setting, with fallback to clip scales if all clips agree. Key information is displayed in project card tooltips and the list view "Key" column, and can be sorted alphabetically.
-
-#### Live Version Compatibility
-
-- **Detected Versions**: Automatically detects Live 9.x, 10.x, 11.x, and 12.x installations
-- **Launch Support**: Can launch projects with any detected Live version
-- **Version-Specific Features**: Some metadata extraction may vary by Live version
-
-#### Ableton Link Integration
-
-The application includes Ableton Link network discovery using the `zeroconf` library (zero-configuration networking). It can:
-- Discover devices on the Link network
-- Monitor Link network status
-- Display device information (name, IP address)
-
-This does not interfere with Live's Link functionality and operates in read-only mode.
-
-#### Data Privacy & Security
-
-- **Local-Only Storage**: All data is stored locally; no cloud sync or external services
-- **No Network Communication**: The application does not send any data to external servers
-- **Read-Only Access**: The application only reads `.als` files and does not modify them
-- **Export Detection**: Uses fuzzy matching (approximate string matching) to link exported audio files to projects (no modification of export files)
-
-#### Technical Stack
-
-- **UI Framework**: PyQt6 (Qt 6.6+) for cross-platform GUI (Graphical User Interface)
-- **Database**: SQLite (file-based database) with FTS5 (Full-Text Search engine) for full-text search
-- **Async Operations**: `qasync` (async/await support library) for async/await support with Qt event loop
-- **File Watching**: `watchdog` (file system monitoring library) for real-time file system monitoring
-- **Audio Playback**: Qt Multimedia (QMediaPlayer) for cross-platform audio preview
-
-#### Project Structure & Architecture
-
-The application follows a clean architecture pattern:
-- **UI Layer**: PyQt6 widgets and dialogs (presentation layer)
-- **Service Layer**: Business logic and domain services
-- **Data Layer**: SQLAlchemy ORM (Object-Relational Mapping) with repository pattern
-- **Utils**: Cross-platform utilities and helpers
-
-This separation allows for easy testing and future enhancements without major refactoring.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these guidelines:
+Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md)** for detailed information on:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests if applicable
-5. Ensure all tests pass (`pytest`)
-6. Format code (`black src tests && ruff check src tests --fix`)
-7. Commit your changes (`git commit -m 'Add amazing feature'`)
-8. Push to the branch (`git push origin feature/amazing-feature`)
-9. Open a Pull Request
-
-### Code Style
-
-- Follow PEP 8 style guidelines
-- Use type hints where appropriate
-- Write docstrings for all public functions and classes
-- Keep functions focused and single-purpose
+- How to get started with development
+- Code style guidelines
+- Testing requirements
+- Pull request process
 
 
 ## 🔮 Roadmap
@@ -772,22 +435,14 @@ Contributions are welcome! Please follow these guidelines:
 - ✅ Visual project export indicators
 
 ### Planned
-- **Pack Management & Browsing**:
-  - Full pack browser with installed pack detection
-  - Pack usage statistics and tracking
-  - Pack-to-project associations
-  - Pack version tracking and update detection
-- **Ableton Lesson Integration**:
-  - Browse built-in Ableton Live lessons
-  - Lesson table of contents viewer
-  - Integration with Ableton's native lesson format
-- Project versioning and history tracking
-- Project relationships and linking (stems, remixes, versions)
+- **Plugin Usage Dashboard**: View most-used plugins, plugin combinations, missing plugin warnings
+- **Workflow Analytics Dashboard**: Project timeline visualization, productivity metrics, modification trends
+- **ML Cluster Visualization**: Visual grouping of similar projects, cluster-based organization
+- **Project Versioning**: Automatic version detection, version timeline, version comparison
+- **Statistics Dashboard**: Comprehensive analytics with charts and exportable reports
 - Cloud sync integration
-- Workflow analytics dashboard
-- AI/ML project clustering and recommendations
-- Real-time Ableton Live integration (OSC)
-- Plugin usage dashboard
+
+See **[Feature Development](docs/FEATURE_DEVELOPMENT.md)** for full details on completed and planned features.
 
 
 ## 📝 License
@@ -809,6 +464,12 @@ This application is an independent, open-source project and is **not affiliated 
 - Built with [PyQt6](https://www.riverbankcomputing.com/software/pyqt/)
 - Uses [SQLAlchemy](https://www.sqlalchemy.org/) for database management
 - [Ableton](https://www.ableton.com/) for creating amazing music production software
+
+## 📋 Project Documentation
+
+- **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
+- **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 
 ## 📞 Support
 

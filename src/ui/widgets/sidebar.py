@@ -531,51 +531,6 @@ class Sidebar(QWidget):
         sep_live.setFixedHeight(1)
         content_layout.addWidget(sep_live)
         
-        # Packs section
-        self.packs_section = SidebarSection("PACKS", start_collapsed=True)
-        
-        # Pack location info
-        packs_intro = QLabel("Ableton Packs:")
-        packs_intro.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 10px; padding: 4px 12px;")
-        self.packs_section.add_item(packs_intro)
-        
-        # Core Library
-        core_library = SidebarItem("Core Library", "📦")
-        core_library.setCheckable(False)
-        core_library.setToolTip("Open Ableton Core Library folder")
-        core_library.clicked.connect(self._open_core_library)
-        self.packs_section.add_item(core_library)
-        
-        # User Library / Packs
-        user_packs = SidebarItem("User Library", "📁")
-        user_packs.setCheckable(False)
-        user_packs.setToolTip("Open User Library folder")
-        user_packs.clicked.connect(self._open_user_library)
-        self.packs_section.add_item(user_packs)
-        
-        # Factory Packs location
-        factory_packs = SidebarItem("Factory Packs", "🎹")
-        factory_packs.setCheckable(False)
-        factory_packs.setToolTip("Browse installed Factory Packs")
-        factory_packs.clicked.connect(self._open_factory_packs)
-        self.packs_section.add_item(factory_packs)
-        
-        # Ableton Packs Store
-        packs_store = SidebarItem("Pack Store", "🛒")
-        packs_store.setCheckable(False)
-        packs_store.setToolTip("Browse Ableton Packs in store")
-        packs_store.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://www.ableton.com/en/packs/")))
-        self.packs_section.add_item(packs_store)
-        
-        content_layout.addWidget(self.packs_section)
-        
-        # Separator
-        sep_packs = QFrame()
-        sep_packs.setFrameShape(QFrame.Shape.HLine)
-        sep_packs.setStyleSheet(f"background-color: {AbletonTheme.COLORS['border']};")
-        sep_packs.setFixedHeight(1)
-        content_layout.addWidget(sep_packs)
-        
         # MCP Servers section (Ableton MCP integrations)
         mcp_section = SidebarSection("MCP AGENTS", start_collapsed=True)
         
@@ -1033,7 +988,7 @@ class Sidebar(QWidget):
         except Exception as e:
             self.logger.error(f"Failed to launch {install.name}: {e}", exc_info=True)
     
-    # === Packs Methods ===
+    # === Resource Path Helper ===
     
     def _get_live_resources_path(self) -> Optional[Path]:
         """Get the Resources path from the most recent Live installation."""
@@ -1075,94 +1030,6 @@ class Sidebar(QWidget):
             return resources if resources.exists() else None
         finally:
             session.close()
-    
-    def _open_core_library(self) -> None:
-        """Open the Ableton Core Library folder."""
-        from PyQt6.QtWidgets import QMessageBox
-        
-        resources = self._get_live_resources_path()
-        if resources:
-            core_lib = resources / "Core Library"
-            if core_lib.exists():
-                try:
-                    if sys.platform == "win32":
-                        subprocess.run(["explorer", str(core_lib)])
-                    elif sys.platform == "darwin":
-                        subprocess.run(["open", str(core_lib)])
-                    else:
-                        subprocess.run(["xdg-open", str(core_lib)])
-                    return
-                except Exception as e:
-                    pass
-        
-        QMessageBox.information(
-            self,
-            "Core Library Not Found",
-            "Could not find the Ableton Core Library.\n\n"
-            "Make sure you have at least one Live installation registered."
-        )
-    
-    def _open_user_library(self) -> None:
-        """Open the User Library folder."""
-        from PyQt6.QtWidgets import QMessageBox
-        
-        # Default user library locations
-        if sys.platform == "win32":
-            user_lib = Path.home() / "Documents" / "Ableton" / "User Library"
-        elif sys.platform == "darwin":
-            user_lib = Path.home() / "Music" / "Ableton" / "User Library"
-        else:
-            user_lib = Path.home() / "Ableton" / "User Library"
-        
-        if user_lib.exists():
-            try:
-                if sys.platform == "win32":
-                    subprocess.run(["explorer", str(user_lib)])
-                elif sys.platform == "darwin":
-                    subprocess.run(["open", str(user_lib)])
-                else:
-                    subprocess.run(["xdg-open", str(user_lib)])
-                return
-            except Exception as e:
-                pass
-        
-        QMessageBox.information(
-            self,
-            "User Library Not Found",
-            f"Could not find the User Library at:\n{user_lib}\n\n"
-            "The folder may not exist if Live hasn't been run yet."
-        )
-    
-    def _open_factory_packs(self) -> None:
-        """Open the Factory Packs folder."""
-        from PyQt6.QtWidgets import QMessageBox
-        
-        # Default factory packs location
-        if sys.platform == "win32":
-            packs_path = Path.home() / "Documents" / "Ableton" / "Factory Packs"
-        elif sys.platform == "darwin":
-            packs_path = Path.home() / "Music" / "Ableton" / "Factory Packs"
-        else:
-            packs_path = Path.home() / "Ableton" / "Factory Packs"
-        
-        if packs_path.exists():
-            try:
-                if sys.platform == "win32":
-                    subprocess.run(["explorer", str(packs_path)])
-                elif sys.platform == "darwin":
-                    subprocess.run(["open", str(packs_path)])
-                else:
-                    subprocess.run(["xdg-open", str(packs_path)])
-                return
-            except Exception as e:
-                pass
-        
-        QMessageBox.information(
-            self,
-            "Factory Packs Not Found",
-            f"Could not find Factory Packs at:\n{packs_path}\n\n"
-            "The folder may not exist if no packs have been installed."
-        )
     
     # === Lessons Methods ===
     
