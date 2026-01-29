@@ -75,21 +75,33 @@ class MainWindow(QMainWindow):
     def _set_window_icon(self) -> None:
         """Set the window icon from resources."""
         try:
-            # Use .ico file for better Windows taskbar support
-            icon_path = get_resources_path() / "icons" / "AProject.ico"
-            if not icon_path.exists():
-                # Fallback to png if ico not found
-                icon_path = get_resources_path() / "images" / "ableton-logo.png"
-            if icon_path.exists():
-                icon = QIcon(str(icon_path))
-                # Set icon on the window
-                self.setWindowIcon(icon)
-                # Also set on the application to ensure it shows in taskbar/system tray
-                from PyQt6.QtWidgets import QApplication
-                QApplication.instance().setWindowIcon(icon)
-                self.logger.info(f"Set window icon from: {icon_path}")
+            import sys
+            resources = get_resources_path()
+            
+            # Try icons in order of preference (PNG works on all platforms)
+            if sys.platform == "win32":
+                icon_paths = [
+                    resources / "icons" / "AProject.ico",
+                    resources / "images" / "als-icon.png",
+                ]
             else:
-                self.logger.warning(f"Window icon not found at: {icon_path}")
+                # macOS/Linux - prefer PNG
+                icon_paths = [
+                    resources / "images" / "als-icon.png",
+                    resources / "icons" / "AProject.ico",
+                ]
+            
+            for icon_path in icon_paths:
+                if icon_path.exists():
+                    icon = QIcon(str(icon_path))
+                    if not icon.isNull():
+                        self.setWindowIcon(icon)
+                        from PyQt6.QtWidgets import QApplication
+                        QApplication.instance().setWindowIcon(icon)
+                        self.logger.info(f"Set window icon from: {icon_path}")
+                        return
+            
+            self.logger.warning("No valid window icon found")
         except Exception as e:
             self.logger.error(f"Failed to set window icon: {e}", exc_info=True)
     
