@@ -157,16 +157,23 @@ def get_resources_path() -> Path:
     Returns:
         Path to the resources directory.
     """
-    # Resources are now inside the src package: src/resources/
-    # This works both in development and when installed via pip
-    current_file = Path(__file__)
-    # Go up from src/utils/paths.py to src, then into resources
-    resources_path = current_file.parent.parent / "resources"
+    # Method 1: Use the src.resources package __file__ attribute
+    try:
+        import src.resources as resources_pkg
+        if hasattr(resources_pkg, '__file__') and resources_pkg.__file__:
+            resources_path = Path(resources_pkg.__file__).parent
+            if resources_path.exists():
+                return resources_path
+    except Exception:
+        pass
     
+    # Method 2: Resources inside src package (src/resources/) - relative to this file
+    current_file = Path(__file__)
+    resources_path = current_file.parent.parent / "resources"
     if resources_path.exists():
         return resources_path
     
-    # Fallback: try the old location (ableton_hub/resources/) for development
+    # Method 3: Original location (ableton_hub/resources/) for development
     old_resources_path = current_file.parent.parent.parent / "resources"
     if old_resources_path.exists():
         return old_resources_path

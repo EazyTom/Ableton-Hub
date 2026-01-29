@@ -67,6 +67,9 @@ include-package-data = true
 where = ["."]
 include = ["src", "src.*"]
 
+[tool.setuptools.package-data]
+"*" = ["*.png", "*.ico", "*.json", "*.md"]
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]
