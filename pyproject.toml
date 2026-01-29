@@ -64,6 +64,8 @@ ableton-hub-gui = "src.main:main"
 where = ["."]
 include = ["src", "src.*"]
 
+include_package_data = true
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]

@@ -152,15 +152,26 @@ def is_ableton_project(path: Path) -> bool:
 def get_resources_path() -> Path:
     """Get the path to the resources directory.
     
+    Works both in development and when installed via pip.
+    
     Returns:
         Path to the resources directory.
     """
-    # Get the path relative to this file
-    # Assuming structure: ableton_hub/src/utils/paths.py
-    # Resources are at: ableton_hub/resources/
+    # Resources are now inside the src package: src/resources/
+    # This works both in development and when installed via pip
     current_file = Path(__file__)
-    # Go up from src/utils/paths.py to ableton_hub, then to resources
-    resources_path = current_file.parent.parent.parent / "resources"
+    # Go up from src/utils/paths.py to src, then into resources
+    resources_path = current_file.parent.parent / "resources"
+    
+    if resources_path.exists():
+        return resources_path
+    
+    # Fallback: try the old location (ableton_hub/resources/) for development
+    old_resources_path = current_file.parent.parent.parent / "resources"
+    if old_resources_path.exists():
+        return old_resources_path
+    
+    # Last resort: return the expected path even if it doesn't exist
     return resources_path
 
 

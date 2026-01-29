@@ -180,9 +180,11 @@ class ProjectCard(QFrame):
     def _set_default_logo(self) -> None:
         """Set the default logo as preview based on export status.
         
-        Uses AProject.ico for projects without exports, ableton-logo.png for projects with exports.
+        Uses AProject icon for projects without exports, ableton-logo.png for projects with exports.
+        Falls back gracefully if icons can't be loaded (e.g., ICO on macOS).
         """
         from ...utils.paths import get_resources_path
+        import sys
         
         # Check if project has exports
         try:
@@ -190,27 +192,38 @@ class ProjectCard(QFrame):
         except Exception:
             has_exports = False
         
-        # Choose icon based on export status
-        if has_exports:
-            logo_path = get_resources_path() / "images" / "ableton-logo.png"
-        else:
-            # Use AProject.ico for projects without exports
-            logo_path = get_resources_path() / "icons" / "AProject.ico"
-            # Fallback to ableton-logo if ico doesn't exist
-            if not logo_path.exists():
-                logo_path = get_resources_path() / "images" / "ableton-logo.png"
+        resources = get_resources_path()
         
-        if logo_path.exists():
-            pixmap = QPixmap(str(logo_path))
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    156, 60,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.preview_label.setPixmap(scaled)
-                return
-        # Fallback to music note emoji
+        # Build list of paths to try (in order of preference)
+        paths_to_try = []
+        
+        if has_exports:
+            paths_to_try.append(resources / "images" / "ableton-logo.png")
+        else:
+            # Try PNG first on macOS (ICO often doesn't render), ICO first on Windows
+            if sys.platform == "darwin":
+                paths_to_try.append(resources / "icons" / "AProject.png")
+                paths_to_try.append(resources / "icons" / "AProject.ico")
+            else:
+                paths_to_try.append(resources / "icons" / "AProject.ico")
+                paths_to_try.append(resources / "icons" / "AProject.png")
+            # Always fall back to ableton-logo
+            paths_to_try.append(resources / "images" / "ableton-logo.png")
+        
+        # Try each path until one works
+        for logo_path in paths_to_try:
+            if logo_path.exists():
+                pixmap = QPixmap(str(logo_path))
+                if not pixmap.isNull():
+                    scaled = pixmap.scaled(
+                        156, 60,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.preview_label.setPixmap(scaled)
+                    return
+        
+        # Fallback to music note emoji if all else fails
         self.preview_label.setText("🎵")
     
     def _apply_style(self) -> None:
