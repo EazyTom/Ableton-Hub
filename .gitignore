@@ -68,11 +68,11 @@ generated-*.ico
 # Local Python cache in build directory
 localpycs/
 
-# Database
+# Database files (but not src/database/ module)
 *.db
 *.sqlite
 *.sqlite3
-database/
+/database/
 
 # Logs
 *.log
