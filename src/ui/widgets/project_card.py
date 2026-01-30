@@ -164,24 +164,6 @@ class ProjectCard(QFrame):
         self.export_indicator = QLabel()
         bottom_row.addWidget(self.export_indicator)
         
-        # Add stretch to push similarity indicator to far right
-        bottom_row.addStretch()
-        
-        # Similarity indicator (shows if similar projects exist) - positioned at bottom right
-        self.similarity_indicator = QLabel()
-        self.similarity_indicator.setStyleSheet(f"""
-            QLabel {{
-                color: {AbletonTheme.COLORS['accent']};
-                font-size: 10px;
-                padding: 2px 4px;
-                background-color: {AbletonTheme.COLORS['surface_light']};
-                border-radius: 3px;
-            }}
-        """)
-        # Tooltip will be set in _update_display to match other tooltips
-        self.similarity_indicator.setVisible(False)  # Hidden by default, shown when similar projects found
-        bottom_row.addWidget(self.similarity_indicator)
-        
         layout.addLayout(bottom_row)
     
     def _set_default_logo(self) -> None:
@@ -476,9 +458,6 @@ class ProjectCard(QFrame):
         # Favorite indicator
         self.favorite_indicator.setText("💎" if self.project.is_favorite else "")
         
-        # Similarity indicator - check if similar projects exist (async, don't block)
-        self._check_similar_projects()
-        
         # Modified date
         if self.project.modified_date:
             date_str = self._format_date(self.project.modified_date)
@@ -658,7 +637,7 @@ class ProjectCard(QFrame):
             display_folder = parent_folder
             if len(display_folder) > 30:
                 display_folder = display_folder[:27] + "..."
-            self.folder_label.setText(f"📁 {display_folder}")
+            self.folder_label.setText(display_folder)
             self.folder_label.setVisible(True)
         else:
             self.folder_label.setVisible(False)
@@ -722,77 +701,6 @@ class ProjectCard(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.project.id)
         super().mouseDoubleClickEvent(event)
-    
-    def _check_similar_projects(self) -> None:
-        """Check if this project has similar projects (lightweight check)."""
-        from ...database import get_session, Project
-        
-        # Only check if we have enough data for similarity
-        if not (self.project.plugins or self.project.devices or self.project.tempo):
-            self.similarity_indicator.setVisible(False)
-            return
-        
-        # Quick lightweight check: see if there are other projects with overlapping plugins/devices
-        # This is much faster than full similarity calculation
-        session = get_session()
-        try:
-            # Get this project's plugins and devices
-            project_plugins = set(self.project.plugins or [])
-            project_devices = set(self.project.devices or [])
-            project_tempo = self.project.tempo
-            
-            # Quick check: find at least one other project with some overlap
-            # This is a lightweight heuristic - full similarity would require computing all similarities
-            other_projects = session.query(Project).filter(
-                Project.id != self.project.id,
-                Project.status != ProjectStatus.MISSING
-            ).all()
-            
-            has_similar = False
-            
-            for other in other_projects:
-                # Quick overlap check
-                other_plugins = set(other.plugins or [])
-                other_devices = set(other.devices or [])
-                
-                # Check for plugin overlap
-                if project_plugins and other_plugins:
-                    overlap = len(project_plugins & other_plugins)
-                    if overlap >= 2:  # At least 2 shared plugins
-                        has_similar = True
-                        break
-                
-                # Check for device overlap
-                if project_devices and other_devices:
-                    overlap = len(project_devices & other_devices)
-                    if overlap >= 3:  # At least 3 shared devices
-                        has_similar = True
-                        break
-                
-                # Check for tempo proximity (within 10 BPM)
-                if project_tempo and other.tempo:
-                    tempo_diff = abs(project_tempo - other.tempo)
-                    if tempo_diff <= 10:
-                        has_similar = True
-                        break
-            
-            if has_similar:
-                self.similarity_indicator.setText("🔗")
-                # Set tooltip with same style as other tooltips (small font, centered)
-                tooltip_html = '<div style="font-size: 10px; text-align: center;">'
-                tooltip_html += 'Has similar projects<br/>'
-                tooltip_html += 'Right-click for options'
-                tooltip_html += '</div>'
-                self.similarity_indicator.setToolTip(tooltip_html)
-                self.similarity_indicator.setVisible(True)
-            else:
-                self.similarity_indicator.setVisible(False)
-                
-        except Exception:
-            # On error, hide the indicator
-            self.similarity_indicator.setVisible(False)
-        finally:
-            session.close()
     
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         """Handle context menu request."""

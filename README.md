@@ -4,6 +4,8 @@
 
 # Ableton Hub
 
+**Version 1.0.0**
+
 ## What is Ableton Hub?
 
 Ableton Hub is a desktop application that helps you organize, manage, and discover your Ableton Live projects across multiple locations. Whether your projects are on your computer, external drives, network shares, or cloud storage, Ableton Hub scans and indexes them all in one place. Creating collections of your projects and mapping exports to projects with deep learning of your project stats.
@@ -33,7 +35,7 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - Plugins and devices used
   - Tempo and time signature
   - Musical key and scale type (e.g., C Major, D# Minor)
-  - Track counts (audio, MIDI, return tracks)
+  - Track counts (top-level audio, MIDI, and group tracks - excludes nested/return tracks)
   - Arrangement length
   - Ableton Live version
   - Sample references
@@ -78,16 +80,19 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - **Multi-Metric Comparison**: Combines plugin similarity, device similarity, tempo proximity, structural similarity, and feature vector analysis
   - **Weighted Scoring**: Overall similarity score (0-100%) with detailed breakdowns
 - **Multiple Discovery Methods**:
-  - **Similarity Indicator**: Projects with similar projects display a 🔗 icon in the bottom-right corner of project cards - hover to see tooltip, right-click to find similar projects
   - **Context Menu**: Right-click any project → "Find Similar Projects" to open a dialog showing up to 20 similar projects with similarity scores and explanations
-  - **Project Details Dialog**: View similar projects directly in project properties with detailed similarity breakdowns
-  - **Recommendations Panel**: Dedicated sidebar panel showing similar projects and recommendations based on the currently selected project
+  - **Project Properties View**: View similar projects directly in project properties with detailed similarity breakdowns
+  - **Similarities Panel**: Dedicated sidebar panel (between Recent and Favorites) for exploring project similarities with:
+    - Project dropdown selector for quick comparison
+    - Detailed explanation of how Jaccard similarity works with examples
+    - Similar Projects list with percentage scores
+    - ML-Based Matches using content-based filtering
   - **Smart Collections**: Create dynamic collections filtered by similarity to a reference project (with configurable similarity threshold)
 - **How to Use**:
-  1. **Find Similar Projects from a Card**: Right-click any project card with a 🔗 similarity indicator → "Find Similar Projects"
+  1. **Find Similar Projects from a Card**: Right-click any project card → "Find Similar Projects"
   2. **Search First, Then Find Similar**: Use the search bar to find a project, then right-click it to find similar projects
-  3. **View in Project Details**: Double-click any project to open details, then view the "Similar Projects" tab
-  4. **Browse Recommendations**: Select a project to see recommendations in the sidebar Recommendations panel
+  3. **View in Project Properties**: Open project properties to see the "Similar Projects" section
+  4. **Browse Similarities**: Click "Similarities" in the sidebar (between Recent and Favorites) to explore project similarities with the built-in explanation and project selector
   5. **Create Similarity-Based Collections**: Use Smart Collections with a similarity filter rule
 - **Similarity Metrics**:
   - Plugin overlap (Jaccard similarity on plugin sets)
@@ -520,11 +525,10 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 
 ### Recently Completed
 - ✅ **Project Similarity & Discovery** - Find similar projects using Jaccard similarity algorithm and multi-metric analysis
-- ✅ Similar projects in Project Details Dialog
-- ✅ "Find Similar Projects" context menu option
-- ✅ Recommendations Panel with similarity-based recommendations
+- ✅ Similar projects in Project Properties view (embedded in main window)
+- ✅ "Find Similar Projects" context menu option with main window navigation
+- ✅ Similarities Panel with project selector, similarity explanations, and ML-based matches
 - ✅ Smart Collections similarity filter rule
-- ✅ Visual similarity indicators on project cards
 - ✅ Click-to-play exports on project cards
 - ✅ Automatic export detection during scanning
 - ✅ Smart fuzzy matching for export-to-project linking
