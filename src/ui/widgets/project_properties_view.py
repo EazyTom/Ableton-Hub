@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 from datetime import datetime
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout, QLabel,
     QPushButton, QLineEdit, QTextEdit, QComboBox,
     QMessageBox, QGroupBox, QCheckBox, QSlider,
     QListWidget, QListWidgetItem, QCompleter, QScrollArea, QFrame,
@@ -244,33 +244,139 @@ class ProjectPropertiesView(QWidget):
         self.title_label.setStyleSheet(f"font-size: 28px; font-weight: bold; color: {AbletonTheme.COLORS['text_primary']};")
         layout.addWidget(self.title_label)
         
-        # File info (read-only)
-        file_group = QGroupBox("File Information")
-        file_group.setStyleSheet(self._group_box_style())
-        file_layout = QFormLayout(file_group)
-        file_layout.setSpacing(8)
+        # Project info (read-only) - 2 column layout
+        project_group = QGroupBox("Project Information")
+        project_group.setStyleSheet(self._group_box_style())
+        project_layout = QGridLayout(project_group)
+        project_layout.setSpacing(8)
+        project_layout.setColumnStretch(1, 1)
+        project_layout.setColumnStretch(3, 1)
         
+        label_style = f"color: {AbletonTheme.COLORS['text_secondary']}; font-weight: bold;"
+        
+        # Left column
+        row = 0
+        lbl = QLabel("Path:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
         self.path_label = QLabel()
         self.path_label.setWordWrap(True)
         self.path_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
         self.path_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        file_layout.addRow("Path:", self.path_label)
+        project_layout.addWidget(self.path_label, row, 1, 1, 3)  # Span across columns
         
-        self.size_label = QLabel()
-        file_layout.addRow("Size:", self.size_label)
-        
-        self.modified_label = QLabel()
-        file_layout.addRow("Modified:", self.modified_label)
-        
+        row += 1
+        lbl = QLabel("Location:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
         self.location_label = QLabel()
-        file_layout.addRow("Location:", self.location_label)
+        project_layout.addWidget(self.location_label, row, 1)
         
-        # Open folder button
+        lbl = QLabel("Size:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.size_label = QLabel()
+        project_layout.addWidget(self.size_label, row, 3)
+        
+        row += 1
+        lbl = QLabel("Ableton Version:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
+        self.version_label = QLabel()
+        project_layout.addWidget(self.version_label, row, 1)
+        
+        lbl = QLabel("Tempo:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.tempo_label = QLabel()
+        project_layout.addWidget(self.tempo_label, row, 3)
+        
+        row += 1
+        lbl = QLabel("Tracks:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
+        self.track_count_label = QLabel()
+        project_layout.addWidget(self.track_count_label, row, 1)
+        
+        lbl = QLabel("Clips:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.clip_count_label = QLabel()
+        project_layout.addWidget(self.clip_count_label, row, 3)
+        
+        row += 1
+        lbl = QLabel("Samples:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
+        self.sample_count_label = QLabel()
+        project_layout.addWidget(self.sample_count_label, row, 1)
+        
+        lbl = QLabel("Automation:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.automation_label = QLabel()
+        project_layout.addWidget(self.automation_label, row, 3)
+        
+        row += 1
+        lbl = QLabel("Key:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
+        self.key_label = QLabel()
+        project_layout.addWidget(self.key_label, row, 1)
+        
+        lbl = QLabel("Length:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.length_label = QLabel()
+        project_layout.addWidget(self.length_label, row, 3)
+        
+        row += 1
+        lbl = QLabel("Created:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
+        self.created_label = QLabel()
+        project_layout.addWidget(self.created_label, row, 1)
+        
+        lbl = QLabel("Modified:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.modified_label = QLabel()
+        project_layout.addWidget(self.modified_label, row, 3)
+        
+        row += 1
+        lbl = QLabel("Last Scanned:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 0)
+        self.scanned_label = QLabel()
+        project_layout.addWidget(self.scanned_label, row, 1)
+        
+        lbl = QLabel("Last Parsed:")
+        lbl.setStyleSheet(label_style)
+        project_layout.addWidget(lbl, row, 2)
+        self.parsed_label = QLabel()
+        project_layout.addWidget(self.parsed_label, row, 3)
+        
+        row += 1
         open_folder_btn = QPushButton("Open in File Manager")
         open_folder_btn.clicked.connect(self._open_folder)
-        file_layout.addRow("", open_folder_btn)
+        project_layout.addWidget(open_folder_btn, row, 0, 1, 2)
         
-        layout.addWidget(file_group)
+        layout.addWidget(project_group)
+        
+        # Collections
+        collections_group = QGroupBox("Collections")
+        collections_group.setStyleSheet(self._group_box_style())
+        collections_layout = QVBoxLayout(collections_group)
+        
+        self.collections_label = QLabel("Not in any collections")
+        self.collections_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
+        collections_layout.addWidget(self.collections_label)
+        
+        add_to_collection_btn = QPushButton("Add to Collection...")
+        add_to_collection_btn.clicked.connect(self._add_to_collection)
+        collections_layout.addWidget(add_to_collection_btn)
+        
+        layout.addWidget(collections_group)
         
         # Metadata (editable)
         meta_group = QGroupBox("Metadata")
@@ -334,33 +440,6 @@ class ProjectPropertiesView(QWidget):
         
         layout.addWidget(tags_group)
         
-        # Collections
-        collections_group = QGroupBox("Collections")
-        collections_group.setStyleSheet(self._group_box_style())
-        collections_layout = QVBoxLayout(collections_group)
-        
-        self.collections_label = QLabel("Not in any collections")
-        self.collections_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
-        collections_layout.addWidget(self.collections_label)
-        
-        add_to_collection_btn = QPushButton("Add to Collection...")
-        add_to_collection_btn.clicked.connect(self._add_to_collection)
-        collections_layout.addWidget(add_to_collection_btn)
-        
-        layout.addWidget(collections_group)
-        
-        # Export history from project metadata (found in ALS file)
-        als_exports_group = QGroupBox("Export History (from project file)")
-        als_exports_group.setStyleSheet(self._group_box_style())
-        als_exports_layout = QVBoxLayout(als_exports_group)
-        
-        self.als_exports_label = QLabel("Loading...")
-        self.als_exports_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
-        self.als_exports_label.setWordWrap(True)
-        als_exports_layout.addWidget(self.als_exports_label)
-        
-        layout.addWidget(als_exports_group)
-        
         # Linked Exports with audio playback
         exports_group = QGroupBox("Linked Exports (audio files)")
         exports_group.setStyleSheet(self._group_box_style())
@@ -416,6 +495,42 @@ class ProjectPropertiesView(QWidget):
         exports_layout.addLayout(volume_layout)
         
         layout.addWidget(exports_group)
+        
+        # Plugins section
+        plugins_group = QGroupBox("Plugins (VST/AU)")
+        plugins_group.setStyleSheet(self._group_box_style())
+        plugins_layout = QVBoxLayout(plugins_group)
+        
+        self.plugins_list = QListWidget()
+        self.plugins_list.setMaximumHeight(120)
+        self.plugins_list.setAlternatingRowColors(True)
+        plugins_layout.addWidget(self.plugins_list)
+        
+        layout.addWidget(plugins_group)
+        
+        # Ableton Devices section
+        devices_group = QGroupBox("Ableton Devices")
+        devices_group.setStyleSheet(self._group_box_style())
+        devices_layout = QVBoxLayout(devices_group)
+        
+        self.devices_list = QListWidget()
+        self.devices_list.setMaximumHeight(120)
+        self.devices_list.setAlternatingRowColors(True)
+        devices_layout.addWidget(self.devices_list)
+        
+        layout.addWidget(devices_group)
+        
+        # Export history from project metadata (found in ALS file)
+        als_exports_group = QGroupBox("Export History (from project file)")
+        als_exports_group.setStyleSheet(self._group_box_style())
+        als_exports_layout = QVBoxLayout(als_exports_group)
+        
+        self.als_exports_label = QLabel("Loading...")
+        self.als_exports_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
+        self.als_exports_label.setWordWrap(True)
+        als_exports_layout.addWidget(self.als_exports_label)
+        
+        layout.addWidget(als_exports_group)
         
         # Available Project Backups
         backups_group = QGroupBox("Available Project Backups")
@@ -525,23 +640,106 @@ class ProjectPropertiesView(QWidget):
             # Size
             if self._project.file_size:
                 size_mb = self._project.file_size / (1024 * 1024)
-                self.size_label.setText(f"{size_mb:.2f} MB")
+                if size_mb < 1:
+                    self.size_label.setText(f"{size_mb * 1024:.0f} KB")
+                else:
+                    self.size_label.setText(f"{size_mb:.2f} MB")
             else:
                 self.size_label.setText("Unknown")
-            
-            # Modified
-            if self._project.modified_date:
-                self.modified_label.setText(
-                    self._project.modified_date.strftime("%Y-%m-%d %H:%M:%S")
-                )
-            else:
-                self.modified_label.setText("Unknown")
             
             # Location
             if self._project.location:
                 self.location_label.setText(self._project.location.name)
             else:
                 self.location_label.setText("Unknown")
+            
+            # Ableton Version
+            version_display = self._project.ableton_version or self._project.get_live_version_display() if hasattr(self._project, 'get_live_version_display') else None
+            self.version_label.setText(version_display or "Unknown")
+            
+            # Track count
+            if self._project.track_count and self._project.track_count > 0:
+                self.track_count_label.setText(str(self._project.track_count))
+            else:
+                self.track_count_label.setText("Unknown")
+            
+            # Clip count
+            clip_count = None
+            if self._project.custom_metadata and isinstance(self._project.custom_metadata, dict):
+                clip_count = self._project.custom_metadata.get('total_clip_count') or self._project.custom_metadata.get('clip_count')
+            self.clip_count_label.setText(str(clip_count) if clip_count else "Unknown")
+            
+            # Sample count
+            samples = self._project.get_sample_references_list() if hasattr(self._project, 'get_sample_references_list') else []
+            sample_count = len(samples) if samples else 0
+            self.sample_count_label.setText(str(sample_count) if sample_count > 0 else "None")
+            
+            # Automation
+            has_automation = getattr(self._project, 'has_automation', None)
+            self.automation_label.setText("Yes" if has_automation else "No" if has_automation is not None else "Unknown")
+            
+            # Tempo
+            if self._project.tempo and self._project.tempo > 0:
+                self.tempo_label.setText(f"{self._project.tempo:.1f} BPM")
+            else:
+                self.tempo_label.setText("Unknown")
+            
+            # Key/Scale
+            key_display = self._project.get_key_display() if hasattr(self._project, 'get_key_display') else None
+            self.key_label.setText(key_display or "Unknown")
+            
+            # Arrangement Length
+            if self._project.arrangement_length and self._project.arrangement_length > 0:
+                minutes = int(self._project.arrangement_length // 60)
+                seconds = int(self._project.arrangement_length % 60)
+                self.length_label.setText(f"{minutes}:{seconds:02d}")
+            else:
+                self.length_label.setText("Unknown")
+            
+            # Dates
+            if self._project.created_date:
+                self.created_label.setText(self._project.created_date.strftime("%Y-%m-%d %H:%M:%S"))
+            else:
+                self.created_label.setText("Unknown")
+            
+            if self._project.modified_date:
+                self.modified_label.setText(self._project.modified_date.strftime("%Y-%m-%d %H:%M:%S"))
+            else:
+                self.modified_label.setText("Unknown")
+            
+            if self._project.last_scanned:
+                self.scanned_label.setText(self._project.last_scanned.strftime("%Y-%m-%d %H:%M:%S"))
+            else:
+                self.scanned_label.setText("Never")
+            
+            if self._project.last_parsed:
+                self.parsed_label.setText(self._project.last_parsed.strftime("%Y-%m-%d %H:%M:%S"))
+            else:
+                self.parsed_label.setText("Never")
+            
+            # Plugins
+            self.plugins_list.clear()
+            plugins = self._project.get_plugins_list() if hasattr(self._project, 'get_plugins_list') else (self._project.plugins or [])
+            if plugins:
+                for plugin in sorted(set(plugins)):  # Deduplicate and sort
+                    item = QListWidgetItem(f"🔌 {plugin}")
+                    self.plugins_list.addItem(item)
+            else:
+                item = QListWidgetItem("No plugins detected")
+                item.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.plugins_list.addItem(item)
+            
+            # Devices
+            self.devices_list.clear()
+            devices = self._project.get_devices_list() if hasattr(self._project, 'get_devices_list') else (self._project.devices or [])
+            if devices:
+                for device in sorted(set(devices)):  # Deduplicate and sort
+                    item = QListWidgetItem(f"🎛️ {device}")
+                    self.devices_list.addItem(item)
+            else:
+                item = QListWidgetItem("No Ableton devices detected")
+                item.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.devices_list.addItem(item)
             
             # Metadata
             self.export_name_input.setText(self._project.export_song_name or "")

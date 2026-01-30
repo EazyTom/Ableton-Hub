@@ -265,7 +265,12 @@ class ALSParser:
         return None
     
     def _extract_tracks(self, root: ET.Element) -> Dict[str, int]:
-        """Extract track information."""
+        """Extract track information.
+        
+        Only counts top-level Audio and MIDI tracks.
+        Excludes: return tracks, master track, and nested tracks
+        (e.g., drum rack pads, group track chains).
+        """
         counts = {
             'total': 0,
             'audio': 0,
@@ -274,21 +279,37 @@ class ALSParser:
             'master': 0
         }
         
-        # Look for Tracks section
-        for tracks_elem in root.iter():
-            if 'Tracks' in tracks_elem.tag:
+        # Find the main Tracks element (direct child of LiveSet)
+        # This is the only place top-level tracks are defined
+        liveset = root.find('.//LiveSet')
+        if liveset is None:
+            # Root might be LiveSet itself
+            liveset = root if root.tag == 'LiveSet' else None
+        
+        if liveset is not None:
+            # Find the direct Tracks child (not nested track containers)
+            tracks_elem = liveset.find('Tracks')
+            if tracks_elem is not None:
                 for track in tracks_elem:
-                    counts['total'] += 1
+                    tag = track.tag
                     
-                    # Determine track type
-                    if 'AudioTrack' in track.tag:
+                    # Only count AudioTrack and MidiTrack for the main total
+                    if tag == 'AudioTrack':
                         counts['audio'] += 1
-                    elif 'MidiTrack' in track.tag:
+                        counts['total'] += 1
+                    elif tag == 'MidiTrack':
                         counts['midi'] += 1
-                    elif 'ReturnTrack' in track.tag:
+                        counts['total'] += 1
+                    elif tag == 'ReturnTrack':
+                        # Count but don't include in total
                         counts['return'] += 1
-                    elif 'MasterTrack' in track.tag:
+                    elif tag == 'MasterTrack':
+                        # Count but don't include in total
                         counts['master'] += 1
+                    # GroupTrack is counted as a track
+                    elif tag == 'GroupTrack':
+                        counts['midi'] += 1  # Group tracks are MIDI-like
+                        counts['total'] += 1
         
         return counts
     

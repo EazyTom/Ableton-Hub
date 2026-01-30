@@ -2203,7 +2203,7 @@ class MainWindow(QMainWindow):
     def _on_location_added(self, location_id: int) -> None:
         """Handle a new location being added."""
         self._refresh_sidebar()
-        self._start_scan(location_id)
+        self._on_scan_location(location_id)
         # Restart watcher to include new location
         if self._watcher:
             self._watcher.start()
