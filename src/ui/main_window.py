@@ -22,6 +22,7 @@ from .widgets.location_panel import LocationPanel
 from .widgets.collection_view import CollectionView
 from .widgets.search_bar import SearchBar
 from .widgets.link_panel import LinkPanel
+from .widgets.project_properties_view import ProjectPropertiesView
 from .theme import AbletonTheme
 from .controllers.scan_controller import ScanController
 from ..services.watcher import FileWatcher
@@ -229,6 +230,11 @@ class MainWindow(QMainWindow):
         cleanup_missing_action.triggered.connect(self._on_cleanup_missing_projects)
         tools_menu.addAction(cleanup_missing_action)
         
+        cleanup_backups_action = QAction("Remove Backup Projects from Database...", self)
+        cleanup_backups_action.setToolTip("Remove projects that are in Backup folders from database")
+        cleanup_backups_action.triggered.connect(self._on_cleanup_backup_projects)
+        tools_menu.addAction(cleanup_backups_action)
+        
         reset_db_action = QAction("Reset Database...", self)
         reset_db_action.setToolTip("Delete all data and start fresh (use with caution!)")
         reset_db_action.triggered.connect(self._on_reset_database)
@@ -425,6 +431,14 @@ class MainWindow(QMainWindow):
         self.recommendations_panel.project_selected.connect(self._on_project_selected)
         self.content_stack.addWidget(self.recommendations_panel)
         
+        # Project properties view (index 6)
+        self.project_properties_view = ProjectPropertiesView()
+        self.project_properties_view.back_requested.connect(self._on_properties_back)
+        self.project_properties_view.project_selected.connect(self._on_project_selected)
+        self.project_properties_view.tags_modified.connect(self._refresh_sidebar)
+        self.project_properties_view.project_saved.connect(self._on_project_saved)
+        self.content_stack.addWidget(self.project_properties_view)
+        
         self.splitter.addWidget(self.content_stack)
         
         # Set initial sizes
@@ -568,6 +582,14 @@ class MainWindow(QMainWindow):
             query = session.query(Project).options(
                 joinedload(Project.location),
                 joinedload(Project.exports)
+            )
+            
+            # Always exclude backup projects (files in Backup folders)
+            # Using case-insensitive check for "/Backup/" or "\Backup\" in path
+            from sqlalchemy import not_, or_
+            query = query.filter(
+                not_(Project.file_path.ilike('%/Backup/%')),
+                not_(Project.file_path.ilike('%\\Backup\\%'))
             )
             
             # Conditionally exclude MISSING projects based on view setting
@@ -973,6 +995,94 @@ class MainWindow(QMainWindow):
                 summary += f"Removed {deleted_count} MISSING project(s) from database.\n"
             if kept_count > 0:
                 summary += f"Kept {kept_count} MISSING project(s) that are in collections."
+            
+            QMessageBox.information(
+                self,
+                "Cleanup Complete",
+                summary
+            )
+        finally:
+            session.close()
+    
+    def _on_cleanup_backup_projects(self) -> None:
+        """Remove backup projects (files in Backup folders) from the database."""
+        from ..database import get_session, Project, ProjectCollection
+        from sqlalchemy import or_
+        
+        session = get_session()
+        try:
+            # Find all projects with "Backup" in their path
+            backup_projects = session.query(Project).filter(
+                or_(
+                    Project.file_path.ilike('%/Backup/%'),
+                    Project.file_path.ilike('%\\Backup\\%')
+                )
+            ).all()
+            
+            if not backup_projects:
+                QMessageBox.information(
+                    self,
+                    "No Backup Projects",
+                    "No backup projects found in the database."
+                )
+                return
+            
+            # Separate projects into those in collections and those not
+            projects_in_collections = []
+            projects_not_in_collections = []
+            
+            for project in backup_projects:
+                in_collection = session.query(ProjectCollection).filter(
+                    ProjectCollection.project_id == project.id
+                ).first() is not None
+                
+                if in_collection:
+                    projects_in_collections.append(project)
+                else:
+                    projects_not_in_collections.append(project)
+            
+            # Confirm deletion
+            message = f"Found {len(backup_projects)} backup project(s) in the database.\n\n"
+            message += "These are .als files located in Backup folders.\n\n"
+            if projects_not_in_collections:
+                message += f"• {len(projects_not_in_collections)} project(s) will be removed (not in collections)\n"
+            if projects_in_collections:
+                message += f"• {len(projects_in_collections)} project(s) will be KEPT (in collections)\n"
+            message += "\nThis will NOT delete any files - only database records.\n\n"
+            message += "Continue?"
+            
+            reply = QMessageBox.question(
+                self,
+                "Remove Backup Projects",
+                message,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            
+            # Delete projects not in collections
+            deleted_count = 0
+            for project in projects_not_in_collections:
+                session.delete(project)
+                deleted_count += 1
+            
+            kept_count = len(projects_in_collections)
+            
+            session.commit()
+            
+            self.logger.info(f"Removed {deleted_count} backup project(s) from database")
+            
+            # Refresh UI
+            self._refresh_sidebar()
+            self._load_projects()
+            
+            # Show summary message
+            summary = f"Cleanup complete.\n\n"
+            summary += f"Removed {deleted_count} backup project(s) from database.\n"
+            if kept_count > 0:
+                summary += f"Kept {kept_count} backup project(s) that are in collections."
             
             QMessageBox.information(
                 self,
@@ -1444,6 +1554,27 @@ class MainWindow(QMainWindow):
         """Show collection details view."""
         self.content_stack.setCurrentIndex(1)  # Show collection view
         self.collection_view.set_collection(collection_id)
+    
+    def show_project_properties(self, project_id: int) -> None:
+        """Show project properties view for a project.
+        
+        Args:
+            project_id: The project ID to show properties for.
+        """
+        self.content_stack.setCurrentIndex(6)  # Show project properties view
+        self.project_properties_view.set_project(project_id)
+        self.sidebar.clear_selection()
+    
+    def _on_properties_back(self) -> None:
+        """Handle back button from properties view."""
+        self.content_stack.setCurrentIndex(0)  # Return to projects view
+        self._load_projects()
+    
+    def _on_project_saved(self) -> None:
+        """Handle project being saved in properties view."""
+        # Refresh the project grid to reflect any changes
+        self._load_projects()
+        self._refresh_sidebar()
     
     def _on_edit_collection_from_sidebar(self, collection_id: int) -> None:
         """Edit collection from sidebar context menu."""
@@ -2114,6 +2245,10 @@ class MainWindow(QMainWindow):
                     self.link_panel.cleanup()
                 elif hasattr(self.link_panel, '_scanner') and self.link_panel._scanner:
                     self.link_panel._scanner.stop()
+            
+            # Stop project properties view workers
+            if hasattr(self, 'project_properties_view'):
+                self.project_properties_view.cleanup()
             
             # Stop all timers
             if hasattr(self, 'search_bar') and hasattr(self.search_bar, '_debounce_timer'):

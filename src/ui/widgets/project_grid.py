@@ -480,12 +480,17 @@ class ProjectGrid(QWidget):
         dialog.exec()
     
     def _show_properties(self, project_id: int) -> None:
-        """Show project properties dialog."""
-        from ..dialogs.project_details import ProjectDetailsDialog
-        dialog = ProjectDetailsDialog(project_id, self)
-        dialog.tags_modified.connect(self.tags_modified.emit)
-        if dialog.exec():
-            self._refresh_view()
+        """Show project properties in main window view."""
+        # Use main window's properties view instead of dialog
+        if hasattr(self, '_main_window') and self._main_window:
+            self._main_window.show_project_properties(project_id)
+        else:
+            # Fallback to dialog if main window reference not available
+            from ..dialogs.project_details import ProjectDetailsDialog
+            dialog = ProjectDetailsDialog(project_id, self)
+            dialog.tags_modified.connect(self.tags_modified.emit)
+            if dialog.exec():
+                self._refresh_view()
     
     def select_all(self) -> None:
         """Select all projects."""

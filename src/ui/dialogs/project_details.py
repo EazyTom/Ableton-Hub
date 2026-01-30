@@ -73,7 +73,7 @@ class ProjectDetailsDialog(QDialog):
         # Export song name with auto-suggest
         export_name_layout = QHBoxLayout()
         self.export_name_input = QLineEdit()
-        self.export_name_input.setPlaceholderText("Song name for exports")
+        self.export_name_input.setPlaceholderText("Song name for exports (used for fuzzy matching)")
         
         # Set up completer for export name suggestions
         self._export_name_completer = QCompleter()
@@ -85,11 +85,11 @@ class ProjectDetailsDialog(QDialog):
         # Auto-suggest button
         self.suggest_name_btn = QPushButton("Suggest")
         self.suggest_name_btn.setFixedWidth(60)
-        self.suggest_name_btn.setToolTip("Suggest export name from existing exports")
+        self.suggest_name_btn.setToolTip("Auto-suggest export name from project metadata")
         self.suggest_name_btn.clicked.connect(self._suggest_export_name)
         export_name_layout.addWidget(self.suggest_name_btn)
         
-        meta_layout.addRow("Export Name:", export_name_layout)
+        meta_layout.addRow("Export Name Match:", export_name_layout)
         
         # Rating
         rating_row = QHBoxLayout()

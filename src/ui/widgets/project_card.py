@@ -94,6 +94,13 @@ class ProjectCard(QFrame):
         
         layout.addLayout(name_row)
         
+        # Parent folder label (shown when folder name differs from project name)
+        self.folder_label = QLabel()
+        self.folder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.folder_label.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 9px; font-style: italic;")
+        self.folder_label.setVisible(False)
+        layout.addWidget(self.folder_label)
+        
         layout.addStretch()
         
         # Tempo row (centered)
@@ -268,8 +275,12 @@ class ProjectCard(QFrame):
         else:
             self._set_default_logo()
         
-        # Name
-        self.name_label.setText(self.project.name)
+        # Name - remove "Project" suffix for brevity
+        display_name = self._get_display_name()
+        self.name_label.setText(display_name)
+        
+        # Show parent folder name if it differs from project name (helps distinguish copies)
+        self._update_folder_label()
         
         # Style name label for missing projects (dark orange with yellow)
         if self.project.status == ProjectStatus.MISSING:
@@ -611,6 +622,47 @@ class ProjectCard(QFrame):
         """Handle when playback is stopped."""
         self._update_playing_indicator(False)
     
+    def _get_display_name(self) -> str:
+        """Get the display name for the project, removing 'Project' for brevity."""
+        import re
+        name = self.project.name
+        # Remove all instances of "project" (case-insensitive) - they're all projects anyway
+        # Also clean up any resulting double spaces, leading/trailing separators
+        name = re.sub(r'[Pp]roject', '', name)
+        name = re.sub(r'[\s_-]+', ' ', name)  # Normalize multiple spaces/separators to single space
+        return name.strip(' -_')
+    
+    def _update_folder_label(self) -> None:
+        """Update folder label to show parent folder when it differs from project name.
+        
+        This helps distinguish copies and projects with the same .als filename
+        but in different folders (e.g., 'Project - Copy/Project.als').
+        """
+        if not self.project.file_path:
+            self.folder_label.setVisible(False)
+            return
+        
+        from pathlib import Path
+        project_path = Path(self.project.file_path)
+        parent_folder = project_path.parent.name
+        project_name = self.project.name
+        
+        # Check if parent folder name is meaningfully different from project name
+        # Normalize both for comparison (remove common suffixes like "Project")
+        parent_lower = parent_folder.lower().replace(" project", "").replace("_project", "").strip()
+        name_lower = project_name.lower().replace(" project", "").replace("_project", "").strip()
+        
+        # Show folder label if they're different (indicates copy or alternate naming)
+        if parent_lower != name_lower and parent_folder:
+            # Truncate long folder names
+            display_folder = parent_folder
+            if len(display_folder) > 30:
+                display_folder = display_folder[:27] + "..."
+            self.folder_label.setText(f"📁 {display_folder}")
+            self.folder_label.setVisible(True)
+        else:
+            self.folder_label.setVisible(False)
+    
     def _update_playing_indicator(self, playing: bool) -> None:
         """Update visual indicator for playback state."""
         if playing and self._exports:
@@ -624,8 +676,8 @@ class ProjectCard(QFrame):
             self.name_label.setText(f"🔊 {export_name} ({idx}/{total})")
             self.name_label.setStyleSheet(f"color: {AbletonTheme.COLORS['accent']}; font-weight: bold;")
         else:
-            # Restore original name
-            name = self.project.name
+            # Restore original name (with "Project" removed)
+            name = self._get_display_name()
             if len(name) > 25:
                 name = name[:22] + "..."
             self.name_label.setText(name)

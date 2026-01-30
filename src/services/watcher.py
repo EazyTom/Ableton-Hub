@@ -437,24 +437,8 @@ class FileWatcher(QObject):
         project.has_automation = metadata.has_automation
         project.last_parsed = datetime.utcnow()
         
-        # Auto-populate export_song_name if not already set
-        # Priority: annotation > export filenames > master track name
-        if not project.export_song_name:
-            # Try annotation first (if it looks like a song name)
-            if metadata.annotation:
-                anno = metadata.annotation.strip()
-                # Only use if short and looks like a title (not a long note)
-                if len(anno) < 100 and '\n' not in anno:
-                    project.export_song_name = anno
-            
-            # Try export filenames found in project
-            if not project.export_song_name and metadata.export_filenames:
-                # Use the first export filename (most recent in Live)
-                project.export_song_name = metadata.export_filenames[0]
-            
-            # Try master track name if it's customized
-            if not project.export_song_name and metadata.master_track_name:
-                project.export_song_name = metadata.master_track_name
+        # Note: export_song_name is NOT auto-populated during file watching.
+        # Users can manually set it via the Properties view or use the "Suggest" button.
     
     @property
     def watched_locations(self) -> List[str]:
