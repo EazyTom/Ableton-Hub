@@ -11,11 +11,11 @@
 Ableton Hub is a desktop application that helps you organize, manage, and discover your Ableton Live projects across multiple locations. Whether your projects are on your computer, external drives, network shares, or cloud storage, Ableton Hub scans and indexes them all in one place. Creating collections of your projects and mapping exports to projects with deep learning of your project stats.
 
 **Key Benefits:**
-- **Find projects quickly** - Search and Sort across all your projects by Name, Tempo, Key, Age, Length, Bars, Tracks, Plugins, or Tags
-- **Discover similar projects** - Find projects with similar plugins, devices, tempo, and structure using advanced similarity analysis
-- **Organize with collections** - Create albums, EPs, or custom collections to group related projects
-- **Track your exports** - Automatically find and link exported audio files to their source projects
-- **Preview Audio Exports** - Click on Ableton project to cycle thru all audio exports.
+- **Find Projects quickly** - Search and Sort across all your projects by Name, Tempo, Key, Age, Length, Bars, Tracks, Plugins, or Tags
+- **Discover Similar Projects** - Find projects with similar plugins, devices, tempo, and structure using advanced similarity analysis
+- **Organize with Collections** - Create albums, EPs, or custom collections to group related projects
+- **Track your Exports** - Automatically find and link exported audio files to their source projects
+- **Preview Audio Exports** - Click on Ableton project to cycle thru all audio exports
 - **Launch with Live** - Open any project directly in Ableton Live with your preferred version
 - **Discover patterns** - See which plugins and devices you use most across your projects
 
