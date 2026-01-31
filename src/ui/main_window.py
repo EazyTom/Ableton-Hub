@@ -1107,6 +1107,8 @@ class MainWindow(QMainWindow):
                 # Reload theme
                 self.theme = AbletonTheme(self.config.ui.theme)
                 self.theme.apply(QApplication.instance())
+                # Refresh search bar theme-dependent styles
+                self.search_bar.refresh_theme()
             self._refresh_view()
     
     def _focus_search(self) -> None:
@@ -1451,7 +1453,7 @@ class MainWindow(QMainWindow):
             <li>Ableton Link WiFi network monitoring</li>
             <li>MCP Agents integration links</li>
             <li>Learning resources (Making Music, Learning Music, Max for Live docs)</li>
-            <li>Multiple themes (Orange, Cool Blue, Green, Rainbow)</li>
+            <li>Multiple themes (Orange, Blue, Green, Pink)</li>
             <li>Database cleanup tools</li>
         </ul>
         

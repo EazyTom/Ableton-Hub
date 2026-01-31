@@ -195,7 +195,7 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - Cross-platform audio playback using Qt Multimedia
 
 #### User Interface
-- **Multiple Themes**: Choose from Orange (default), Cool Blue, Green, or Rainbow themes inspired by Ableton Live's aesthetic
+- **Multiple Themes**: Choose from Orange (default), Blue, Green, or Pink themes inspired by Ableton Live's aesthetic
 - **Grid & List Views**: Toggle between grid and list views for projects
 - **Sortable List View**: Click column headers to sort by:
   - Name (A-Z / Z-A)

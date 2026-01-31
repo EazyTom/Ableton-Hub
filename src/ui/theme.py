@@ -40,8 +40,8 @@ class ThemeColors:
         "scrollbar_hover": "#5a5a5a",
     }
     
-    # Cool Blue theme
-    COOL_BLUE = {
+    # Blue theme
+    BLUE = {
         "background": "#1a1f2e",
         "background_alt": "#222836",
         "surface": "#2a3441",
@@ -102,8 +102,8 @@ class ThemeColors:
         "scrollbar_hover": "#5a6a5a",
     }
     
-    # Rainbow theme (vibrant multi-color)
-    RAINBOW = {
+    # Pink theme (vibrant pink accent)
+    PINK = {
         "background": "#1a1a1a",
         "background_alt": "#222222",
         "surface": "#2a2a2a",
@@ -139,16 +139,19 @@ class AbletonTheme:
     
     THEMES = {
         "orange": ThemeColors.ORANGE,
-        "cool_blue": ThemeColors.COOL_BLUE,
+        "blue": ThemeColors.BLUE,
         "green": ThemeColors.GREEN,
-        "rainbow": ThemeColors.RAINBOW,
+        "pink": ThemeColors.PINK,
+        # Legacy aliases for backward compatibility
+        "cool_blue": ThemeColors.BLUE,
+        "rainbow": ThemeColors.PINK,
     }
     
     THEME_NAMES = {
         "orange": "Orange (Ableton)",
-        "cool_blue": "Cool Blue",
+        "blue": "Blue",
         "green": "Green",
-        "rainbow": "Rainbow",
+        "pink": "Pink",
     }
     
     # Backward compatibility: class-level COLORS points to default theme
@@ -168,7 +171,7 @@ class AbletonTheme:
         """Initialize the theme.
         
         Args:
-            theme_name: Name of the theme to use ("orange", "cool_blue", "green", "rainbow").
+            theme_name: Name of the theme to use ("orange", "blue", "green", "pink").
         """
         self.theme_name = theme_name
         self.COLORS = self.THEMES.get(theme_name, self.THEMES["orange"])

@@ -118,10 +118,10 @@ This document tracks all features that have been implemented and those planned f
 - ✅ Device information display (name, IP address)
 
 #### User Interface
-- ✅ Multiple themes (Orange, Cool Blue, Green, Rainbow)
+- ✅ Multiple themes (Orange, Blue, Green, Pink)
 - ✅ Grid and list views with toggle
 - ✅ Sortable list view (Name, Location, Tempo, Key, Version, Modified, etc.)
-- ✅ Rainbow tempo colors on project cards
+- ✅ Rainbow tempo colors on project cards (color-coded BPM display)
 - ✅ MCP servers integration links in sidebar
 - ✅ Learning resources links (Ableton docs, trainers, user groups)
 

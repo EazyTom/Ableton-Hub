@@ -58,7 +58,7 @@ class LinkConfig:
 @dataclass
 class UIConfig:
     """User interface configuration."""
-    theme: str = "orange"  # "orange", "cool_blue", "green", "rainbow"
+    theme: str = "orange"  # "orange", "blue", "green", "pink"
     default_view: str = "grid"  # "grid" or "list"
     grid_card_size: int = 200
     show_status_bar: bool = True

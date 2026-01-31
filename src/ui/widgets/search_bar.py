@@ -3,10 +3,10 @@
 from typing import Optional, Tuple
 from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QPushButton, QMenu, QLabel, 
-    QSpinBox, QFrame, QSizePolicy
+    QSpinBox, QFrame, QSizePolicy, QApplication
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QMouseEvent, QResizeEvent
+from PyQt6.QtGui import QMouseEvent, QResizeEvent, QPalette
 
 from ..theme import AbletonTheme
 
@@ -27,11 +27,23 @@ class TempoButton(QPushButton):
         self._update_style()
     
     def _update_style(self):
+        # Get current theme colors from palette
+        palette = QApplication.instance().palette()
+        accent = palette.color(QPalette.ColorRole.Highlight).name()
+        text_on_accent = palette.color(QPalette.ColorRole.HighlightedText).name()
+        surface = palette.color(QPalette.ColorRole.Button).name()
+        text_primary = palette.color(QPalette.ColorRole.ButtonText).name()
+        border = palette.color(QPalette.ColorRole.Mid).name()
+        
+        # Calculate hover colors (slightly lighter)
+        accent_hover = self._lighten_color(accent)
+        surface_hover = self._lighten_color(surface)
+        
         if self.isChecked():
             self.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {AbletonTheme.COLORS['accent']};
-                    color: {AbletonTheme.COLORS['text_on_accent']};
+                    background-color: {accent};
+                    color: {text_on_accent};
                     border: none;
                     border-radius: 3px;
                     padding: 2px 4px;
@@ -39,24 +51,33 @@ class TempoButton(QPushButton):
                     text-align: center;
                 }}
                 QPushButton:hover {{
-                    background-color: {AbletonTheme.COLORS['accent_hover']};
+                    background-color: {accent_hover};
                 }}
             """)
         else:
             self.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {AbletonTheme.COLORS['surface']};
-                    color: {AbletonTheme.COLORS['text_primary']};
-                    border: 1px solid {AbletonTheme.COLORS['border']};
+                    background-color: {surface};
+                    color: {text_primary};
+                    border: 1px solid {border};
                     border-radius: 3px;
                     padding: 2px 4px;
                     font-size: 11px;
                     text-align: center;
                 }}
                 QPushButton:hover {{
-                    background-color: {AbletonTheme.COLORS['surface_hover']};
+                    background-color: {surface_hover};
                 }}
             """)
+    
+    def _lighten_color(self, hex_color: str, factor: float = 1.2) -> str:
+        """Lighten a hex color by a factor."""
+        from PyQt6.QtGui import QColor
+        color = QColor(hex_color)
+        h, s, v, a = color.getHsv()
+        v = min(255, int(v * factor))
+        color.setHsv(h, s, v, a)
+        return color.name()
 
 
 class SearchBar(QWidget):
@@ -110,18 +131,7 @@ class SearchBar(QWidget):
         self.search_input.returnPressed.connect(self._emit_search)
         self.search_input.setFixedHeight(h)
         self.search_input.setMinimumWidth(100)
-        self.search_input.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {AbletonTheme.COLORS['surface']};
-                border: 1px solid {AbletonTheme.COLORS['border']};
-                border-radius: 3px;
-                padding: 2px 8px;
-                font-size: 12px;
-            }}
-            QLineEdit:focus {{
-                border-color: {AbletonTheme.COLORS['accent']};
-            }}
-        """)
+        # Note: Focus border color is handled by the global theme stylesheet
         self.row1_layout.addWidget(self.search_input, 1)  # Stretch factor
         
         # Filter type
@@ -129,31 +139,14 @@ class SearchBar(QWidget):
         self.filter_combo.addItems(["All", "Name", "Export", "Tags", "Notes"])
         self.filter_combo.setFixedSize(65, h)
         self.filter_combo.currentTextChanged.connect(self._on_filter_changed)
-        self.filter_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {AbletonTheme.COLORS['surface']};
-                border: 1px solid {AbletonTheme.COLORS['border']};
-                border-radius: 3px;
-                padding: 2px 4px;
-                font-size: 11px;
-            }}
-            QComboBox::drop-down {{ border: none; width: 14px; }}
-        """)
+        # Note: Styling is handled by the global theme stylesheet
         self.row1_layout.addWidget(self.filter_combo)
         
         # Advanced button (narrower)
         self.advanced_btn = QPushButton("⚙")
         self.advanced_btn.setFixedSize(22, h)
         self.advanced_btn.clicked.connect(self._show_advanced_menu)
-        self.advanced_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {AbletonTheme.COLORS['surface']};
-                border: 1px solid {AbletonTheme.COLORS['border']};
-                border-radius: 3px;
-                font-size: 11px;
-            }}
-            QPushButton:hover {{ background-color: {AbletonTheme.COLORS['surface_hover']}; }}
-        """)
+        # Note: Styling is handled by the global theme stylesheet
         self.row1_layout.addWidget(self.advanced_btn)
         
         # Date filter indicator
@@ -161,15 +154,7 @@ class SearchBar(QWidget):
         self.date_filter_label.setVisible(False)
         self.date_filter_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.date_filter_label.mousePressEvent = lambda e: self.clear_date_filter()
-        self.date_filter_label.setStyleSheet(f"""
-            QLabel {{
-                background-color: {AbletonTheme.COLORS['accent']};
-                color: {AbletonTheme.COLORS['text_on_accent']};
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-size: 10px;
-            }}
-        """)
+        self._update_date_filter_style()
         self.row1_layout.addWidget(self.date_filter_label)
         
         self.main_layout.addWidget(self.row1_widget)
@@ -182,7 +167,8 @@ class SearchBar(QWidget):
         
         # Tempo label
         tempo_lbl = QLabel("Tempo:")
-        tempo_lbl.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 11px;")
+        tempo_lbl.setObjectName("secondary")  # Use theme's secondary label style
+        tempo_lbl.setStyleSheet("font-size: 11px;")
         self.row2_layout.addWidget(tempo_lbl)
         
         # Tempo preset buttons
@@ -209,15 +195,7 @@ class SearchBar(QWidget):
         self.tempo_min_spin.setRange(0, 999)
         self.tempo_min_spin.setFixedSize(70, h)  # Wider for readability
         self.tempo_min_spin.setSpecialValueText("Min")
-        self.tempo_min_spin.setStyleSheet(f"""
-            QSpinBox {{
-                background-color: {AbletonTheme.COLORS['surface']};
-                border: 1px solid {AbletonTheme.COLORS['border']};
-                border-radius: 3px;
-                padding: 2px 6px;
-                font-size: 12px;
-            }}
-        """)
+        # Note: Styling is handled by the global theme stylesheet
         # Connect Enter key to apply filter
         self.tempo_min_spin.editingFinished.connect(self._apply_custom_tempo)
         self.row2_layout.addWidget(self.tempo_min_spin)
@@ -226,58 +204,31 @@ class SearchBar(QWidget):
         self.tempo_max_spin.setRange(0, 999)
         self.tempo_max_spin.setFixedSize(70, h)  # Wider for readability
         self.tempo_max_spin.setSpecialValueText("Max")
-        self.tempo_max_spin.setStyleSheet(f"""
-            QSpinBox {{
-                background-color: {AbletonTheme.COLORS['surface']};
-                border: 1px solid {AbletonTheme.COLORS['border']};
-                border-radius: 3px;
-                padding: 2px 6px;
-                font-size: 12px;
-            }}
-        """)
+        # Note: Styling is handled by the global theme stylesheet
         # Connect Enter key to apply filter
         self.tempo_max_spin.editingFinished.connect(self._apply_custom_tempo)
         self.row2_layout.addWidget(self.tempo_max_spin)
         
-        apply_btn = QPushButton("Go")
-        apply_btn.setFixedSize(TempoButton.BUTTON_WIDTH, h)  # Match tempo button width
-        apply_btn.clicked.connect(self._apply_custom_tempo)
-        apply_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {AbletonTheme.COLORS['accent']};
-                color: {AbletonTheme.COLORS['text_on_accent']};
-                border: none;
-                border-radius: 3px;
-                font-size: 10px;
-                font-weight: bold;
-                text-align: center;
-            }}
-            QPushButton:hover {{ background-color: {AbletonTheme.COLORS['accent_hover']}; }}
-        """)
-        self.row2_layout.addWidget(apply_btn)
+        self.apply_btn = QPushButton("Go")
+        self.apply_btn.setFixedSize(TempoButton.BUTTON_WIDTH, h)  # Match tempo button width
+        self.apply_btn.clicked.connect(self._apply_custom_tempo)
+        self._update_go_button_style()
+        self.row2_layout.addWidget(self.apply_btn)
         
         # Spacer to push sort to right
         self.row2_layout.addStretch()
         
         # Sort
         sort_lbl = QLabel("Sort:")
-        sort_lbl.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 11px;")
+        sort_lbl.setObjectName("secondary")  # Use theme's secondary label style
+        sort_lbl.setStyleSheet("font-size: 11px;")
         self.row2_layout.addWidget(sort_lbl)
         
         self.sort_combo = QComboBox()
         self.sort_combo.addItems(["Modified ↓", "Modified ↑", "Name A-Z", "Name Z-A", "Tempo ↓", "Tempo ↑", "Length ↓", "Length ↑", "Size ↓", "Size ↑", "Version ↓", "Version ↑", "Key A-Z", "Key Z-A", "Location"])
         self.sort_combo.setFixedSize(110, h)
         self.sort_combo.currentTextChanged.connect(self._on_sort_changed)
-        self.sort_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {AbletonTheme.COLORS['surface']};
-                border: 1px solid {AbletonTheme.COLORS['border']};
-                border-radius: 3px;
-                padding: 2px 4px;
-                font-size: 11px;
-            }}
-            QComboBox::drop-down {{ border: none; width: 14px; }}
-        """)
+        # Note: Styling is handled by the global theme stylesheet
         self.row2_layout.addWidget(self.sort_combo)
         
         self.main_layout.addWidget(self.row2_widget)
@@ -418,6 +369,48 @@ class SearchBar(QWidget):
         else:
             self.date_filter_label.setVisible(False)
     
+    def _update_date_filter_style(self) -> None:
+        """Update date filter label style with current theme colors."""
+        palette = QApplication.instance().palette()
+        accent = palette.color(QPalette.ColorRole.Highlight).name()
+        text_on_accent = palette.color(QPalette.ColorRole.HighlightedText).name()
+        self.date_filter_label.setStyleSheet(f"""
+            QLabel {{
+                background-color: {accent};
+                color: {text_on_accent};
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+            }}
+        """)
+    
+    def _update_go_button_style(self) -> None:
+        """Update Go button style with current theme colors."""
+        palette = QApplication.instance().palette()
+        accent = palette.color(QPalette.ColorRole.Highlight).name()
+        text_on_accent = palette.color(QPalette.ColorRole.HighlightedText).name()
+        
+        # Calculate hover color (slightly lighter)
+        from PyQt6.QtGui import QColor
+        color = QColor(accent)
+        h, s, v, a = color.getHsv()
+        v = min(255, int(v * 1.2))
+        color.setHsv(h, s, v, a)
+        accent_hover = color.name()
+        
+        self.apply_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {accent};
+                color: {text_on_accent};
+                border: none;
+                border-radius: 3px;
+                font-size: 10px;
+                font-weight: bold;
+                text-align: center;
+            }}
+            QPushButton:hover {{ background-color: {accent_hover}; }}
+        """)
+    
     def clear_date_filter(self) -> None:
         self._active_date_filter = None
         self._update_date_filter_indicator()
@@ -457,3 +450,21 @@ class SearchBar(QWidget):
     
     def selectAll(self) -> None:
         self.search_input.selectAll()
+    
+    def refresh_theme(self) -> None:
+        """Refresh all theme-dependent styles. Call this after theme changes."""
+        # Update tempo buttons
+        for btn in self.tempo_buttons:
+            btn._update_style()
+        
+        # Update Go button
+        self._update_go_button_style()
+        
+        # Update date filter label
+        self._update_date_filter_style()
+    
+    def showEvent(self, event) -> None:
+        """Handle show event to refresh theme on display."""
+        super().showEvent(event)
+        # Refresh theme when widget is shown to ensure correct colors
+        QTimer.singleShot(0, self.refresh_theme)
