@@ -16,136 +16,9 @@ from PyQt6.QtGui import QColor
 from ...database import get_session, Project, Location, Collection, ProjectCollection, Export, ProjectTag
 from ...services.audio_player import AudioPlayer, format_duration
 from ...utils.fuzzy_match import extract_song_name
-from ...utils.paths import find_backup_files
 from ..widgets.tag_editor import ProjectTagSelector
 from ..theme import AbletonTheme
-
-
-class ALSParserWorker(QObject):
-    """Worker for parsing ALS files in background thread."""
-    
-    finished = pyqtSignal(dict)  # Emits metadata dict
-    error = pyqtSignal(str)
-    
-    def __init__(self, file_path: str):
-        super().__init__()
-        self.file_path = file_path
-    
-    def run(self):
-        """Parse the ALS file and emit results."""
-        try:
-            from ...services.als_parser import ALSParser
-            parser = ALSParser()
-            metadata = parser.parse(Path(self.file_path))
-            
-            result = {}
-            if metadata:
-                result['export_filenames'] = metadata.export_filenames or []
-                result['annotation'] = metadata.annotation
-                result['master_track_name'] = metadata.master_track_name
-            
-            self.finished.emit(result)
-        except Exception as e:
-            self.error.emit(str(e)[:100])
-
-
-class BackupScanWorker(QObject):
-    """Worker for scanning backup files in background thread."""
-    
-    finished = pyqtSignal(list)  # Emits list of backup file paths
-    error = pyqtSignal(str)
-    
-    def __init__(self, project_path: str):
-        super().__init__()
-        self.project_path = project_path
-    
-    def run(self):
-        """Scan for backup files and emit results."""
-        try:
-            backup_files = find_backup_files(Path(self.project_path))
-            result = []
-            for backup_path in backup_files:
-                mod_time = datetime.fromtimestamp(backup_path.stat().st_mtime)
-                result.append({
-                    'path': str(backup_path),
-                    'name': backup_path.name,
-                    'date': mod_time.strftime("%Y-%m-%d %H:%M")
-                })
-            self.finished.emit(result)
-        except Exception as e:
-            self.error.emit(str(e)[:100])
-
-
-class SimilarProjectsWorker(QObject):
-    """Worker for finding similar projects in background thread."""
-    
-    finished = pyqtSignal(list)  # Emits list of similar projects
-    error = pyqtSignal(str)
-    
-    def __init__(self, project_id: int, project_data: dict):
-        super().__init__()
-        self.project_id = project_id
-        self.project_data = project_data
-    
-    def run(self):
-        """Find similar projects and emit results."""
-        try:
-            from ...services.similarity_analyzer import SimilarityAnalyzer
-            from ...database import get_session, Project as ProjectModel
-            
-            analyzer = SimilarityAnalyzer()
-            
-            session = get_session()
-            try:
-                all_projects = session.query(ProjectModel).filter(
-                    ProjectModel.id != self.project_id
-                ).all()
-                
-                if not all_projects:
-                    self.finished.emit([])
-                    return
-                
-                candidate_dicts = []
-                for p in all_projects:
-                    candidate_dicts.append({
-                        'id': p.id,
-                        'name': p.name,
-                        'plugins': p.plugins or [],
-                        'devices': p.devices or [],
-                        'tempo': p.tempo,
-                        'track_count': p.track_count,
-                        'audio_tracks': getattr(p, 'audio_tracks', 0),
-                        'midi_tracks': getattr(p, 'midi_tracks', 0),
-                        'arrangement_length': p.arrangement_length,
-                        'als_path': p.file_path
-                    })
-                
-                similar = analyzer.find_similar_projects(
-                    reference_project=self.project_data,
-                    candidate_projects=candidate_dicts,
-                    top_n=10,
-                    min_similarity=0.3
-                )
-                
-                result = []
-                for sim_project in similar:
-                    score_percent = int(sim_project.similarity_score * 100)
-                    explanation = ""
-                    if sim_project.similarity_result:
-                        explanation = analyzer.get_similarity_explanation(sim_project.similarity_result)
-                    
-                    result.append({
-                        'id': sim_project.project_id,
-                        'name': sim_project.project_name,
-                        'score': score_percent,
-                        'explanation': explanation
-                    })
-                
-                self.finished.emit(result)
-            finally:
-                session.close()
-        except Exception as e:
-            self.error.emit(str(e)[:100])
+from ..workers import ALSParserWorker, BackupScanWorker, SimilarProjectsWorker
 
 
 class ProjectPropertiesView(QWidget):
@@ -803,7 +676,8 @@ class ProjectPropertiesView(QWidget):
             return
         
         self._als_thread = QThread()
-        self._als_worker = ALSParserWorker(self._project.file_path)
+        # Create worker without parent - required for moveToThread
+        self._als_worker = ALSParserWorker(self._project.file_path, None)
         self._als_worker.moveToThread(self._als_thread)
         
         self._als_thread.started.connect(self._als_worker.run)
@@ -849,7 +723,8 @@ class ProjectPropertiesView(QWidget):
             return
         
         self._backup_thread = QThread()
-        self._backup_worker = BackupScanWorker(self._project.file_path)
+        # Create worker without parent - required for moveToThread
+        self._backup_worker = BackupScanWorker(self._project.file_path, None)
         self._backup_worker.moveToThread(self._backup_thread)
         
         self._backup_thread.started.connect(self._backup_worker.run)
@@ -917,7 +792,8 @@ class ProjectPropertiesView(QWidget):
             self._similar_thread.wait()
         
         self._similar_thread = QThread()
-        self._similar_worker = SimilarProjectsWorker(self._project.id, project_data)
+        # Create worker without parent - required for moveToThread
+        self._similar_worker = SimilarProjectsWorker(self._project.id, project_data, None)
         self._similar_worker.moveToThread(self._similar_thread)
         
         self._similar_thread.started.connect(self._similar_worker.run)
@@ -955,21 +831,63 @@ class ProjectPropertiesView(QWidget):
     
     def _stop_workers(self) -> None:
         """Stop all background workers."""
+        # Stop ALS parser worker
+        if self._als_worker:
+            self._als_worker.cancel()
+            # Disconnect signals before cleanup
+            try:
+                self._als_worker.finished.disconnect()
+                self._als_worker.error.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signals may already be disconnected
         if self._als_thread and self._als_thread.isRunning():
             self._als_thread.quit()
-            self._als_thread.wait(1000)
+            if not self._als_thread.wait(2000):  # Wait up to 2 seconds
+                self._als_thread.terminate()
+                self._als_thread.wait(1000)
+            self._als_thread.deleteLater()
+        if self._als_worker:
+            self._als_worker.deleteLater()
         self._als_thread = None
         self._als_worker = None
         
+        # Stop backup scan worker
+        if self._backup_worker:
+            self._backup_worker.cancel()
+            # Disconnect signals before cleanup
+            try:
+                self._backup_worker.finished.disconnect()
+                self._backup_worker.error.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signals may already be disconnected
         if self._backup_thread and self._backup_thread.isRunning():
             self._backup_thread.quit()
-            self._backup_thread.wait(1000)
+            if not self._backup_thread.wait(2000):  # Wait up to 2 seconds
+                self._backup_thread.terminate()
+                self._backup_thread.wait(1000)
+            self._backup_thread.deleteLater()
+        if self._backup_worker:
+            self._backup_worker.deleteLater()
         self._backup_thread = None
         self._backup_worker = None
         
+        # Stop similar projects worker
+        if self._similar_worker:
+            self._similar_worker.cancel()
+            # Disconnect signals before cleanup
+            try:
+                self._similar_worker.finished.disconnect()
+                self._similar_worker.error.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signals may already be disconnected
         if self._similar_thread and self._similar_thread.isRunning():
             self._similar_thread.quit()
-            self._similar_thread.wait(1000)
+            if not self._similar_thread.wait(2000):  # Wait up to 2 seconds
+                self._similar_thread.terminate()
+                self._similar_thread.wait(1000)
+            self._similar_thread.deleteLater()
+        if self._similar_worker:
+            self._similar_worker.deleteLater()
         self._similar_thread = None
         self._similar_worker = None
     

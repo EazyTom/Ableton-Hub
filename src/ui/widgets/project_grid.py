@@ -158,6 +158,9 @@ class ProjectGrid(QWidget):
         """Populate the grid view with project cards."""
         # Clear existing cards
         for card in self._cards.values():
+            # Clean up signals before deletion
+            if hasattr(card, 'cleanup'):
+                card.cleanup()
             card.deleteLater()
         self._cards.clear()
         
@@ -392,6 +395,12 @@ class ProjectGrid(QWidget):
         
         open_action = menu.addAction("Open in File Manager")
         open_action.triggered.connect(lambda: self.project_double_clicked.emit(project_id))
+        
+        menu.addSeparator()
+        
+        # Rescan action
+        rescan_action = menu.addAction("Re-scan Project")
+        rescan_action.triggered.connect(lambda: self._rescan_project(project_id))
         
         menu.addSeparator()
         
@@ -659,6 +668,74 @@ class ProjectGrid(QWidget):
                 )
         finally:
             session.close()
+    
+    def _rescan_project(self, project_id: int) -> None:
+        """Rescan a single project to update its metadata."""
+        # Access scan controller through main window
+        if not hasattr(self, '_main_window') or not self._main_window:
+            QMessageBox.warning(
+                self, "Error",
+                "Unable to rescan project: Main window reference not available."
+            )
+            return
+        
+        if not hasattr(self._main_window, 'scan_controller'):
+            QMessageBox.warning(
+                self, "Error",
+                "Scan controller not available."
+            )
+            return
+        
+        scan_controller = self._main_window.scan_controller
+        
+        # Check if scan is already running
+        if scan_controller.is_running():
+            QMessageBox.warning(
+                self, "Scan In Progress",
+                "A scan is already in progress. Please wait for it to complete before rescanning individual projects."
+            )
+            return
+        
+        # Get project name for user feedback
+        session = get_session()
+        try:
+            project = session.query(Project).get(project_id)
+            if not project:
+                QMessageBox.warning(self, "Error", "Project not found.")
+                return
+            
+            project_name = project.name
+        finally:
+            session.close()
+        
+        # Connect to rescan completion and error signals
+        def on_rescanned(rescanned_id: int):
+            if rescanned_id == project_id:
+                QMessageBox.information(
+                    self, "Rescan Complete",
+                    f"Project '{project_name}' has been rescanned successfully.\n\n"
+                    "Metadata has been updated."
+                )
+                # Refresh the view to show updated information
+                self._refresh_view()
+                # Disconnect signals after completion
+                scan_controller.project_rescanned.disconnect(on_rescanned)
+                scan_controller.scan_error.disconnect(on_error)
+        
+        def on_error(error_msg: str):
+            QMessageBox.warning(
+                self, "Rescan Error",
+                f"Failed to rescan project '{project_name}':\n\n{error_msg}"
+            )
+            # Disconnect signals after error
+            scan_controller.project_rescanned.disconnect(on_rescanned)
+            scan_controller.scan_error.disconnect(on_error)
+        
+        scan_controller.project_rescanned.connect(on_rescanned)
+        scan_controller.scan_error.connect(on_error)
+        
+        # Start the rescan
+        scan_controller.rescan_project(project_id)
     
     def _find_exports(self, project_id: int) -> None:
         """Find and link exports for this project."""

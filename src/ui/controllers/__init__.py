@@ -5,6 +5,7 @@ from .project_controller import ProjectController
 from .collection_controller import CollectionController
 from .live_controller import LiveController
 from .location_controller import LocationController
+from .view_controller import ViewController
 
 __all__ = [
     "ScanController",
@@ -12,4 +13,5 @@ __all__ = [
     "CollectionController",
     "LiveController",
     "LocationController",
+    "ViewController",
 ]

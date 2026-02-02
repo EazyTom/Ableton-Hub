@@ -25,6 +25,9 @@ from .widgets.link_panel import LinkPanel
 from .widgets.project_properties_view import ProjectPropertiesView
 from .theme import AbletonTheme
 from .controllers.scan_controller import ScanController
+from .managers.view_manager import ViewManager
+from .managers.menu_bar_manager import MenuBarManager
+from .managers.toolbar_manager import ToolBarManager
 from ..services.watcher import FileWatcher
 
 
@@ -53,6 +56,15 @@ class MainWindow(QMainWindow):
         
         # Initialize controllers
         self.scan_controller = ScanController(self)
+        
+        # ViewManager will be initialized after content_stack is created
+        self.view_manager: Optional[ViewManager] = None
+        
+        # MenuBarManager will be initialized before menus are created
+        self.menu_manager: Optional[MenuBarManager] = None
+        
+        # ToolBarManager will be initialized before toolbar is created
+        self.toolbar_manager: Optional[ToolBarManager] = None
         
         self._setup_window()
         self._set_window_icon()
@@ -108,248 +120,70 @@ class MainWindow(QMainWindow):
     
     def _create_menus(self) -> None:
         """Create the menu bar and menus."""
-        menubar = self.menuBar()
+        # Create menu manager
+        self.menu_manager = MenuBarManager(self, self)
         
-        # File menu
-        file_menu = menubar.addMenu("&File")
+        # Connect menu signals to MainWindow methods
+        self.menu_manager.add_location_requested.connect(self._on_add_location)
+        self.menu_manager.scan_all_requested.connect(self._on_scan_all)
+        self.menu_manager.settings_requested.connect(self._on_settings)
+        self.menu_manager.exit_requested.connect(self.close)
+        self.menu_manager.search_projects_requested.connect(self._focus_search)
+        self.menu_manager.select_all_requested.connect(self._select_all_projects)
+        self.menu_manager.grid_view_requested.connect(lambda: self._set_view_mode("grid"))
+        self.menu_manager.list_view_requested.connect(lambda: self._set_view_mode("list"))
+        self.menu_manager.toggle_sidebar_requested.connect(self._toggle_sidebar)
+        self.menu_manager.toggle_show_missing_requested.connect(self._toggle_show_missing)
+        self.menu_manager.refresh_requested.connect(self._refresh_view)
+        self.menu_manager.new_collection_requested.connect(self._on_new_collection)
+        self.menu_manager.global_search_requested.connect(self._on_global_search)
+        self.menu_manager.show_link_panel_requested.connect(self._show_link_panel)
+        self.menu_manager.force_rescan_metadata_requested.connect(self._on_force_rescan_metadata)
+        self.menu_manager.clear_thumbnail_cache_requested.connect(self._on_clear_thumbnail_cache)
+        self.menu_manager.cleanup_missing_projects_requested.connect(self._on_cleanup_missing_projects)
+        self.menu_manager.cleanup_backup_projects_requested.connect(self._on_cleanup_backup_projects)
+        self.menu_manager.reset_database_requested.connect(self._on_reset_database)
+        self.menu_manager.view_logs_requested.connect(self._on_view_logs)
+        self.menu_manager.about_requested.connect(self._show_about)
         
-        add_location_action = QAction("Add Location...", self)
-        add_location_action.setShortcut(QKeySequence("Ctrl+L"))
-        add_location_action.triggered.connect(self._on_add_location)
-        file_menu.addAction(add_location_action)
+        # Create menus
+        self.menu_manager.create_menus()
         
-        scan_all_action = QAction("Scan All Locations", self)
-        scan_all_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
-        scan_all_action.triggered.connect(self._on_scan_all)
-        file_menu.addAction(scan_all_action)
-        
-        file_menu.addSeparator()
-        
-        settings_action = QAction("Settings...", self)
-        settings_action.setShortcut(QKeySequence("Ctrl+,"))
-        settings_action.triggered.connect(self._on_settings)
-        file_menu.addAction(settings_action)
-        
-        file_menu.addSeparator()
-        
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence("Ctrl+Q"))
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-        
-        # Edit menu
-        edit_menu = menubar.addMenu("&Edit")
-        
-        search_action = QAction("Search Projects...", self)
-        search_action.setShortcut(QKeySequence("Ctrl+F"))
-        search_action.triggered.connect(self._focus_search)
-        edit_menu.addAction(search_action)
-        
-        edit_menu.addSeparator()
-        
-        select_all_action = QAction("Select All", self)
-        select_all_action.setShortcut(QKeySequence("Ctrl+A"))
-        select_all_action.triggered.connect(self._select_all_projects)
-        edit_menu.addAction(select_all_action)
-        
-        # View menu
-        view_menu = menubar.addMenu("&View")
-        
-        grid_view_action = QAction("Grid View", self)
-        grid_view_action.setShortcut(QKeySequence("Ctrl+1"))
-        grid_view_action.triggered.connect(lambda: self._set_view_mode("grid"))
-        view_menu.addAction(grid_view_action)
-        
-        list_view_action = QAction("List View", self)
-        list_view_action.setShortcut(QKeySequence("Ctrl+2"))
-        list_view_action.triggered.connect(lambda: self._set_view_mode("list"))
-        view_menu.addAction(list_view_action)
-        
-        view_menu.addSeparator()
-        
-        self.sidebar_action = QAction("Show Sidebar", self)
-        self.sidebar_action.setShortcut(QKeySequence("Ctrl+B"))
-        self.sidebar_action.setCheckable(True)
-        self.sidebar_action.setChecked(True)
-        self.sidebar_action.triggered.connect(self._toggle_sidebar)
-        view_menu.addAction(self.sidebar_action)
-        
-        view_menu.addSeparator()
-        
-        self.show_missing_action = QAction("Show Missing Projects", self)
-        self.show_missing_action.setCheckable(True)
-        self.show_missing_action.setChecked(False)
-        self.show_missing_action.triggered.connect(self._toggle_show_missing)
-        view_menu.addAction(self.show_missing_action)
-        
-        view_menu.addSeparator()
-        
-        refresh_action = QAction("Refresh", self)
-        refresh_action.setShortcut(QKeySequence("F5"))
-        refresh_action.triggered.connect(self._refresh_view)
-        view_menu.addAction(refresh_action)
-        
-        # Collection menu
-        collection_menu = menubar.addMenu("&Collections")
-        
-        new_collection_action = QAction("New Collection...", self)
-        new_collection_action.setShortcut(QKeySequence("Ctrl+N"))
-        new_collection_action.triggered.connect(self._on_new_collection)
-        collection_menu.addAction(new_collection_action)
-        
-        # Tools menu
-        tools_menu = menubar.addMenu("&Tools")
-        
-        global_search_action = QAction("Global Search...", self)
-        global_search_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
-        global_search_action.triggered.connect(self._on_global_search)
-        tools_menu.addAction(global_search_action)
-        
-        tools_menu.addSeparator()
-        
-        link_panel_action = QAction("Ableton Link WiFi...", self)
-        link_panel_action.triggered.connect(self._show_link_panel)
-        tools_menu.addAction(link_panel_action)
-        
-        tools_menu.addSeparator()
-        
-        rescan_metadata_action = QAction("Force Re-scan Metadata...", self)
-        rescan_metadata_action.setToolTip("Clear parse timestamps and re-extract all project metadata on next scan")
-        rescan_metadata_action.triggered.connect(self._on_force_rescan_metadata)
-        tools_menu.addAction(rescan_metadata_action)
-        
-        clear_cache_action = QAction("Clear Thumbnail Cache...", self)
-        clear_cache_action.setToolTip("Delete all generated waveform thumbnails and regenerate them")
-        clear_cache_action.triggered.connect(self._on_clear_thumbnail_cache)
-        tools_menu.addAction(clear_cache_action)
-        
-        tools_menu.addSeparator()
-        
-        cleanup_missing_action = QAction("Clean Up Missing Projects...", self)
-        cleanup_missing_action.setToolTip("Remove MISSING projects from database (including backup projects)")
-        cleanup_missing_action.triggered.connect(self._on_cleanup_missing_projects)
-        tools_menu.addAction(cleanup_missing_action)
-        
-        cleanup_backups_action = QAction("Remove Backup Projects from Database...", self)
-        cleanup_backups_action.setToolTip("Remove projects that are in Backup folders from database")
-        cleanup_backups_action.triggered.connect(self._on_cleanup_backup_projects)
-        tools_menu.addAction(cleanup_backups_action)
-        
-        reset_db_action = QAction("Reset Database...", self)
-        reset_db_action.setToolTip("Delete all data and start fresh (use with caution!)")
-        reset_db_action.triggered.connect(self._on_reset_database)
-        tools_menu.addAction(reset_db_action)
-        
-        # Help menu
-        help_menu = menubar.addMenu("&Help")
-        
-        about_action = QAction("About Ableton Hub", self)
-        about_action.triggered.connect(self._show_about)
-        help_menu.addAction(about_action)
+        # Store references to actions that are accessed elsewhere
+        self.sidebar_action = self.menu_manager.get_action("sidebar")
+        self.show_missing_action = self.menu_manager.get_action("show_missing")
     
     def _create_toolbar(self) -> None:
         """Create the main toolbar."""
-        toolbar = QToolBar("Main Toolbar")
-        toolbar.setMovable(False)
-        toolbar.setFloatable(False)
-        # Ensure toolbar has valid font
-        font = toolbar.font()
-        if font.pointSize() <= 0:
-            font.setPixelSize(12)
-            toolbar.setFont(font)
-        self.addToolBar(toolbar)
+        # Create toolbar manager
+        self.toolbar_manager = ToolBarManager(self, self)
         
-        # Logo at top left
-        try:
-            from ..utils.paths import get_resources_path
-            logo_path = get_resources_path() / "images" / "hub-logo.png"
-            if logo_path.exists():
-                logo_label = QLabel()
-                pixmap = QPixmap(str(logo_path))
-                # Scale logo to reasonable size (max height 40px for toolbar)
-                scaled_pixmap = pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
-                logo_label.setPixmap(scaled_pixmap)
-                logo_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-                logo_label.setStyleSheet("padding: 4px;")
-                toolbar.addWidget(logo_label)
-        except Exception as e:
-            self.logger.warning(f"Could not load logo: {e}", exc_info=True)
+        # Connect toolbar signals
+        self.toolbar_manager.scan_requested.connect(self._on_scan_all)
+        self.toolbar_manager.grid_view_requested.connect(lambda: self._set_view_mode("grid"))
+        self.toolbar_manager.list_view_requested.connect(lambda: self._set_view_mode("list"))
         
-        # Add spacer
-        spacer = QWidget()
-        spacer.setFixedWidth(10)
-        toolbar.addWidget(spacer)
+        # Create toolbar
+        toolbar = self.toolbar_manager.create_toolbar()
         
-        # Search bar - expands to fill available space
-        self.search_bar = SearchBar()
-        self.search_bar.search_changed.connect(self._on_search)
-        self.search_bar.filter_changed.connect(self._on_filter_changed)
-        self.search_bar.tempo_filter_changed.connect(self._on_tempo_filter_changed)
-        self.search_bar.sort_changed.connect(self._on_sort_changed)
-        self.search_bar.create_collection_from_filter.connect(self._on_create_collection_from_filter)
-        self.search_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        toolbar.addWidget(self.search_bar)
+        # Get search bar and connect its signals
+        self.search_bar = self.toolbar_manager.get_search_bar()
+        if self.search_bar:
+            self.search_bar.search_changed.connect(self._on_search)
+            self.search_bar.filter_changed.connect(self._on_filter_changed)
+            self.search_bar.tempo_filter_changed.connect(self._on_tempo_filter_changed)
+            self.search_bar.sort_changed.connect(self._on_sort_changed)
+            self.search_bar.create_collection_from_filter.connect(self._on_create_collection_from_filter)
+        
+        # Store references to view buttons
+        self.grid_btn = self.toolbar_manager.get_grid_button()
+        self.list_btn = self.toolbar_manager.get_list_button()
         
         # Store current filters
         self._current_date_filter = None
         self._current_tempo_min = 0
         self._current_tempo_max = 0
         self._current_sort = "modified"
-        
-        # Scan button
-        scan_action = QAction("Scan", self)
-        scan_action.setToolTip("")  # No tooltip to avoid font errors
-        scan_action.setStatusTip("")  # No status tip either
-        scan_action.triggered.connect(self._on_scan_all)
-        toolbar.addAction(scan_action)
-        
-        toolbar.addSeparator()
-        
-        # View toggle buttons
-        self.grid_btn = QAction("Grid", self)
-        self.grid_btn.setCheckable(True)
-        self.grid_btn.setChecked(self.config.ui.default_view == "grid")
-        self.grid_btn.setToolTip("")  # No tooltip to avoid font errors
-        self.grid_btn.setStatusTip("")  # No status tip either
-        self.grid_btn.triggered.connect(lambda: self._set_view_mode("grid"))
-        toolbar.addAction(self.grid_btn)
-        
-        self.list_btn = QAction("List", self)
-        self.list_btn.setCheckable(True)
-        self.list_btn.setChecked(self.config.ui.default_view == "list")
-        self.list_btn.setToolTip("")  # No tooltip to avoid font errors
-        self.list_btn.setStatusTip("")  # No status tip either
-        self.list_btn.triggered.connect(lambda: self._set_view_mode("list"))
-        toolbar.addAction(self.list_btn)
-        
-        # Set fonts programmatically on toolbar buttons and block tooltips
-        from PyQt6.QtWidgets import QToolButton
-        from PyQt6.QtCore import QTimer, QObject, QEvent
-        from PyQt6.QtGui import QFont as QtFont
-        
-        class ToolbarTooltipBlocker(QObject):
-            """Event filter to block tooltip events on toolbar buttons."""
-            def eventFilter(self, obj, event):
-                # Block tooltip events completely - this prevents font errors
-                if event.type() == QEvent.Type.ToolTip:
-                    return True  # Consume the event, don't show tooltip
-                return False  # Let other events through
-        
-        tooltip_blocker = ToolbarTooltipBlocker(self)
-        
-        def set_toolbar_button_fonts():
-            """Set fonts directly on toolbar button widgets and block tooltips."""
-            for action in toolbar.actions():
-                widget = toolbar.widgetForAction(action)
-                if widget and isinstance(widget, QToolButton):
-                    # Set a valid font with pixel size
-                    font = QtFont("Segoe UI", 9)  # Use point size constructor
-                    widget.setFont(font)
-                    # Install event filter to block tooltip events
-                    widget.installEventFilter(tooltip_blocker)
-        
-        # Set fonts after widgets are created
-        QTimer.singleShot(0, set_toolbar_button_fonts)
     
     def _create_central_widget(self) -> None:
         """Create the central widget with sidebar and content area."""
@@ -368,7 +202,7 @@ class MainWindow(QMainWindow):
         self.sidebar.setMinimumWidth(200)
         self.sidebar.setMaximumWidth(400)
         
-        # Connect sidebar signals
+        # Connect sidebar signals (removed duplicates)
         self.sidebar.navigation_changed.connect(self._on_navigation_changed)
         self.sidebar.location_selected.connect(self._on_location_filter)
         self.sidebar.collection_selected.connect(self._on_collection_selected)
@@ -380,13 +214,6 @@ class MainWindow(QMainWindow):
         self.sidebar.add_manual_installation_requested.connect(self._on_add_manual_installation)
         self.sidebar.set_favorite_installation_requested.connect(self._on_set_favorite_installation)
         self.sidebar.remove_installation_requested.connect(self._on_remove_installation)
-        self.sidebar.navigation_changed.connect(self._on_navigation_changed)
-        self.sidebar.location_selected.connect(self._on_location_filter)
-        self.sidebar.location_delete_requested.connect(self._on_delete_location_from_sidebar)
-        self.sidebar.cleanup_orphaned_projects_requested.connect(self._on_cleanup_orphaned_projects)
-        self.sidebar.collection_selected.connect(self._on_collection_selected)
-        self.sidebar.collection_edit_requested.connect(self._on_edit_collection_from_sidebar)
-        self.sidebar.collection_delete_requested.connect(self._on_delete_collection_from_sidebar)
         self.sidebar.tag_selected.connect(self._on_tag_filter)
         self.sidebar.manage_tags_requested.connect(self._on_manage_tags)
         self.splitter.addWidget(self.sidebar)
@@ -440,6 +267,16 @@ class MainWindow(QMainWindow):
         self.content_stack.addWidget(self.project_properties_view)
         
         self.splitter.addWidget(self.content_stack)
+        
+        # Initialize ViewManager and register all views
+        self.view_manager = ViewManager(self.content_stack, self)
+        self.view_manager.register_view(ViewManager.VIEW_PROJECTS, self.project_grid, 0)
+        self.view_manager.register_view(ViewManager.VIEW_COLLECTIONS, self.collection_view, 1)
+        self.view_manager.register_view(ViewManager.VIEW_LOCATIONS, self.location_panel, 2)
+        self.view_manager.register_view(ViewManager.VIEW_LINK, self.link_panel, 3)
+        self.view_manager.register_view(ViewManager.VIEW_HEALTH, self.health_dashboard, 4)
+        self.view_manager.register_view(ViewManager.VIEW_SIMILARITIES, self.recommendations_panel, 5)
+        self.view_manager.register_view(ViewManager.VIEW_PROPERTIES, self.project_properties_view, 6)
         
         # Set initial sizes
         self.splitter.setSizes([self.config.window.sidebar_width, 1000])
@@ -1187,7 +1024,7 @@ class MainWindow(QMainWindow):
             self._refresh_sidebar()
             self.collection_view.refresh()
             # Switch to collections view to show the new collection
-            self.content_stack.setCurrentIndex(1)
+            self.view_manager.switch_to_view(ViewManager.VIEW_COLLECTIONS)
     
     def _on_new_smart_collection(self) -> None:
         """Show new smart collection dialog."""
@@ -1197,7 +1034,7 @@ class MainWindow(QMainWindow):
             self._refresh_sidebar()
             self.collection_view.refresh()
             # Switch to collections view
-            self.content_stack.setCurrentIndex(1)
+            self.view_manager.switch_to_view(ViewManager.VIEW_COLLECTIONS)
     
     def _on_create_collection_from_filter(self, filter_state: dict) -> None:
         """Create a smart collection from the current filter state."""
@@ -1224,7 +1061,7 @@ class MainWindow(QMainWindow):
             self._refresh_sidebar()
             self.collection_view.refresh()
             # Switch to collections view
-            self.content_stack.setCurrentIndex(1)
+            self.view_manager.switch_to_view(ViewManager.VIEW_COLLECTIONS)
     
     def _on_global_search(self) -> None:
         """Show global search dialog."""
@@ -1232,7 +1069,7 @@ class MainWindow(QMainWindow):
     
     def _show_link_panel(self) -> None:
         """Show the Link network panel."""
-        self.content_stack.setCurrentIndex(3)
+        self.view_manager.switch_to_view(ViewManager.VIEW_LINK)
         self.sidebar.clear_selection()
     
     def _on_force_rescan_metadata(self) -> None:
@@ -1377,6 +1214,12 @@ class MainWindow(QMainWindow):
                 "Error",
                 f"Failed to clear thumbnail cache:\n{str(e)}"
             )
+    
+    def _on_view_logs(self) -> None:
+        """Show log viewer dialog."""
+        from .dialogs.log_viewer_dialog import LogViewerDialog
+        dialog = LogViewerDialog(self)
+        dialog.exec()
     
     def _show_about(self) -> None:
         """Show about dialog with compact README content."""
@@ -1545,27 +1388,27 @@ class MainWindow(QMainWindow):
             self.show_missing_action.setChecked(False)
         
         if view == "projects":
-            self.content_stack.setCurrentIndex(0)
+            self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
             self._load_projects()
         elif view == "favorites":
-            self.content_stack.setCurrentIndex(0)
+            self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
             self._load_projects(favorites_only=True)
         elif view == "recent":
-            self.content_stack.setCurrentIndex(0)
+            self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
             self._load_projects(date_filter="7days")
         elif view == "collections":
-            self.content_stack.setCurrentIndex(1)
+            self.view_manager.switch_to_view(ViewManager.VIEW_COLLECTIONS)
             self.collection_view.refresh()
         elif view == "locations":
-            self.content_stack.setCurrentIndex(2)
+            self.view_manager.switch_to_view(ViewManager.VIEW_LOCATIONS)
             self.location_panel.refresh()
         elif view == "link":
-            self.content_stack.setCurrentIndex(3)
+            self.view_manager.switch_to_view(ViewManager.VIEW_LINK)
         elif view == "health":
-            self.content_stack.setCurrentIndex(4)
+            self.view_manager.switch_to_view(ViewManager.VIEW_HEALTH)
             self.health_dashboard.refresh()
         elif view == "similarities":
-            self.content_stack.setCurrentIndex(5)
+            self.view_manager.switch_to_view(ViewManager.VIEW_SIMILARITIES)
             # If a project is selected, set it in similarities panel
             selected_ids = self.project_grid.get_selected_ids()
             if selected_ids and len(selected_ids) == 1:
@@ -1579,12 +1422,12 @@ class MainWindow(QMainWindow):
     
     def _on_location_filter(self, location_id: int) -> None:
         """Filter projects by location."""
-        self.content_stack.setCurrentIndex(0)
+        self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
         self._load_projects(location_id=location_id)
     
     def _on_collection_selected(self, collection_id: int) -> None:
         """Show collection details view."""
-        self.content_stack.setCurrentIndex(1)  # Show collection view
+        self.view_manager.switch_to_view(ViewManager.VIEW_COLLECTIONS)
         self.collection_view.set_collection(collection_id)
     
     def show_project_properties(self, project_id: int) -> None:
@@ -1593,13 +1436,13 @@ class MainWindow(QMainWindow):
         Args:
             project_id: The project ID to show properties for.
         """
-        self.content_stack.setCurrentIndex(6)  # Show project properties view
+        self.view_manager.switch_to_view(ViewManager.VIEW_PROPERTIES)
         self.project_properties_view.set_project(project_id)
         self.sidebar.clear_selection()
     
     def _on_properties_back(self) -> None:
         """Handle back button from properties view."""
-        self.content_stack.setCurrentIndex(0)  # Return to projects view
+        self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
         self._load_projects()
     
     def _on_project_saved(self) -> None:
@@ -1876,7 +1719,7 @@ class MainWindow(QMainWindow):
     
     def _on_tag_filter(self, tag_id: int) -> None:
         """Filter projects by tag."""
-        self.content_stack.setCurrentIndex(0)
+        self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
         self._load_projects(tag_id=tag_id)
     
     def _on_manage_tags(self) -> None:

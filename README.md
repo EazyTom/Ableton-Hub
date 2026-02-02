@@ -4,7 +4,7 @@
 
 # Ableton Hub
 
-**Version 1.0.1**
+**Version 1.0.2**
 
 ## What is Ableton Hub?
 
@@ -54,9 +54,9 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - Filter by tempo range (min/max BPM)
   - **Filter by similarity**: Find projects similar to a reference project (with configurable similarity threshold)
 - **Track Management**: Organize projects within collections as tracks with:
-  - Custom track names
+  - Custom Track / Song names that map to Project name and Audio Export
   - Per-track artwork
-  - Drag-and-drop reordering
+  - Track re-ordering
 - **Collection Types**: Support for albums, EPs, sessions, compilations, and custom types
 
 #### Search & Discovery
@@ -135,6 +135,22 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
 - **Export Status Indicators**: Green border and 🔊 icon for projects with playable exports
 - **Export Song Name**: Set custom export names to improve matching accuracy
 
+#### Audio Preview & Playback
+- **Waveform Thumbnails**: Generate visual waveform previews from exported audio files
+- **Automatic Generation**: Thumbnails created automatically during export tracking
+- **Default Artwork**: Uses Ableton logo as default thumbnail when preview unavailable
+- **Click-to-Play on Project Cards**: Single-click any project card with exports to instantly play audio
+  - Click again to cycle through multiple exports
+  - Click on last export to stop playback
+  - Visual feedback shows current export name and position (e.g., "🔊 MySong (2/3)")
+- **Status Bar Playback Display**: Shows currently playing filename in the status bar with green highlight
+- **In-App Audio Playback**: Play exported audio files directly from the project details:
+  - Play/Pause and Stop controls
+  - Seek slider with time display
+  - Volume control
+  - Support for WAV, AIFF, MP3, FLAC, OGG, and M4A formats
+  - Cross-platform audio playback using Qt Multimedia
+  
 #### Duplicate Detection
 - **Multiple Detection Methods**:
   - File hash comparison (SHA256)
@@ -178,21 +194,7 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - ableton-copilot-mcp (GitHub)
   - Live control via MCP documentation and resources
 
-#### Audio Preview & Playback
-- **Waveform Thumbnails**: Generate visual waveform previews from exported audio files
-- **Automatic Generation**: Thumbnails created automatically during export tracking
-- **Default Artwork**: Uses Ableton logo as default thumbnail when preview unavailable
-- **Click-to-Play on Project Cards**: Single-click any project card with exports to instantly play audio
-  - Click again to cycle through multiple exports
-  - Click on last export to stop playback
-  - Visual feedback shows current export name and position (e.g., "🔊 MySong (2/3)")
-- **Status Bar Playback Display**: Shows currently playing filename in the status bar with green highlight
-- **In-App Audio Playback**: Play exported audio files directly from the project details:
-  - Play/Pause and Stop controls
-  - Seek slider with time display
-  - Volume control
-  - Support for WAV, AIFF, MP3, FLAC, OGG, and M4A formats
-  - Cross-platform audio playback using Qt Multimedia
+
 
 #### User Interface
 - **Multiple Themes**: Choose from Orange (default), Blue, Green, or Pink themes inspired by Ableton Live's aesthetic
@@ -210,6 +212,35 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - Certified trainers directory
   - Regional user groups (Austin, Chicago, San Francisco)
   - Ableton Discord community
+
+#### Enhanced Logging & Diagnostics
+- **Comprehensive Logging System**: Built-in logging infrastructure for troubleshooting and debugging
+  - **File-based Logging**: Automatic log file creation with rotation (10MB files, 5 backups)
+  - **Separate Error Log**: Dedicated error log file for quick problem identification
+  - **Configurable Log Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL (defaults to ERROR for production)
+  - **Development Mode**: Automatically switches to DEBUG level when running from source
+  - **Log Viewer**: Built-in log viewer accessible from Help menu to view recent logs without leaving the app
+  - **Settings Integration**: Configure logging preferences (level, file location, rotation settings) in Settings dialog
+  - **Global Exception Handling**: Unhandled exceptions are automatically logged with full tracebacks
+  - **Qt Message Integration**: Qt warnings and errors routed through Python logging for unified error tracking
+  - **Context-Rich Error Logging**: Worker threads and operations include contextual information (project IDs, file paths, etc.) in error logs
+- **Log File Locations**: 
+  - Windows: `%APPDATA%\AbletonHub\logs\`
+  - macOS: `~/Library/Application Support/AbletonHub/logs/`
+  - Linux: `~/.local/share/AbletonHub/logs/`
+
+#### Performance Optimizations
+- **Database Optimizations**:
+  - **SQLite WAL Mode**: Write-Ahead Logging for better concurrent access and performance
+  - **Optimized Cache**: 64MB SQLite cache for faster query performance
+  - **Strategic Indexes**: Composite indexes on common query patterns (location+status, favorite+modified, etc.)
+  - **Query Optimization**: Indexed columns for fast filtering and sorting operations
+- **GUI Widget Optimizations**:
+  - **Modular Architecture**: MainWindow refactored into specialized managers (ViewManager, MenuBarManager, ToolBarManager)
+  - **Background Processing**: Heavy operations moved to worker threads to keep UI responsive
+  - **Efficient Signal Management**: Proper signal disconnection and cleanup to prevent memory leaks
+  - **Lazy Loading**: Resources loaded on-demand to improve startup time
+  - **Widget Lifecycle Management**: Proper cleanup and bounds checking to prevent crashes
 
 ## 🏗️ System Architecture
 
@@ -511,8 +542,10 @@ Having issues? Here are solutions to common problems:
 ### Something went wrong
 
 - Check the status bar at the bottom of the window for error messages
+- **View Logs**: Use Help → View Logs to see detailed error information and recent activity
+- Check log files in the logs directory (see Settings → Logging tab for location)
 - Try resetting the database: Tools → Reset Database (⚠️ This will delete all your indexed projects)
-- If the problem persists, open an issue on GitHub with details about what happened
+- If the problem persists, open an issue on GitHub with details about what happened and include relevant log entries
 
 
 ## 🤝 Contributing
@@ -531,6 +564,9 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
 
 ### Recently Completed
+- ✅ **Enhanced Logging System** - Comprehensive logging with file rotation, configurable levels, log viewer, and global exception handling
+- ✅ **Database Performance Optimizations** - SQLite WAL mode, optimized cache, composite indexes for faster queries
+- ✅ **GUI Widget Optimizations** - Modular architecture with specialized managers, background processing, efficient signal management
 - ✅ **Project Similarity & Discovery** - Find similar projects using Jaccard similarity algorithm and multi-metric analysis
 - ✅ Similar projects in Project Properties view (embedded in main window)
 - ✅ "Find Similar Projects" context menu option with main window navigation
@@ -554,6 +590,7 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 - ✅ MCP servers integration links
 - ✅ Smart collection tempo rules
 - ✅ Visual project export indicators
+- ✅ Single project re-scan functionality (right-click context menu)
 
 ### Planned
 - **Plugin Usage Dashboard**: View most-used plugins, plugin combinations, missing plugin warnings

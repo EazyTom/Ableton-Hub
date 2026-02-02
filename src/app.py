@@ -39,35 +39,105 @@ class AbletonHubApp:
         self.app.setOrganizationName("AbletonHub")
         self.app.setOrganizationDomain("abletonhub.local")
         
-        # Suppress Qt debug/info messages (like qt.multimedia.ffmpeg messages)
+        # Load configuration BEFORE setting up logging (needed for logging config)
+        self.config_manager = get_config_manager()
+        self.config = self.config_manager.config
+        
+        # Detect development mode
+        is_dev_mode = __debug__ or os.getenv('ABLETON_HUB_DEBUG') == '1'
+        
+        # Setup logging with config
+        # If dev mode and config level is ERROR (default), override to DEBUG
+        if is_dev_mode and self.config.logging.level == "ERROR":
+            # Create a temporary config with DEBUG level for dev mode
+            from .config import LoggingConfig
+            dev_logging_config = LoggingConfig(
+                enabled=self.config.logging.enabled,
+                level="DEBUG",  # Override to DEBUG in dev mode
+                log_dir=self.config.logging.log_dir,
+                max_bytes=self.config.logging.max_bytes,
+                backup_count=self.config.logging.backup_count
+            )
+            setup_logging(config=dev_logging_config)
+        else:
+            setup_logging(config=self.config.logging)
+        
+        self.logger = get_logger(__name__)
+        
+        # Install Qt message handler (routes through Python logging)
         self._install_qt_message_handler()
         
-        # Setup logging - use WARNING level to suppress INFO messages in console
-        setup_logging(log_level=logging.WARNING, log_to_file=False)
-        self.logger = get_logger(__name__)
+        # Install global exception handler
+        self._install_exception_handler()
         
         # Set application icon
         self._set_application_icon()
     
     def _install_qt_message_handler(self) -> None:
-        """Install a Qt message handler to suppress debug/info messages."""
+        """Install a Qt message handler that routes messages through Python logging."""
+        qt_logger = get_logger('PyQt6')
+        
         def qt_message_handler(msg_type, context, message):
-            """Filter Qt messages - only show warnings and critical errors."""
-            # Suppress QtDebugMsg (0) and QtInfoMsg (4) messages
-            # Only show QtWarningMsg (1), QtCriticalMsg (2), and QtFatalMsg (3)
-            if msg_type in (QtMsgType.QtDebugMsg, QtMsgType.QtInfoMsg):
-                return  # Suppress debug and info messages
-            # For warnings and critical errors, print them
+            """Route Qt messages through Python logging."""
+            # Suppress QtDebugMsg (0) and QtInfoMsg (4) messages unless in dev mode
+            is_dev_mode = __debug__ or os.getenv('ABLETON_HUB_DEBUG') == '1'
+            
+            if msg_type == QtMsgType.QtDebugMsg:
+                if is_dev_mode:
+                    qt_logger.debug(f"Qt Debug: {message}")
+                return
+            
+            if msg_type == QtMsgType.QtInfoMsg:
+                if is_dev_mode:
+                    qt_logger.info(f"Qt Info: {message}")
+                return
+            
+            # Route warnings and critical errors through Python logging
             if msg_type == QtMsgType.QtWarningMsg:
-                print(f"Qt Warning: {message}", file=sys.stderr)
-            elif msg_type in (QtMsgType.QtCriticalMsg, QtMsgType.QtFatalMsg):
-                print(f"Qt Critical: {message}", file=sys.stderr)
+                qt_logger.warning(f"Qt Warning: {message}")
+            elif msg_type == QtMsgType.QtCriticalMsg:
+                qt_logger.error(f"Qt Critical: {message}")
+            elif msg_type == QtMsgType.QtFatalMsg:
+                qt_logger.critical(f"Qt Fatal: {message}")
         
         qInstallMessageHandler(qt_message_handler)
+    
+    def _install_exception_handler(self) -> None:
+        """Install global exception handler for unhandled exceptions."""
+        def exception_handler(exc_type, exc_value, exc_traceback):
+            """Handle unhandled exceptions."""
+            if issubclass(exc_type, KeyboardInterrupt):
+                # Allow keyboard interrupts to work normally
+                sys.__excepthook__(exc_type, exc_value, exc_traceback)
+                return
+            
+            # Log the exception with full traceback
+            logger = get_logger(__name__)
+            logger.critical(
+                "Unhandled exception",
+                exc_info=(exc_type, exc_value, exc_traceback)
+            )
+            
+            # Also show user-friendly message if possible
+            try:
+                if hasattr(self, 'app') and self.app:
+                    from PyQt6.QtWidgets import QMessageBox
+                    import traceback
+                    msg = QMessageBox()
+                    msg.setWindowTitle("Application Error")
+                    msg.setIcon(QMessageBox.Icon.Critical)
+                    msg.setText(
+                        "An unexpected error occurred. Please check the log file for details.\n\n"
+                        f"Error: {exc_type.__name__}: {exc_value}"
+                    )
+                    traceback_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+                    msg.setDetailedText(f"Traceback:\n{traceback_str}")
+                    msg.exec()
+            except Exception:
+                # If we can't show dialog, just log it
+                pass
         
-        # Load configuration
-        self.config_manager = get_config_manager()
-        self.config = self.config_manager.config
+        sys.excepthook = exception_handler
         
         # Initialize database
         init_database()

@@ -3,7 +3,7 @@
 # Single source of truth for version - reads from pyproject.toml via importlib.metadata
 # When installed via pip, this reads from package metadata
 # When running from source, falls back to the hardcoded version below
-_FALLBACK_VERSION = "1.0.1"
+_FALLBACK_VERSION = "1.0.2"
 
 try:
     from importlib.metadata import version as get_version

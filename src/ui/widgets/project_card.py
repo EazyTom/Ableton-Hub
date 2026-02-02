@@ -221,17 +221,29 @@ class ProjectCard(QFrame):
         # Determine border width - thicker for projects with exports
         border_width = "3px" if has_exports and not self._selected else "2px"
         
-        self.setStyleSheet(f"""
-            ProjectCard {{
-                background-color: {bg_color};
-                border: {border_width} solid {border_color};
-                border-radius: 8px;
-            }}
-            ProjectCard:hover {{
-                background-color: {AbletonTheme.COLORS['surface_hover']};
-                border-color: {AbletonTheme.COLORS['border_light']};
-            }}
-        """)
+        # Build stylesheet - when selected, disable hover effects to show selection immediately
+        if self._selected:
+            # When selected, don't apply hover styles so selection is immediately visible
+            self.setStyleSheet(f"""
+                ProjectCard {{
+                    background-color: {bg_color};
+                    border: {border_width} solid {border_color};
+                    border-radius: 8px;
+                }}
+            """)
+        else:
+            # When not selected, normal hover behavior
+            self.setStyleSheet(f"""
+                ProjectCard {{
+                    background-color: {bg_color};
+                    border: {border_width} solid {border_color};
+                    border-radius: 8px;
+                }}
+                ProjectCard:hover {{
+                    background-color: {AbletonTheme.COLORS['surface_hover']};
+                    border-color: {AbletonTheme.COLORS['border_light']};
+                }}
+            """)
     
     def _update_display(self) -> None:
         """Update the display with project data."""
@@ -243,41 +255,44 @@ class ProjectCard(QFrame):
             # Only generate if no cached thumbnail exists
             preview_path = AudioPreviewGenerator.get_or_generate_preview(self.project.id)
         
-        if preview_path and Path(preview_path).exists():
-            pixmap = QPixmap(preview_path)
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    156, 60,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.preview_label.setPixmap(scaled)
+        if hasattr(self, 'preview_label') and self.preview_label is not None:
+            if preview_path and Path(preview_path).exists():
+                pixmap = QPixmap(preview_path)
+                if not pixmap.isNull():
+                    scaled = pixmap.scaled(
+                        156, 60,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.preview_label.setPixmap(scaled)
+                else:
+                    self._set_default_logo()
             else:
                 self._set_default_logo()
-        else:
-            self._set_default_logo()
         
         # Name - remove "Project" suffix for brevity
-        display_name = self._get_display_name()
-        self.name_label.setText(display_name)
+        if hasattr(self, 'name_label') and self.name_label is not None:
+            display_name = self._get_display_name()
+            self.name_label.setText(display_name)
         
         # Show parent folder name if it differs from project name (helps distinguish copies)
         self._update_folder_label()
         
         # Style name label for missing projects (dark orange with yellow)
-        if self.project.status == ProjectStatus.MISSING:
-            self.name_label.setStyleSheet(f"""
-                QLabel {{
-                    color: #FF8C00;  /* Dark orange */
-                    background-color: #FFD700;  /* Yellow background */
-                    padding: 2px 4px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }}
-            """)
-        else:
-            # Reset to default styling (clear any previous styling)
-            self.name_label.setStyleSheet("")
+        if hasattr(self, 'name_label') and self.name_label is not None:
+            if self.project.status == ProjectStatus.MISSING:
+                self.name_label.setStyleSheet(f"""
+                    QLabel {{
+                        color: #FF8C00;  /* Dark orange */
+                        background-color: #FFD700;  /* Yellow background */
+                        padding: 2px 4px;
+                        border-radius: 3px;
+                        font-weight: bold;
+                    }}
+                """)
+            else:
+                # Reset to default styling (clear any previous styling)
+                self.name_label.setStyleSheet("")
         
         # Unified tooltip for preview and name (small font, centered)
         tooltip_html = f'<div style="font-size: 10px; text-align: center;">'
@@ -345,126 +360,140 @@ class ProjectCard(QFrame):
         tooltip_html += '</div>'
         
         # Set tooltip on both preview and name
-        self.preview_label.setToolTip(tooltip_html)
-        self.name_label.setToolTip(tooltip_html)
+        if hasattr(self, 'preview_label') and self.preview_label is not None:
+            self.preview_label.setToolTip(tooltip_html)
+        if hasattr(self, 'name_label') and self.name_label is not None:
+            self.name_label.setToolTip(tooltip_html)
         
         # Tempo with rainbow color based on BPM (purple=60 -> blue -> cyan -> green -> yellow -> orange -> red=200+)
-        has_tempo = self.project.tempo and self.project.tempo > 0
-        has_length = self.project.arrangement_length and self.project.arrangement_length > 0
+        has_tempo = bool(self.project.tempo and self.project.tempo > 0)
+        has_length = bool(self.project.arrangement_length and self.project.arrangement_length > 0)
         
-        if has_tempo:
-            tempo = self.project.tempo
-            self.tempo_label.setText(f"{tempo:.0f}")
-            # Remove individual tooltip - unified tooltip on name/preview
-            
-            # Calculate color based on tempo (60-200 BPM range mapped to rainbow)
-            tempo_color = self._get_tempo_color(tempo)
-            self.tempo_label.setStyleSheet(f"""
-                QLabel {{
-                    color: {tempo_color};
-                    font-size: 11px;
-                    font-weight: bold;
-                    padding: 0px 2px;
-                }}
-            """)
-            self.tempo_label.setVisible(True)
-            self.bpm_label.setVisible(True)
-        else:
-            self.tempo_label.setVisible(False)
-            self.bpm_label.setVisible(False)
+        if hasattr(self, 'tempo_label') and self.tempo_label is not None:
+            if has_tempo:
+                tempo = self.project.tempo
+                self.tempo_label.setText(f"{tempo:.0f}")
+                # Remove individual tooltip - unified tooltip on name/preview
+                
+                # Calculate color based on tempo (60-200 BPM range mapped to rainbow)
+                tempo_color = self._get_tempo_color(tempo)
+                self.tempo_label.setStyleSheet(f"""
+                    QLabel {{
+                        color: {tempo_color};
+                        font-size: 11px;
+                        font-weight: bold;
+                        padding: 0px 2px;
+                    }}
+                """)
+                self.tempo_label.setVisible(True)
+                if hasattr(self, 'bpm_label') and self.bpm_label is not None:
+                    self.bpm_label.setVisible(True)
+            else:
+                self.tempo_label.setVisible(False)
+                if hasattr(self, 'bpm_label') and self.bpm_label is not None:
+                    self.bpm_label.setVisible(False)
         
         # Arrangement length in bars
-        if has_length:
-            bars = int(self.project.arrangement_length)
-            self.length_label.setText(f"{bars} bars")
-            # Remove individual tooltip - unified tooltip on name/preview
-            self.length_label.setVisible(True)
-        else:
-            self.length_label.setVisible(False)
+        if hasattr(self, 'length_label') and self.length_label is not None:
+            if has_length:
+                bars = int(self.project.arrangement_length)
+                self.length_label.setText(f"{bars} bars")
+                # Remove individual tooltip - unified tooltip on name/preview
+                self.length_label.setVisible(True)
+            else:
+                self.length_label.setVisible(False)
         
         # Duration in min:sec (calculated from bars and tempo)
         has_duration = (hasattr(self.project, 'arrangement_duration_seconds') and 
                        self.project.arrangement_duration_seconds and 
                        self.project.arrangement_duration_seconds > 0)
-        if has_duration:
-            duration_sec = int(self.project.arrangement_duration_seconds)
-            minutes = duration_sec // 60
-            seconds = duration_sec % 60
-            duration_str = f"{minutes}:{seconds:02d}"
-            self.duration_label.setText(duration_str)
-            # Remove individual tooltip - unified tooltip on name/preview
-            self.duration_label.setVisible(True)
-        else:
-            self.duration_label.setVisible(False)
+        if hasattr(self, 'duration_label') and self.duration_label is not None:
+            if has_duration:
+                duration_sec = int(self.project.arrangement_duration_seconds)
+                minutes = duration_sec // 60
+                seconds = duration_sec % 60
+                duration_str = f"{minutes}:{seconds:02d}"
+                self.duration_label.setText(duration_str)
+                # Remove individual tooltip - unified tooltip on name/preview
+                self.duration_label.setVisible(True)
+            else:
+                self.duration_label.setVisible(False)
         
         # Show separator only if both tempo and length are visible
-        self.tempo_sep.setVisible(has_tempo and has_length)
+        if hasattr(self, 'tempo_sep') and self.tempo_sep is not None:
+            self.tempo_sep.setVisible(bool(has_tempo and has_length))
         
         # Show separator based on visibility
         has_date = bool(self.project.modified_date)
-        has_location = self.location_label.isVisible()
-        self.date_location_sep.setVisible(has_date and has_location)
+        has_location = self.location_label.isVisible() if hasattr(self, 'location_label') and self.location_label is not None else False
+        if hasattr(self, 'date_location_sep') and self.date_location_sep is not None:
+            self.date_location_sep.setVisible(bool(has_date and has_location))
         
         # Location
         # Access location safely (may be detached)
-        try:
-            location = self.project.location if hasattr(self.project, 'location') else None
-            if location:
-                loc_name = location.name
-                if len(loc_name) > 12:
-                    loc_name = loc_name[:10] + "..."
-                self.location_label.setText(loc_name)
-                # Remove individual tooltip - unified tooltip on name/preview
-                self.location_label.setVisible(True)
-            else:
+        if hasattr(self, 'location_label') and self.location_label is not None:
+            try:
+                location = self.project.location if hasattr(self.project, 'location') else None
+                if location:
+                    loc_name = location.name
+                    if len(loc_name) > 12:
+                        loc_name = loc_name[:10] + "..."
+                    self.location_label.setText(loc_name)
+                    # Remove individual tooltip - unified tooltip on name/preview
+                    self.location_label.setVisible(True)
+                else:
+                    self.location_label.setVisible(False)
+            except Exception:
+                # If relationship is detached, hide location
                 self.location_label.setVisible(False)
-        except Exception:
-            # If relationship is detached, hide location
-            self.location_label.setVisible(False)
         
         # Live version
-        version_display = self.project.get_live_version_display()
-        if version_display:
-            self.version_label.setText(version_display)
-            self.version_label.setVisible(True)
-        else:
-            self.version_label.setVisible(False)
+        if hasattr(self, 'version_label') and self.version_label is not None:
+            version_display = self.project.get_live_version_display()
+            if version_display:
+                self.version_label.setText(version_display)
+                self.version_label.setVisible(True)
+            else:
+                self.version_label.setVisible(False)
         
         # Export indicator
-        # Access exports list safely (may be detached)
-        try:
-            has_exports = bool(self.project.exports) if hasattr(self.project, 'exports') else False
-            export_count = len(self.project.exports) if has_exports else 0
-        except Exception:
-            # If relationship is detached, check if we have export count
-            has_exports = False
-            export_count = 0
-        
-        if has_exports:
-            # Show colorized indicator with count
-            self.export_indicator.setText(f"🎵 {export_count}" if export_count > 1 else "🎵")
-            self.export_indicator.setStyleSheet(f"""
-                QLabel {{
-                    color: #4CAF50;
-                    font-weight: bold;
-                }}
-            """)
-            # Remove individual tooltip - unified tooltip on name/preview
-        else:
-            self.export_indicator.setText("")
-            self.export_indicator.setStyleSheet("")
-            # Remove individual tooltip - unified tooltip on name/preview
+        if hasattr(self, 'export_indicator') and self.export_indicator is not None:
+            # Access exports list safely (may be detached)
+            try:
+                has_exports = bool(self.project.exports) if hasattr(self.project, 'exports') else False
+                export_count = len(self.project.exports) if has_exports else 0
+            except Exception:
+                # If relationship is detached, check if we have export count
+                has_exports = False
+                export_count = 0
+            
+            if has_exports:
+                # Show colorized indicator with count
+                self.export_indicator.setText(f"🎵 {export_count}" if export_count > 1 else "🎵")
+                self.export_indicator.setStyleSheet(f"""
+                    QLabel {{
+                        color: #4CAF50;
+                        font-weight: bold;
+                    }}
+                """)
+                # Remove individual tooltip - unified tooltip on name/preview
+            else:
+                self.export_indicator.setText("")
+                self.export_indicator.setStyleSheet("")
+                # Remove individual tooltip - unified tooltip on name/preview
         
         # Favorite indicator
-        self.favorite_indicator.setText("💎" if self.project.is_favorite else "")
+        if hasattr(self, 'favorite_indicator') and self.favorite_indicator is not None:
+            self.favorite_indicator.setText("💎" if self.project.is_favorite else "")
         
         # Modified date
-        if self.project.modified_date:
-            date_str = self._format_date(self.project.modified_date)
-            self.date_label.setText(date_str)
-            # Remove individual tooltip - unified tooltip on name/preview
-        else:
-            self.date_label.setText("")
+        if hasattr(self, 'date_label') and self.date_label is not None:
+            if self.project.modified_date:
+                date_str = self._format_date(self.project.modified_date)
+                self.date_label.setText(date_str)
+                # Remove individual tooltip - unified tooltip on name/preview
+            else:
+                self.date_label.setText("")
     
     def _get_tempo_color(self, tempo: float) -> str:
         """Get a rainbow color based on tempo (purple=60 -> red=200+).
@@ -540,6 +569,8 @@ class ProjectCard(QFrame):
         """Set the selection state."""
         self._selected = selected
         self._apply_style()
+        # Force immediate update to ensure visual feedback
+        self.update()
     
     def is_selected(self) -> bool:
         """Check if the card is selected."""
@@ -556,11 +587,24 @@ class ProjectCard(QFrame):
                 Export.project_id == self.project.id
             ).order_by(Export.export_date.desc()).all()
             
-            # Filter to only existing files
-            self._exports = [e for e in exports if Path(e.export_path).exists()]
-            self._current_export_index = 0
+            # Filter to only existing files and normalize paths
+            self._exports = []
+            for e in exports:
+                export_path = Path(e.export_path)
+                if export_path.exists():
+                    self._exports.append(e)
+            
+            # Reset index if it's out of bounds
+            if self._current_export_index >= len(self._exports):
+                self._current_export_index = 0
         finally:
             session.close()
+    
+    def refresh_exports(self) -> None:
+        """Refresh the exports list from the database (useful after exports are added)."""
+        self._load_exports()
+        # Update display to reflect new export count
+        self._update_display()
     
     def has_exports(self) -> bool:
         """Check if this project has playable exports."""
@@ -601,6 +645,17 @@ class ProjectCard(QFrame):
         """Handle when playback is stopped."""
         self._update_playing_indicator(False)
     
+    def cleanup(self) -> None:
+        """Clean up resources before deletion."""
+        # Disconnect signals to prevent callbacks after deletion
+        if hasattr(self, '_audio_player') and self._audio_player:
+            try:
+                self._audio_player.playback_finished.disconnect(self._on_playback_finished)
+                self._audio_player.playback_stopped.disconnect(self._on_playback_stopped)
+            except (TypeError, RuntimeError):
+                # Signals may already be disconnected or object deleted
+                pass
+    
     def _get_display_name(self) -> str:
         """Get the display name for the project, removing 'Project' for brevity."""
         import re
@@ -617,6 +672,9 @@ class ProjectCard(QFrame):
         This helps distinguish copies and projects with the same .als filename
         but in different folders (e.g., 'Project - Copy/Project.als').
         """
+        if not hasattr(self, 'folder_label') or self.folder_label is None:
+            return
+        
         if not self.project.file_path:
             self.folder_label.setVisible(False)
             return
@@ -644,6 +702,9 @@ class ProjectCard(QFrame):
     
     def _update_playing_indicator(self, playing: bool) -> None:
         """Update visual indicator for playback state."""
+        if not hasattr(self, 'name_label') or self.name_label is None:
+            return
+        
         if playing and self._exports:
             export = self._exports[self._current_export_index]
             export_name = Path(export.export_path).stem
@@ -668,9 +729,13 @@ class ProjectCard(QFrame):
             return False
         current_file = self._audio_player.current_file
         if current_file:
+            # Normalize current file path for comparison
+            current_path = Path(current_file).resolve()
             # Check if current file matches any of this project's exports
             for export in self._exports:
-                if export.export_path == current_file:
+                # Normalize export path for comparison
+                export_path = Path(export.export_path).resolve()
+                if export_path == current_path:
                     return True
         return False
     

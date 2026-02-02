@@ -56,6 +56,16 @@ class LinkConfig:
 
 
 @dataclass
+class LoggingConfig:
+    """Logging configuration."""
+    enabled: bool = True  # File logging enabled by default
+    level: str = "ERROR"  # Default: ERROR for production
+    log_dir: Optional[str] = None  # None = use default (%APPDATA%/AbletonHub/logs)
+    max_bytes: int = 10 * 1024 * 1024  # 10MB per file
+    backup_count: int = 5  # Keep 5 rotated files
+
+
+@dataclass
 class UIConfig:
     """User interface configuration."""
     theme: str = "orange"  # "orange", "blue", "green", "pink"
@@ -74,9 +84,10 @@ class Config:
     scan: ScanConfig = field(default_factory=ScanConfig)
     export: ExportConfig = field(default_factory=ExportConfig)
     link: LinkConfig = field(default_factory=LinkConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     first_run: bool = True
-    version: str = "1.0.1"
+    version: str = "1.0.2"
 
 
 class ConfigManager:
@@ -158,6 +169,7 @@ class ConfigManager:
             'scan': asdict(config.scan),
             'export': asdict(config.export),
             'link': asdict(config.link),
+            'logging': asdict(config.logging),
             'ui': asdict(config.ui),
             'first_run': config.first_run,
             'version': config.version,
@@ -170,6 +182,7 @@ class ConfigManager:
             scan=ScanConfig(**data.get('scan', {})),
             export=ExportConfig(**data.get('export', {})),
             link=LinkConfig(**data.get('link', {})),
+            logging=LoggingConfig(**data.get('logging', {})),
             ui=UIConfig(**data.get('ui', {})),
             first_run=data.get('first_run', True),
             version=data.get('version', '1.0.1'),

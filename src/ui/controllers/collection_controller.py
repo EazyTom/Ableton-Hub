@@ -33,10 +33,14 @@ class CollectionController(QObject):
             collection_id: Collection ID.
             
         Returns:
-            Collection object or None if not found.
+            Collection object or None if not found or on error.
         """
-        with get_session() as session:
-            return session.query(Collection).filter(Collection.id == collection_id).first()
+        try:
+            with get_session() as session:
+                return session.query(Collection).filter(Collection.id == collection_id).first()
+        except Exception as e:
+            self.logger.error(f"Error getting collection {collection_id}: {e}", exc_info=True)
+            return None
     
     def get_all_collections(self) -> List[Collection]:
         """Get all collections.
@@ -54,14 +58,18 @@ class CollectionController(QObject):
             collection_id: Collection ID to delete.
             
         Returns:
-            True if deleted successfully.
+            True if deleted successfully, False otherwise.
         """
-        with get_session() as session:
-            collection = session.query(Collection).filter(Collection.id == collection_id).first()
-            if collection:
-                session.delete(collection)
-                session.commit()
-                self.logger.info(f"Deleted collection: {collection.name} (ID: {collection_id})")
-                self.collection_deleted.emit(collection_id)
-                return True
+        try:
+            with get_session() as session:
+                collection = session.query(Collection).filter(Collection.id == collection_id).first()
+                if collection:
+                    session.delete(collection)
+                    session.commit()
+                    self.logger.info(f"Deleted collection: {collection.name} (ID: {collection_id})")
+                    self.collection_deleted.emit(collection_id)
+                    return True
+                return False
+        except Exception as e:
+            self.logger.error(f"Error deleting collection {collection_id}: {e}", exc_info=True)
             return False

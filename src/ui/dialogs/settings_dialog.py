@@ -1,14 +1,17 @@
 """Settings dialog for Ableton Hub."""
 
 from typing import Optional
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTabWidget, QWidget, QSpinBox, QCheckBox, QGroupBox,
-    QFileDialog, QLineEdit, QMessageBox, QRadioButton, QButtonGroup
+    QFileDialog, QLineEdit, QMessageBox, QRadioButton, QButtonGroup,
+    QComboBox
 )
 from PyQt6.QtCore import Qt
 
 from ...config import Config, save_config
+from ...utils.logging import get_logs_directory
 from ..theme import AbletonTheme
 
 
@@ -52,6 +55,10 @@ class SettingsDialog(QDialog):
         # Link tab
         link_tab = self._create_link_tab()
         tabs.addTab(link_tab, "Link")
+        
+        # Logging tab
+        logging_tab = self._create_logging_tab()
+        tabs.addTab(logging_tab, "Logging")
         
         layout.addWidget(tabs)
         
@@ -297,6 +304,114 @@ class SettingsDialog(QDialog):
         layout.addStretch()
         return widget
     
+    def _create_logging_tab(self) -> QWidget:
+        """Create the logging settings tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(12)
+        
+        # File logging settings
+        file_group = QGroupBox("File Logging")
+        file_layout = QVBoxLayout(file_group)
+        
+        self.logging_enabled = QCheckBox("Enable file logging")
+        self.logging_enabled.setChecked(self.config.logging.enabled)
+        file_layout.addWidget(self.logging_enabled)
+        
+        # Log level
+        level_layout = QHBoxLayout()
+        level_layout.addWidget(QLabel("Log level:"))
+        self.log_level_combo = QComboBox()
+        self.log_level_combo.addItems(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        current_level = self.config.logging.level.upper()
+        index = self.log_level_combo.findText(current_level)
+        if index >= 0:
+            self.log_level_combo.setCurrentIndex(index)
+        else:
+            self.log_level_combo.setCurrentText("ERROR")
+        level_layout.addWidget(self.log_level_combo)
+        level_layout.addStretch()
+        file_layout.addLayout(level_layout)
+        
+        layout.addWidget(file_group)
+        
+        # Log file settings
+        file_settings_group = QGroupBox("Log File Settings")
+        file_settings_layout = QVBoxLayout(file_settings_group)
+        
+        # Log directory
+        dir_layout = QHBoxLayout()
+        dir_layout.addWidget(QLabel("Log directory:"))
+        self.log_dir_edit = QLineEdit()
+        if self.config.logging.log_dir:
+            self.log_dir_edit.setText(self.config.logging.log_dir)
+        else:
+            # Show default location
+            default_dir = get_logs_directory()
+            self.log_dir_edit.setText(str(default_dir))
+            self.log_dir_edit.setPlaceholderText(f"Default: {default_dir}")
+        dir_layout.addWidget(self.log_dir_edit)
+        
+        browse_btn = QPushButton("Browse...")
+        browse_btn.clicked.connect(self._browse_log_directory)
+        dir_layout.addWidget(browse_btn)
+        file_settings_layout.addLayout(dir_layout)
+        
+        # Current log file location (read-only)
+        current_log_label = QLabel()
+        current_log_path = get_logs_directory(self.config.logging) / "ableton_hub.log"
+        current_log_label.setText(f"Current log file: {current_log_path}")
+        current_log_label.setWordWrap(True)
+        current_log_label.setStyleSheet("color: #888; font-size: 10px;")
+        file_settings_layout.addWidget(current_log_label)
+        
+        # Max file size
+        size_layout = QHBoxLayout()
+        size_layout.addWidget(QLabel("Max file size (MB):"))
+        self.max_file_size = QSpinBox()
+        self.max_file_size.setRange(1, 100)
+        self.max_file_size.setValue(self.config.logging.max_bytes // (1024 * 1024))
+        size_layout.addWidget(self.max_file_size)
+        size_layout.addStretch()
+        file_settings_layout.addLayout(size_layout)
+        
+        # Backup count
+        backup_layout = QHBoxLayout()
+        backup_layout.addWidget(QLabel("Number of backup files:"))
+        self.backup_count = QSpinBox()
+        self.backup_count.setRange(1, 20)
+        self.backup_count.setValue(self.config.logging.backup_count)
+        backup_layout.addWidget(self.backup_count)
+        backup_layout.addStretch()
+        file_settings_layout.addLayout(backup_layout)
+        
+        # Info label
+        info_label = QLabel(
+            "Note: Changes to logging settings require restarting the application to take effect.\n\n"
+            "Log files are automatically rotated when they reach the maximum size. "
+            "The error log (ableton_hub_errors.log) contains only ERROR and CRITICAL messages."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #888; font-size: 10px;")
+        file_settings_layout.addWidget(info_label)
+        
+        layout.addWidget(file_settings_group)
+        
+        layout.addStretch()
+        return widget
+    
+    def _browse_log_directory(self) -> None:
+        """Browse for log directory."""
+        current_dir = self.log_dir_edit.text() or str(get_logs_directory())
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select Log Directory",
+            current_dir,
+            QFileDialog.Option.ShowDirsOnly
+        )
+        if directory:
+            self.log_dir_edit.setText(directory)
+    
     def _on_ok(self) -> None:
         """Handle OK button click - save settings."""
         # Theme selection
@@ -343,7 +458,35 @@ class SettingsDialog(QDialog):
         self.config.link.scan_interval_seconds = self.scan_interval.value()
         self.config.link.show_offline_devices = self.show_offline.isChecked()
         
+        # Logging settings
+        self.config.logging.enabled = self.logging_enabled.isChecked()
+        self.config.logging.level = self.log_level_combo.currentText()
+        log_dir_text = self.log_dir_edit.text().strip()
+        if log_dir_text and Path(log_dir_text).is_dir():
+            self.config.logging.log_dir = log_dir_text
+        else:
+            # Reset to default if invalid
+            self.config.logging.log_dir = None
+        self.config.logging.max_bytes = self.max_file_size.value() * 1024 * 1024
+        self.config.logging.backup_count = self.backup_count.value()
+        
+        # Check if logging settings changed
+        logging_changed = (
+            self.logging_enabled.isChecked() != self.config.logging.enabled or
+            self.log_level_combo.currentText() != self.config.logging.level or
+            (log_dir_text and log_dir_text != str(get_logs_directory(self.config.logging)))
+        )
+        
         # Save configuration
         save_config()
+        
+        # Warn if logging settings changed
+        if logging_changed:
+            QMessageBox.information(
+                self,
+                "Restart Required",
+                "Logging settings have been saved.\n\n"
+                "Please restart the application for the changes to take effect."
+            )
         
         self.accept()
