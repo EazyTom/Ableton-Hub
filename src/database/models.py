@@ -462,17 +462,26 @@ class LiveInstallation(Base):
     def get_major_version(self) -> int | None:
         """Extract major version number from version string.
 
+        Handles full version strings including hotfix and beta versions.
+        Examples: "11.3.13" -> 11, "12.0.5" -> 12, "12.0.5b1" -> 12, "12b1" -> 12
+
         Returns:
             Major version number (9, 10, 11, 12) or None if not available.
         """
         if not self.version:
             return None
 
-        # Parse version string like "11.3.13" or "12.0.5"
+        # Parse version string like "11.3.13", "12.0.5", "12.0.5b1", or "12b1"
+        # First, remove any beta/rc suffixes (e.g., "b1", "beta1", "rc2") from the first part
+        # Split by dot to get parts
         version_parts = self.version.split(".")
         if version_parts:
             try:
-                major_version = int(version_parts[0])
+                # Get the first part and remove any beta suffix (e.g., "12b1" -> "12")
+                first_part = version_parts[0]
+                # Remove any trailing letters and digits (beta suffixes)
+                major_version_str = re.sub(r"[a-zA-Z].*$", "", first_part)
+                major_version = int(major_version_str)
                 if 9 <= major_version <= 12:
                     return major_version
             except (ValueError, TypeError):

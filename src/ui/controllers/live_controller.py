@@ -144,9 +144,7 @@ class LiveController(QObject):
         with get_session() as session:
             # Check for favorite first
             favorite = (
-                session.query(LiveInstallation)
-                .filter(LiveInstallation.is_favorite == True)
-                .first()
+                session.query(LiveInstallation).filter(LiveInstallation.is_favorite == True).first()
             )
             if favorite:
                 return favorite

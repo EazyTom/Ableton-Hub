@@ -23,20 +23,27 @@ from ..theme import AbletonTheme
 class LogViewerDialog(QDialog):
     """Dialog for viewing application log files."""
 
-    def __init__(self, parent: QDialog | None = None):
+    def __init__(self, parent: QDialog | None = None, log_file_path: Path | None = None):
         """Initialize the log viewer dialog.
 
         Args:
             parent: Parent widget.
+            log_file_path: Optional path to a specific log file to view.
+                         If None, uses Ableton Hub application logs.
         """
         super().__init__(parent)
         self.config = get_config()
+        self._custom_log_path = log_file_path
         self._setup_ui()
         self._load_logs()
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
-        self.setWindowTitle("View Logs")
+        # Set window title based on whether it's a custom log file
+        if self._custom_log_path:
+            self.setWindowTitle(f"View Log - {self._custom_log_path.name}")
+        else:
+            self.setWindowTitle("View Logs")
         self.setMinimumSize(800, 600)
         self.resize(1000, 700)
 
@@ -45,23 +52,31 @@ class LogViewerDialog(QDialog):
         layout.setContentsMargins(16, 16, 16, 16)
 
         # Header
-        header_label = QLabel("Application Logs")
+        if self._custom_log_path:
+            header_text = f"Live Log: {self._custom_log_path.name}"
+        else:
+            header_text = "Application Logs"
+        header_label = QLabel(header_text)
         header_label.setStyleSheet(
             f"font-size: 16px; font-weight: bold; color: {AbletonTheme.COLORS['text_primary']};"
         )
         layout.addWidget(header_label)
 
-        # Log file selection
-        file_layout = QHBoxLayout()
-        file_layout.addWidget(QLabel("Log file:"))
+        # Log file selection (only show for Ableton Hub logs)
+        if not self._custom_log_path:
+            file_layout = QHBoxLayout()
+            file_layout.addWidget(QLabel("Log file:"))
 
-        self.log_file_combo = QComboBox()
-        self.log_file_combo.addItems(["All logs", "Errors only"])
-        self.log_file_combo.currentIndexChanged.connect(self._load_logs)
-        file_layout.addWidget(self.log_file_combo)
+            self.log_file_combo = QComboBox()
+            self.log_file_combo.addItems(["All logs", "Errors only"])
+            self.log_file_combo.currentIndexChanged.connect(self._load_logs)
+            file_layout.addWidget(self.log_file_combo)
 
-        file_layout.addStretch()
-        layout.addLayout(file_layout)
+            file_layout.addStretch()
+            layout.addLayout(file_layout)
+        else:
+            # Hide combo box for custom log files
+            self.log_file_combo = None
 
         # Log display
         self.log_text = QTextEdit()
@@ -86,8 +101,14 @@ class LogViewerDialog(QDialog):
         refresh_btn.clicked.connect(self._load_logs)
         buttons.addWidget(refresh_btn)
 
-        open_folder_btn = QPushButton("Open Log Folder")
-        open_folder_btn.clicked.connect(self._open_log_folder)
+        if self._custom_log_path:
+            # For custom log files, open the file's parent folder
+            open_folder_btn = QPushButton("Open Log Folder")
+            open_folder_btn.clicked.connect(self._open_custom_log_folder)
+        else:
+            # For Ableton Hub logs, open the logs directory
+            open_folder_btn = QPushButton("Open Log Folder")
+            open_folder_btn.clicked.connect(self._open_log_folder)
         buttons.addWidget(open_folder_btn)
 
         copy_btn = QPushButton("Copy Selected")
@@ -109,6 +130,11 @@ class LogViewerDialog(QDialog):
         Returns:
             Path to log file.
         """
+        # If custom log path provided, use it
+        if self._custom_log_path:
+            return self._custom_log_path
+
+        # Otherwise use Ableton Hub logs
         logs_dir = get_logs_directory(self.config.logging)
         if self.log_file_combo.currentIndex() == 1:  # "Errors only"
             return logs_dir / "ableton_hub_errors.log"
@@ -156,6 +182,15 @@ class LogViewerDialog(QDialog):
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(logs_dir)))
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Could not open log folder:\n{e}")
+
+    def _open_custom_log_folder(self) -> None:
+        """Open the custom log file's parent folder in file explorer."""
+        if self._custom_log_path:
+            try:
+                folder_path = self._custom_log_path.parent
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder_path)))
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Could not open log folder:\n{e}")
 
     def _copy_selected(self) -> None:
         """Copy selected text to clipboard."""

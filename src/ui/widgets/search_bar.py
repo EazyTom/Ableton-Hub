@@ -140,6 +140,7 @@ class SearchBar(QWidget):
         # Override padding to prevent text clipping - reduce vertical padding
         # Global theme has 8px padding which is too much for 26px height
         from PyQt6.QtWidgets import QApplication
+
         palette = QApplication.instance().palette()
         surface = palette.color(palette.ColorRole.Base).name()
         text_primary = palette.color(palette.ColorRole.Text).name()

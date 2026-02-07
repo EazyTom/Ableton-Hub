@@ -157,6 +157,12 @@ class SidebarItem(QPushButton):
                 background-color: {AbletonTheme.COLORS['accent']};
                 color: {AbletonTheme.COLORS['text_on_accent']};
             }}
+            QPushButton::tooltip {{
+                background-color: {AbletonTheme.COLORS['background']};
+                color: {AbletonTheme.COLORS['text_primary']};
+                border: 1px solid {AbletonTheme.COLORS['border']};
+                padding: 4px 8px;
+            }}
         """)
 
         self.setCheckable(True)
@@ -364,16 +370,14 @@ class Sidebar(QWidget):
         self.live_versions_layout.setContentsMargins(0, 0, 0, 0)
         self.live_versions_layout.setSpacing(2)
         self.live_versions_section.add_item(self.live_versions_container)
-        
+
         # Add button to manually add installation
         add_install_btn = SidebarItem("Add Installation", "+")
         add_install_btn.setCheckable(False)
         add_install_btn.setToolTip("Add a Live installation manually")
-        add_install_btn.clicked.connect(
-            lambda: self.add_manual_installation_requested.emit()
-        )
+        add_install_btn.clicked.connect(lambda: self.add_manual_installation_requested.emit())
         self.live_versions_section.add_item(add_install_btn)
-        
+
         self._live_version_items = []
         self._load_live_versions()
         content_layout.addWidget(self.live_versions_section)
@@ -824,9 +828,16 @@ class Sidebar(QWidget):
                     item = SidebarItem(display_text, icon)
                     item.item_id = install.id
                     item.item_type = "live_install"
-                    item.setToolTip(
-                        f"Path: {install.executable_path}\nVersion: {install.version}\n{'Favorite' if install.is_favorite else 'Not favorite'}\nDouble-click to launch Live"
+                    # Set tooltip with installation details
+                    tooltip_text = (
+                        f"Path: {install.executable_path}\n"
+                        f"Version: {install.version}\n"
+                        f"{'Favorite' if install.is_favorite else 'Not favorite'}\n"
+                        f"Double-click to launch Live"
                     )
+                    item.setToolTip(tooltip_text)
+                    # Ensure tooltip is enabled (QPushButton should have this by default, but be explicit)
+                    item.setToolTipDuration(0)  # 0 = show until mouse leaves
                     item.setCheckable(False)  # Don't allow single-click toggling
 
                     # Right-click context menu for each installation
@@ -876,25 +887,80 @@ class Sidebar(QWidget):
 
             menu.addSeparator()
 
-            # Release Notes link
-            version_parts = install.version.split(".")
-            major_version = version_parts[0] if version_parts else "12"
-            release_notes_action = menu.addAction("View Release Notes")
-            release_notes_action.triggered.connect(
-                lambda: QDesktopServices.openUrl(
-                    QUrl(f"https://www.ableton.com/en/release-notes/live-{major_version}/")
+            # Store version in local variable to ensure it's captured correctly
+            # Validate that version is a valid string
+            install_version = str(install.version) if install.version else None
+            if not install_version or install_version.lower() in ("none", "false", ""):
+                self.logger.error(
+                    f"Invalid version for installation {install_id}: {install.version}"
                 )
-            )
+                # Try to extract version from name or path as fallback
+                import re
+
+                version_match = re.search(r"Live\s+(\d+(?:\.\d+)*(?:[a-zA-Z]+\d+)?)", install.name)
+                if version_match:
+                    install_version = version_match.group(1)
+                    self.logger.info(f"Extracted version from name: {install_version}")
+                else:
+                    # Last resort: try to get from executable path
+                    path_match = re.search(
+                        r"Live\s+(\d+(?:\.\d+)*(?:[a-zA-Z]+\d+)?)", install.executable_path
+                    )
+                    if path_match:
+                        install_version = path_match.group(1)
+                        self.logger.info(f"Extracted version from path: {install_version}")
+
+            # Release Notes link
+            if install_version:
+                version_parts = install_version.split(".")
+                major_version = version_parts[0] if version_parts else "12"
+                release_notes_action = menu.addAction("View Release Notes")
+                release_notes_action.triggered.connect(
+                    lambda: QDesktopServices.openUrl(
+                        QUrl(f"https://www.ableton.com/en/release-notes/live-{major_version}/")
+                    )
+                )
 
             menu.addSeparator()
 
             # Open Preferences folder
+            # Use the full version string from the database (should include major.minor.hotfix)
             prefs_action = menu.addAction("Open Preferences Folder")
-            prefs_action.triggered.connect(lambda: self._open_prefs_folder(install.version))
+            if install_version:
+                # Capture version in closure properly
+                version_str = install_version
+                prefs_action.triggered.connect(
+                    lambda checked=False, v=version_str: self._open_prefs_folder(v)
+                )
+            else:
+                prefs_action.setEnabled(False)
+                prefs_action.setToolTip("Version information not available")
+
+            # View Live Log.txt
+            # Use the full version string from the database (should include major.minor.hotfix)
+            log_action = menu.addAction("View Live Log.txt")
+            if install_version:
+                # Capture version in closure properly
+                version_str = install_version
+                log_action.triggered.connect(
+                    lambda checked=False, v=version_str: self._view_live_log(v)
+                )
+            else:
+                log_action.setEnabled(False)
+                log_action.setToolTip("Version information not available")
 
             # Edit Options.txt
+            # Use the full version string from the database (should include major.minor.hotfix)
             options_action = menu.addAction("Edit Options.txt")
-            options_action.triggered.connect(lambda: self._edit_options_txt(install.version))
+            if install_version:
+                # Capture version in closure properly
+                version_str = install_version
+                options_action.triggered.connect(
+                    lambda checked=False, v=version_str: self._edit_options_txt(v)
+                )
+            else:
+                options_action.setEnabled(False)
+                options_action.setToolTip("Version information not available")
 
             menu.addSeparator()
             remove_action = menu.addAction("Remove Installation")
@@ -908,32 +974,147 @@ class Sidebar(QWidget):
             session.close()
 
     def _get_prefs_folder(self, version: str) -> Path | None:
-        """Get the preferences folder path for a Live version."""
-        # Extract major.minor version (e.g., "11.3" from "11.3.13")
-        version_parts = version.split(".")
-        if len(version_parts) >= 2:
-            major_minor = f"{version_parts[0]}.{version_parts[1]}"
-        else:
-            major_minor = version_parts[0]
+        """Get the preferences folder path for a Live version.
+
+        Uses the full version string (major.minor.hotfix) including beta versions
+        to correctly locate the Preferences folder.
+
+        If only a major version is provided (e.g., "12"), attempts to find the
+        actual preferences folder by scanning for folders matching "Live 12.*".
+
+        Args:
+            version: Full version string (e.g., "12.3.5", "11.3.13", "12.0.5b1")
+                    or major version only (e.g., "12")
+
+        Returns:
+            Path to Preferences folder or None if version is invalid.
+        """
+        if not version:
+            self.logger.warning("_get_prefs_folder called with empty version")
+            return None
+
+        # Convert to string and validate
+        version_str = str(version).strip()
+
+        # Check for invalid values
+        if version_str.lower() in ("none", "false", "null", ""):
+            self.logger.error(f"Invalid version string: '{version}' (converted to '{version_str}')")
+            return None
+
+        # Use the full version string as stored (e.g., "12.3.5", "11.3.13", "12.0.5b1")
+        # Live's preferences folder uses the full version including hotfix
+        version_clean = version_str
+
+        # Check if version looks like only major version (e.g., "12" without dots)
+        # If so, try to find the actual folder by scanning
+        if "." not in version_clean and version_clean.isdigit():
+            self.logger.warning(
+                f"Version '{version_clean}' appears to be major version only. "
+                f"Attempting to find actual preferences folder..."
+            )
+            # Try to find the actual preferences folder
+            prefs_path = self._find_prefs_folder_by_major_version(version_clean)
+            if prefs_path:
+                return prefs_path
+            # Fall through to use major version only as last resort
 
         if sys.platform == "win32":
-            # Windows: %APPDATA%\Ableton\Live x.x\Preferences
+            # Windows: %APPDATA%\Ableton\Live <full_version>\Preferences
+            # Example: %APPDATA%\Ableton\Live 12.3.5\Preferences
             appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-            prefs_path = appdata / "Ableton" / f"Live {major_minor}" / "Preferences"
+            prefs_path = appdata / "Ableton" / f"Live {version_clean}" / "Preferences"
         elif sys.platform == "darwin":
-            # macOS: ~/Library/Preferences/Ableton/Live x.x
-            prefs_path = Path.home() / "Library" / "Preferences" / "Ableton" / f"Live {major_minor}"
+            # macOS: ~/Library/Preferences/Ableton/Live <full_version>
+            # Example: ~/Library/Preferences/Ableton/Live 12.3.5
+            prefs_path = (
+                Path.home() / "Library" / "Preferences" / "Ableton" / f"Live {version_clean}"
+            )
         else:
-            # Linux: ~/.ableton/Live x.x/Preferences (if using Wine)
-            prefs_path = Path.home() / ".ableton" / f"Live {major_minor}" / "Preferences"
+            # Linux: ~/.ableton/Live <full_version>/Preferences (if using Wine)
+            prefs_path = Path.home() / ".ableton" / f"Live {version_clean}" / "Preferences"
 
         return prefs_path
+
+    def _find_prefs_folder_by_major_version(self, major_version: str) -> Path | None:
+        """Try to find the preferences folder by scanning for folders matching the major version.
+
+        Finds the most recent version folder (e.g., if major is "12", finds "Live 12.3.5"
+        instead of "Live 12.2.5").
+
+        Args:
+            major_version: Major version number (e.g., "12")
+
+        Returns:
+            Path to Preferences folder (most recent version) or None if not found.
+        """
+        try:
+            if sys.platform == "win32":
+                appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+                ableton_folder = appdata / "Ableton"
+            elif sys.platform == "darwin":
+                ableton_folder = Path.home() / "Library" / "Preferences" / "Ableton"
+            else:
+                ableton_folder = Path.home() / ".ableton"
+
+            if not ableton_folder.exists():
+                return None
+
+            # Look for folders matching "Live {major_version}.*"
+            import re
+
+            pattern = re.compile(rf"^Live\s+{re.escape(major_version)}\.")
+
+            matching_folders = []
+            for item in ableton_folder.iterdir():
+                if item.is_dir() and pattern.match(item.name):
+                    # Extract version number from folder name (e.g., "Live 12.3.5" -> "12.3.5")
+                    version_match = re.search(
+                        rf"{re.escape(major_version)}\.(\d+(?:\.\d+)*(?:[a-zA-Z]+\d+)?)", item.name
+                    )
+                    if version_match:
+                        full_version = f"{major_version}.{version_match.group(1)}"
+                        # Parse version for sorting
+                        try:
+                            version_parts = [int(x) for x in full_version.split(".")[:3]]
+                            while len(version_parts) < 3:
+                                version_parts.append(0)
+                            matching_folders.append((tuple(version_parts), item))
+                        except ValueError:
+                            # If parsing fails, still add it but with low priority
+                            matching_folders.append(((0, 0, 0), item))
+
+            if not matching_folders:
+                return None
+
+            # Sort by version (most recent first) and get the latest
+            matching_folders.sort(key=lambda x: x[0], reverse=True)
+            latest_folder = matching_folders[0][1]
+
+            # Check for Preferences subfolder
+            prefs_path = latest_folder / "Preferences" if sys.platform == "win32" else latest_folder
+            if prefs_path.exists():
+                self.logger.info(
+                    f"Found most recent preferences folder for major version {major_version}: {prefs_path} "
+                    f"(from folder: {latest_folder.name})"
+                )
+                return prefs_path
+
+            return None
+        except Exception as e:
+            self.logger.debug(f"Error scanning for preferences folder: {e}")
+            return None
 
     def _open_prefs_folder(self, version: str) -> None:
         """Open the preferences folder for a Live version."""
         from PyQt6.QtWidgets import QMessageBox
 
+        # Log the version being used for debugging
+        self.logger.debug(f"Opening preferences folder for Live version: '{version}'")
+
         prefs_path = self._get_prefs_folder(version)
+
+        # Log the constructed path
+        self.logger.debug(f"Constructed preferences path: {prefs_path}")
 
         if not prefs_path or not prefs_path.exists():
             QMessageBox.warning(
@@ -954,6 +1135,52 @@ class Sidebar(QWidget):
                 subprocess.run(["xdg-open", str(prefs_path)])
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open preferences folder:\n{str(e)}")
+
+    def _view_live_log(self, version: str) -> None:
+        """View Live's Log.txt file for a specific version."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        # Log the version being used for debugging
+        self.logger.debug(f"Viewing Live log for version: '{version}'")
+
+        prefs_path = self._get_prefs_folder(version)
+
+        # Log the constructed path
+        self.logger.debug(f"Constructed preferences path: {prefs_path}")
+
+        if not prefs_path:
+            QMessageBox.warning(
+                self, "Error", f"Could not determine preferences folder for Live {version}."
+            )
+            return
+
+        log_path = prefs_path / "Log.txt"
+
+        if not log_path.exists():
+            QMessageBox.warning(
+                self,
+                "Log File Not Found",
+                f"Log.txt not found for Live {version}.\n\n"
+                f"Expected location:\n{log_path}\n\n"
+                "The log file may not exist if Live hasn't been run yet or logging is disabled.",
+            )
+            return
+
+        # Open log viewer dialog with the Live Log.txt file
+        try:
+            from ..dialogs.log_viewer_dialog import LogViewerDialog
+
+            dialog = LogViewerDialog(self, log_file_path=log_path)
+            # Center dialog on parent window
+            if self.parent():
+                parent_geometry = self.parent().geometry()
+                dialog_geometry = dialog.geometry()
+                x = parent_geometry.x() + (parent_geometry.width() - dialog_geometry.width()) // 2
+                y = parent_geometry.y() + (parent_geometry.height() - dialog_geometry.height()) // 2
+                dialog.move(x, y)
+            dialog.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open log viewer:\n{str(e)}")
 
     def _edit_options_txt(self, version: str) -> None:
         """Edit or create Options.txt for a Live version."""
