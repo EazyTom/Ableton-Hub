@@ -43,7 +43,7 @@ dependencies = [
     "soundfile>=0.12.0",
     # Timeline Marker Extraction (dawtool depends on hexdump which is source-only,
     # so it works via pip but not in Briefcase's --only-binary macOS environment)
-    "dawtool @ git+https://github.com/offlinemark/dawtool",
+    "dawtool @ git+https://github.com/EazyTom/dawtool",
 ]
 
 [project.optional-dependencies]
@@ -201,7 +201,7 @@ requires = [
 #   - dawtool for timeline marker extraction
 #   - ML/AI features (scikit-learn, etc.)
 requires = [
-    "dawtool @ git+https://github.com/offlinemark/dawtool",
+    "dawtool @ git+https://github.com/EazyTom/dawtool",
     "scikit-learn",
     "numpy",
     "pandas",

@@ -42,7 +42,7 @@ lxml>=6.0.0  # Used in: als_parser (optional, improves XPath support)
 
 # Timeline Marker Extraction (for .als files)
 # Required for timeline marker extraction feature
-dawtool @ git+https://github.com/offlinemark/dawtool  # Extract timeline markers from Ableton Live projects (supports Live v8-12)
+dawtool @ git+https://github.com/EazyTom/dawtool  # Extract timeline markers from Ableton Live projects (supports Live v8-12)
 
 # Optional: Enhanced ALS parsing
 # pyableton>=0.1.0  # Uncomment if available
