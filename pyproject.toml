@@ -174,14 +174,6 @@ requires = [
     "aiosqlite",
     "Pillow",
     "rapidfuzz",
-    # ML/AI Features - Lazy loaded at runtime
-    # Version bounds relaxed for Briefcase embedded Python wheel compatibility
-    "scikit-learn",
-    "numpy",
-    "pandas",
-    # Audio Feature Extraction - Lazy loaded at runtime
-    "librosa",
-    "soundfile",
     # Enhanced XML Parsing
     "lxml",
     # Timeline Marker Extraction
@@ -189,7 +181,21 @@ requires = [
 ]
 
 [tool.briefcase.app.src.macOS]
-requires = []
+# ML deps included separately - requires Python 3.13+ support package for compatible wheels
+requires = [
+    "scikit-learn",
+    "numpy",
+    "pandas",
+    "librosa",
+    "soundfile",
+]
 
 [tool.briefcase.app.src.windows]
-requires = []
+# ML/AI Features - included in Windows MSI (compatible wheels available)
+requires = [
+    "scikit-learn",
+    "numpy",
+    "pandas",
+    "librosa",
+    "soundfile",
+]
