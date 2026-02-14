@@ -181,14 +181,10 @@ requires = [
 ]
 
 [tool.briefcase.app.src.macOS]
-# ML deps included separately - requires Python 3.13+ support package for compatible wheels
-requires = [
-    "scikit-learn",
-    "numpy",
-    "pandas",
-    "librosa",
-    "soundfile",
-]
+# ML deps excluded: Briefcase's macOS embedded Python targets macOS 11.0 and no
+# scikit-learn wheels exist for that platform. ML features gracefully degrade
+# at runtime (lazy imports with fallback). All core features work without ML.
+requires = []
 
 [tool.briefcase.app.src.windows]
 # ML/AI Features - included in Windows MSI (compatible wheels available)
