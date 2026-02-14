@@ -20,9 +20,6 @@ jobs:
   # ── Windows MSI ──────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: ableton_hub
 
     steps:
       - name: Checkout repository
@@ -49,15 +46,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AbletonHub-Windows-MSI
-          path: ableton_hub/windows/**/*.msi
+          path: windows/**/*.msi
           if-no-files-found: error
 
   # ── macOS DMG ────────────────────────────────────────────────
   build-macos:
     runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: ableton_hub
 
     steps:
       - name: Checkout repository
@@ -104,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AbletonHub-macOS-DMG
-          path: ableton_hub/macOS/**/*.dmg
+          path: macOS/**/*.dmg
           if-no-files-found: error
 
   # ── Create GitHub Release (only on tag push) ─────────────────
