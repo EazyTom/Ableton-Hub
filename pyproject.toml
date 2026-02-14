@@ -48,6 +48,9 @@ ml = [
     "pandas>=2.1.0",
     "librosa>=0.10.0",
     "soundfile>=0.12.0",
+    # Timeline Marker Extraction (bundled here because dawtool depends on scipy/hexdump
+    # which are incompatible with Briefcase's macOS embedded Python)
+    "dawtool @ git+https://github.com/offlinemark/dawtool",
 ]
 dev = [
     "pytest>=7.4.0",
@@ -180,19 +183,22 @@ requires = [
     "rapidfuzz",
     # Enhanced XML Parsing
     "lxml",
-    # Timeline Marker Extraction
-    "dawtool @ git+https://github.com/offlinemark/dawtool",
 ]
 
 [tool.briefcase.app.src.macOS]
-# ML deps excluded: Briefcase's macOS embedded Python targets macOS 11.0 and no
-# scikit-learn wheels exist for that platform. ML features gracefully degrade
-# at runtime (lazy imports with fallback). All core features work without ML.
+# Excluded from macOS build:
+#   - dawtool: depends on hexdump (source-only, no wheel) and scipy (no arm64 wheel)
+#   - ML deps: scikit-learn has no macOS 11.0 arm64 wheel
+# Both features gracefully degrade at runtime (lazy imports with fallback).
+# All core features work without these dependencies.
 requires = []
 
 [tool.briefcase.app.src.windows]
-# ML/AI Features - included in Windows MSI (compatible wheels available)
+# Windows has compatible wheels for everything, so include all optional features:
+#   - dawtool for timeline marker extraction
+#   - ML/AI features (scikit-learn, etc.)
 requires = [
+    "dawtool @ git+https://github.com/offlinemark/dawtool",
     "scikit-learn",
     "numpy",
     "pandas",
