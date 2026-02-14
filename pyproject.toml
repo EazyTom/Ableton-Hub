@@ -144,3 +144,53 @@ ignore_errors = true
 pythonVersion = "3.11"
 reportMissingImports = "none"
 reportMissingTypeStubs = "none"
+
+# ============================================================
+# Briefcase Configuration (Native Installer Packaging)
+# Build Windows .msi:  briefcase package windows -p msi
+# Build macOS .dmg:    briefcase package macos -p dmg
+# ============================================================
+[tool.briefcase]
+project_name = "Ableton Hub"
+bundle = "com.abletonhub"
+version = "1.0.6"
+url = "https://github.com/EazyTom/ableton-hub"
+license.file = "LICENSE"
+author = "Tom Carlile"
+author_email = "carlile.tom@gmail.com"
+
+[tool.briefcase.app.src]
+formal_name = "Ableton Hub"
+description = "Cross-platform desktop application for organizing Ableton projects"
+long_description = """Ableton Hub helps you organize, manage, and discover your \
+Ableton Live projects across multiple locations. Search, sort, tag, collect, \
+and preview your projects with advanced similarity analysis."""
+icon = "resources/icons/AProject"
+sources = ["src"]
+requires = [
+    "PyQt6>=6.10.0",
+    "SQLAlchemy>=2.0.0",
+    "watchdog>=6.0.0",
+    "zeroconf>=0.148.0",
+    "qasync>=0.28.0",
+    "aiosqlite>=0.22.0",
+    "Pillow>=12.0.0",
+    "rapidfuzz>=3.14.0",
+    # ML/AI Features - Lazy loaded at runtime
+    "scikit-learn>=1.8.0",
+    "numpy>=2.0.0",
+    "pandas>=3.0.0",
+    # Audio Feature Extraction - Lazy loaded at runtime
+    "librosa>=0.11.0",
+    "soundfile>=0.13.0",
+    # Enhanced XML Parsing
+    "lxml>=6.0.0",
+    # Timeline Marker Extraction
+    "dawtool @ git+https://github.com/offlinemark/dawtool",
+]
+
+[tool.briefcase.app.src.macOS]
+requires = []
+
+[tool.briefcase.app.src.windows]
+requires = []

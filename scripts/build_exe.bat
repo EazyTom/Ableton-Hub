@@ -5,8 +5,8 @@ REM This script uses PyInstaller to create a standalone .exe file
 echo Building Ableton Hub executable...
 echo.
 
-REM Get the directory where this batch file is located
-cd /d "%~dp0"
+REM Change to project root (parent of scripts folder)
+cd /d "%~dp0.."
 
 REM Check for virtual environment Python
 set "PYTHON_EXE="

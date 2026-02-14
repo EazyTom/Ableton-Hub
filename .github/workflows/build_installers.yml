@@ -1,0 +1,127 @@
+name: Build Installers
+
+on:
+  # Manual trigger from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g. v1.0.6)"
+        required: false
+        default: ""
+  # Auto-trigger on version tags
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Windows MSI ──────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ableton_hub
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Briefcase
+        run: pip install briefcase
+
+      - name: Create Briefcase project
+        run: briefcase create windows
+
+      - name: Build Windows app
+        run: briefcase build windows
+
+      - name: Package as MSI
+        run: briefcase package windows -p msi --adhoc-sign
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AbletonHub-Windows-MSI
+          path: ableton_hub/windows/**/*.msi
+          if-no-files-found: error
+
+  # ── macOS DMG ────────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ableton_hub
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate macOS .icns icon
+        run: |
+          # Generate .icns from the PNG icon using macOS sips + iconutil
+          SRC_PNG="resources/icons/AProject.png"
+          ICONSET_DIR="resources/icons/AProject.iconset"
+          mkdir -p "$ICONSET_DIR"
+
+          # Generate required icon sizes (sips handles upscaling if source is smaller)
+          for size in 16 32 64 128 256 512; do
+            sips -z $size $size "$SRC_PNG" --out "$ICONSET_DIR/icon_${size}x${size}.png" 2>/dev/null || true
+          done
+          # Retina variants
+          sips -z 32 32 "$SRC_PNG" --out "$ICONSET_DIR/icon_16x16@2x.png" 2>/dev/null || true
+          sips -z 64 64 "$SRC_PNG" --out "$ICONSET_DIR/icon_32x32@2x.png" 2>/dev/null || true
+          sips -z 256 256 "$SRC_PNG" --out "$ICONSET_DIR/icon_128x128@2x.png" 2>/dev/null || true
+          sips -z 512 512 "$SRC_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png" 2>/dev/null || true
+
+          # Convert iconset to .icns
+          iconutil -c icns "$ICONSET_DIR" -o "resources/icons/AProject.icns" || echo "Warning: .icns generation failed, Briefcase will use default icon"
+
+      - name: Install Briefcase
+        run: pip install briefcase
+
+      - name: Create Briefcase project
+        run: briefcase create macOS
+
+      - name: Build macOS app
+        run: briefcase build macOS
+
+      - name: Package as DMG
+        run: briefcase package macOS -p dmg --adhoc-sign
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AbletonHub-macOS-DMG
+          path: ableton_hub/macOS/**/*.dmg
+          if-no-files-found: error
+
+  # ── Create GitHub Release (only on tag push) ─────────────────
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            AbletonHub-Windows-MSI/*.msi
+            AbletonHub-macOS-DMG/*.dmg
+          generate_release_notes: true
+          draft: true

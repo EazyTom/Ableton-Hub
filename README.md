@@ -372,9 +372,22 @@ If the Mermaid diagram above doesn't render (e.g., on GitHub mobile app), view t
 
 ## 🚀 Installation
 
-Choose the installation method that works best for you. If you're new to Python or command-line tools, see the detailed platform-specific guides below.
+Choose the installation method that works best for you.
 
-### Method 1: Install from GitHub (Recommended)
+### Method 1: Download Installer (Easiest)
+
+Download a pre-built installer from the [Releases page](https://github.com/EazyTom/ableton-hub/releases). No Python installation required.
+
+| Platform | Format | File |
+|----------|--------|------|
+| Windows 10/11 | MSI installer | `AbletonHub-x.x.x.msi` |
+| macOS 10.15+ | DMG disk image | `AbletonHub-x.x.x.dmg` |
+
+**Windows:** Download the `.msi`, double-click to install, and launch "Ableton Hub" from the Start Menu.
+
+**macOS:** Download the `.dmg`, open it, and drag "Ableton Hub" to your Applications folder.
+
+### Method 2: Install from GitHub (Recommended for Developers)
 
 This is the easiest method - pip (Python package installer) will automatically download and install everything you need.
 
@@ -400,7 +413,7 @@ This method will:
 
 > **Note**: This method requires Python 3.11+ to be installed. Most macOS users already have Python installed. See platform-specific guides below if you need help checking or installing Python.
 
-### Method 2: Download Source and Install
+### Method 3: Download Source and Install
 
 If you prefer to download the source code and install manually:
 
@@ -485,6 +498,22 @@ Interested in contributing or understanding how Ableton Hub works? Check out the
 - Code style guidelines
 - Testing instructions
 - Technical details about `.als` file parsing, database structure, and more
+
+### Building Installers Locally
+
+Ableton Hub uses [Briefcase](https://briefcase.beeware.org/) to produce native installers. Briefcase handles all platform tooling (including WiX for Windows MSI) automatically.
+
+```bash
+pip install briefcase
+
+# Windows MSI (run on Windows)
+briefcase create windows && briefcase build windows && briefcase package windows -p msi
+
+# macOS DMG (run on macOS)
+briefcase create macOS && briefcase build macOS && briefcase package macOS -p dmg
+```
+
+Installers are also built automatically via GitHub Actions on every version tag push. See `.github/workflows/build_installers.yml`.
 
 ## 🔧 Troubleshooting
 
