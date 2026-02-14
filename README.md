@@ -19,13 +19,13 @@ Ableton Hub is a desktop application that helps you organize, manage, and discov
 - **Launch with Live** - Open any project directly in Ableton Live with your preferred version
 - **Discover patterns** - See which plugins and devices you use most across your projects
 
-Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub provides powerful tools for music producers to maintain their project libraries and seamlessly integrate with their Ableton Live workflow.
+Built with Python and PyQt6 (GUI framework), Ableton Hub provides powerful tools for music producers to maintain their project libraries and group projects based on their similarities.
 
 <div align="center">
   <img src="resources/images/ableton-hub-screenshot.png" alt="Ableton Hub Logo" />
 </div>
 
-## 🎵 Features
+## Features
 
 ### Core Functionality
 
@@ -84,7 +84,7 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
 - **Real-time Results**: Debounced search with instant results
 - **Always-Visible Tempo Filter**: Quick-access tempo range buttons in the search bar
 
-#### Project Similarity & Discovery ⭐
+#### Project Similarity & Discovery 
 - **Intelligent Similarity Analysis**: Find projects similar to any reference project using advanced algorithms:
   - **Jaccard Similarity Algorithm**: Measures plugin and device overlap between projects
   - **Multi-Metric Comparison**: Combines plugin similarity, device similarity, tempo proximity, structural similarity, and feature vector analysis
@@ -230,7 +230,7 @@ Built with Python (programming language) and PyQt6 (GUI framework), Ableton Hub 
   - macOS: `~/Library/Application Support/AbletonHub/logs/`
   - Linux: `~/.local/share/AbletonHub/logs/`
 
-## 🎯 First Time Setup
+## First Time Setup
 
 New to Ableton Hub? Check out the **[First Time Setup Guide](docs/FIRST_TIME_SETUP.md)** for a detailed walkthrough of what to expect on your first launch and how to get started.
 
@@ -255,7 +255,7 @@ New to Ableton Hub? Check out the **[First Time Setup Guide](docs/FIRST_TIME_SET
 - Explore the search and filtering options
 - Check out the Health Dashboard to see project statistics
 
-## 🏗️ System Architecture
+## System Architecture
 
 > If viewing on mobile, expand the "View Diagram (Mobile)" section below for an image version.
 
@@ -362,7 +362,7 @@ If the Mermaid diagram above doesn't render (e.g., on GitHub mobile app), view t
 
 </details>
 
-## 📋 Requirements
+## Requirements
 
 - **Python** (programming language): Version 3.11 or higher
 - **Operating System**: 
@@ -370,7 +370,7 @@ If the Mermaid diagram above doesn't render (e.g., on GitHub mobile app), view t
   - Windows 10/11
   - Linux (with Qt6 support)
 
-## 🚀 Installation
+## Installation
 
 Choose the installation method that works best for you.
 
@@ -476,7 +476,7 @@ These guides include:
 
 
 
-## 📚 Additional Resources
+## Additional Resources
 
 - **[First Time Setup Guide](docs/FIRST_TIME_SETUP.md)** - Detailed walkthrough for new users
 - **[macOS Installation Guide](docs/INSTALLATION_MAC.md)** - Step-by-step Mac installation
@@ -484,7 +484,7 @@ These guides include:
 - **[Quick Reference](docs/QUICK_REFERENCE.md)** - Common tasks and keyboard shortcuts
 - **[FAQ](docs/FAQ.md)** - Frequently asked questions
 
-## 🛠️ For Developers
+## For Developers
 
 Interested in contributing or understanding how Ableton Hub works? Check out the **[Contributing Guide](CONTRIBUTING.md)** for:
 
@@ -562,7 +562,7 @@ Having issues? Here are solutions to common problems:
 - If the problem persists, open an issue on GitHub with details about what happened and include relevant log entries
 
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md)** for detailed information on:
 
@@ -573,7 +573,7 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 
 
 
-## 🔮 Roadmap
+## Roadmap
 - **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
 
@@ -634,11 +634,11 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 
 
 
-## 📝 License
+## License
 
 MIT License - see LICENSE file for details.
 
-## 👤 Author
+## Author
 
 <a href="https://www.ableton.com/en/certified-training/tom-carlile/">
   <img src="https://cdn-resources.ableton.com/resources/filer_thumbnails/52/d0/52d08c3a-8e12-47d2-8848-2e65675c5f31/tom_carlile.jpg__600x600_q85_crop_subsampling-2_upscale.jpg" width="120" alt="Tom Carlile" style="border-radius: 25%;" />
@@ -650,11 +650,11 @@ Email: carlile.tom@gmail.com
 Ableton Certified Trainer and Austin Ableton User Group Organizer  
 https://www.ableton.com/en/certified-training/tom-carlile/
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This application is an independent, open-source project and is **not affiliated with, endorsed by, or connected to Ableton AG**. Ableton Live is a trademark of Ableton AG. This tool is designed to help music producers organize their Ableton Live projects and is provided as-is without warranty.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Inspired by Ableton Live's workflow and design aesthetic
 - Built with [PyQt6](https://www.riverbankcomputing.com/software/pyqt/)
