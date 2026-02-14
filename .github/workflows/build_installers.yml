@@ -46,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AbletonHub-Windows-MSI
-          path: windows/**/*.msi
+          path: dist/*.msi
           if-no-files-found: error
 
   # ── macOS DMG ────────────────────────────────────────────────
@@ -98,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AbletonHub-macOS-DMG
-          path: macOS/**/*.dmg
+          path: dist/*.dmg
           if-no-files-found: error
 
   # ── Create GitHub Release (only on tag push) ─────────────────
@@ -115,7 +115,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            AbletonHub-Windows-MSI/*.msi
-            AbletonHub-macOS-DMG/*.dmg
+            AbletonHub-Windows-MSI/**/*.msi
+            AbletonHub-macOS-DMG/**/*.dmg
           generate_release_notes: true
           draft: true

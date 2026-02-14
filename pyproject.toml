@@ -25,25 +25,23 @@ classifiers = [
 ]
 
 dependencies = [
-    "PyQt6>=6.10.0",
+    "PyQt6>=6.6.0",
     "SQLAlchemy>=2.0.0",
-    "watchdog>=6.0.0",
-    "zeroconf>=0.148.0",
-    "qasync>=0.28.0",
-    "aiosqlite>=0.22.0",
-    "Pillow>=12.0.0",
-    "rapidfuzz>=3.14.0",
+    "watchdog>=4.0.0",
+    "zeroconf>=0.131.0",
+    "qasync>=0.27.0",
+    "aiosqlite>=0.20.0",
+    "Pillow>=10.0.0",
+    "rapidfuzz>=3.6.0",
     # ML/AI Features (Phase 5+) - Lazy loaded to avoid slow startup
-    "scikit-learn>=1.8.0",
-    # TESTING: Upgraded to numpy 2.x - major version change, testing compatibility
-    "numpy>=2.0.0",
-    # TESTING: Upgraded to pandas 3.x - major version change, removed deprecated functionality
-    "pandas>=3.0.0",
+    "scikit-learn>=1.5.0",
+    "numpy>=1.26.0",
+    "pandas>=2.1.0",
     # Audio Feature Extraction (for ML content analysis) - Lazy loaded
-    "librosa>=0.11.0",
-    "soundfile>=0.13.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
     # Enhanced XML Parsing (for deeper ALS analysis) - Optional, falls back to stdlib
-    "lxml>=6.0.0",
+    "lxml>=5.0.0",
 ]
 
 [project.optional-dependencies]
