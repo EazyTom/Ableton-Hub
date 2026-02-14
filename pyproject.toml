@@ -168,23 +168,24 @@ and preview your projects with advanced similarity analysis."""
 icon = "resources/icons/AProject"
 sources = ["src"]
 requires = [
-    "PyQt6>=6.10.0",
+    "PyQt6",
     "SQLAlchemy>=2.0.0",
-    "watchdog>=6.0.0",
-    "zeroconf>=0.148.0",
-    "qasync>=0.28.0",
-    "aiosqlite>=0.22.0",
-    "Pillow>=12.0.0",
-    "rapidfuzz>=3.14.0",
+    "watchdog>=4.0.0",
+    "zeroconf",
+    "qasync",
+    "aiosqlite",
+    "Pillow",
+    "rapidfuzz",
     # ML/AI Features - Lazy loaded at runtime
-    "scikit-learn>=1.8.0",
-    "numpy>=2.0.0",
-    "pandas>=3.0.0",
+    # Version bounds relaxed for Briefcase embedded Python wheel compatibility
+    "scikit-learn",
+    "numpy",
+    "pandas",
     # Audio Feature Extraction - Lazy loaded at runtime
-    "librosa>=0.11.0",
-    "soundfile>=0.13.0",
+    "librosa",
+    "soundfile",
     # Enhanced XML Parsing
-    "lxml>=6.0.0",
+    "lxml",
     # Timeline Marker Extraction
     "dawtool @ git+https://github.com/offlinemark/dawtool",
 ]
