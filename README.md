@@ -391,20 +391,15 @@ Download a pre-built installer from the [Releases page](https://github.com/EazyT
 
 This is the easiest method - pip (Python package installer) will automatically download and install everything you need.
 
-**macOS:**
 ```bash
-pip install git+https://github.com/EazyTom/ableton-hub.git
-ableton-hub  # Run the application (this is the command, not a directory)
+pip install "ableton-hub[ml] @ git+https://github.com/EazyTom/ableton-hub.git"
+ableton-hub  # Run the application
 ```
 
-**Windows:**
-```bash
-pip install git+https://github.com/EazyTom/ableton-hub.git
-ableton-hub  # Run the application (this is the command, not a directory)
-```
+The `[ml]` extra installs ML features (project similarity, clustering, audio analysis). For a lighter install without ML: `pip install git+https://github.com/EazyTom/ableton-hub.git`
 
 This method will:
-- ✅ Automatically install all dependencies (PyQt6, SQLAlchemy, ML libraries, etc.)
+- ✅ Automatically install all dependencies (PyQt6, SQLAlchemy, and ML libraries with `[ml]`)
 - ✅ Create the `ableton-hub` command in your PATH (system path) - you can run it from anywhere
 - ✅ Work on Windows, macOS, and Linux
 - ✅ Allow easy updates: `pip install --upgrade git+https://github.com/yourusername/ableton-hub.git`

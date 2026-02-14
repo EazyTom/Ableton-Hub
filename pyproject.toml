@@ -33,18 +33,22 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "Pillow>=10.0.0",
     "rapidfuzz>=3.6.0",
-    # ML/AI Features (Phase 5+) - Lazy loaded to avoid slow startup
-    "scikit-learn>=1.5.0",
-    "numpy>=1.26.0",
-    "pandas>=2.1.0",
-    # Audio Feature Extraction (for ML content analysis) - Lazy loaded
-    "librosa>=0.10.0",
-    "soundfile>=0.12.0",
     # Enhanced XML Parsing (for deeper ALS analysis) - Optional, falls back to stdlib
     "lxml>=5.0.0",
 ]
 
 [project.optional-dependencies]
+# ML/AI Features - install with: pip install "ableton-hub[ml]"
+# Separated from core deps because Briefcase's macOS embedded Python (targeting
+# macOS 11.0) has no compatible scikit-learn wheels. Lazy loaded at runtime with
+# graceful fallback when not installed.
+ml = [
+    "scikit-learn>=1.5.0",
+    "numpy>=1.26.0",
+    "pandas>=2.1.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-qt>=4.2.0",
