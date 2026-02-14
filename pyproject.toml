@@ -35,23 +35,18 @@ dependencies = [
     "rapidfuzz>=3.6.0",
     # Enhanced XML Parsing (for deeper ALS analysis) - Optional, falls back to stdlib
     "lxml>=5.0.0",
-]
-
-[project.optional-dependencies]
-# ML/AI Features - install with: pip install "ableton-hub[ml]"
-# Separated from core deps because Briefcase's macOS embedded Python (targeting
-# macOS 11.0) has no compatible scikit-learn wheels. Lazy loaded at runtime with
-# graceful fallback when not installed.
-ml = [
+    # ML/AI Features - Lazy loaded at runtime with graceful fallback
     "scikit-learn>=1.5.0",
     "numpy>=1.26.0",
     "pandas>=2.1.0",
     "librosa>=0.10.0",
     "soundfile>=0.12.0",
-    # Timeline Marker Extraction (bundled here because dawtool depends on scipy/hexdump
-    # which are incompatible with Briefcase's macOS embedded Python)
+    # Timeline Marker Extraction (dawtool depends on hexdump which is source-only,
+    # so it works via pip but not in Briefcase's --only-binary macOS environment)
     "dawtool @ git+https://github.com/offlinemark/dawtool",
 ]
+
+[project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-qt>=4.2.0",
@@ -186,12 +181,20 @@ requires = [
 ]
 
 [tool.briefcase.app.src.macOS]
-# Excluded from macOS build:
-#   - dawtool: depends on hexdump (source-only, no wheel) and scipy (no arm64 wheel)
-#   - ML deps: scikit-learn has no macOS 11.0 arm64 wheel
-# Both features gracefully degrade at runtime (lazy imports with fallback).
-# All core features work without these dependencies.
-requires = []
+# Target macOS 12.0+ (Monterey, 2021) so pip accepts macosx_12_0_arm64 wheels.
+# Without this, Briefcase defaults to macOS 11.0 and scikit-learn wheels are rejected.
+min_os_version = "12.0"
+# ML deps included (wheels available for macosx_12_0_arm64).
+# dawtool excluded: depends on hexdump (source-only, no wheel on any platform)
+# and scipy. Briefcase uses --only-binary so source packages always fail.
+# Marker extraction gracefully degrades at runtime.
+requires = [
+    "scikit-learn",
+    "numpy",
+    "pandas",
+    "librosa",
+    "soundfile",
+]
 
 [tool.briefcase.app.src.windows]
 # Windows has compatible wheels for everything, so include all optional features:
