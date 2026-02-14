@@ -184,11 +184,11 @@ requires = [
 # Target macOS 12.0+ (Monterey, 2021) so pip accepts macosx_12_0_arm64 wheels.
 # Without this, Briefcase defaults to macOS 11.0 and scikit-learn wheels are rejected.
 min_os_version = "12.0"
-# ML deps included (wheels available for macosx_12_0_arm64).
-# dawtool excluded: depends on hexdump (source-only, no wheel on any platform)
-# and scipy. Briefcase uses --only-binary so source packages always fail.
-# Marker extraction gracefully degrades at runtime.
+# ARM64-only build: numba/llvmlite (librosa transitive deps) lack x86_64 wheels.
+# All Macs since late 2020 are Apple Silicon. Intel Macs can use pip install.
+universal_build = false
 requires = [
+    "dawtool @ git+https://github.com/EazyTom/dawtool",
     "scikit-learn",
     "numpy",
     "pandas",
