@@ -122,7 +122,7 @@ jobs:
         run: briefcase build macOS
 
       - name: Package as DMG
-        run: briefcase package macOS -p dmg --identity "Developer ID Application: Tom Carlile (68W2S2YXQZ)"
+        run: briefcase package macOS -p dmg --identity '${{ secrets.APP_IDENTITY }}'
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
