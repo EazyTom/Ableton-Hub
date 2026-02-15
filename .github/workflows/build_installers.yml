@@ -133,10 +133,26 @@ jobs:
         run: |
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/signing.keychain-db"
           DMG_PATH=$(ls dist/*.dmg | head -1)
-          xcrun notarytool submit "$DMG_PATH" \
+          # Submit without --wait to avoid network timeout during long poll
+          SUBMIT_OUTPUT=$(xcrun notarytool submit "$DMG_PATH" \
             --keychain-profile "AC_PASSWORD" \
-            --keychain "$RUNNER_TEMP/signing.keychain-db" \
-            --wait
+            --keychain "$RUNNER_TEMP/signing.keychain-db")
+          SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | awk '/id: / { print $2; exit }')
+          echo "Submission ID: $SUBMISSION_ID"
+          # Poll for completion with retries (Apple's servers can be slow/unreachable)
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if xcrun notarytool info "$SUBMISSION_ID" \
+              --keychain-profile "AC_PASSWORD" \
+              --keychain "$RUNNER_TEMP/signing.keychain-db" \
+              --wait; then
+              echo "Notarization completed successfully"
+              exit 0
+            fi
+            echo "Attempt $attempt failed (possible network error), retrying in 60s..."
+            sleep 60
+          done
+          echo "Notarization did not complete after 10 attempts"
+          exit 1
 
       - name: Staple notarization to DMG
         run: |
