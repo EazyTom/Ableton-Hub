@@ -88,6 +88,12 @@ class FileWatcher(QObject):
         if self._observer is not None:
             self.stop()
 
+        # Recreate debounce timer if it was cleared by stop()
+        if self._debounce_timer is None:
+            self._debounce_timer = QTimer()
+            self._debounce_timer.setSingleShot(True)
+            self._debounce_timer.timeout.connect(self._process_pending_events)
+
         self._observer = Observer()
         self._observer.start()
 
