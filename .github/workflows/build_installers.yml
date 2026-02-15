@@ -139,12 +139,12 @@ jobs:
             --keychain "$RUNNER_TEMP/signing.keychain-db")
           SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | awk '/id: / { print $2; exit }')
           echo "Submission ID: $SUBMISSION_ID"
-          # Poll for completion with retries (Apple's servers can be slow/unreachable)
+          # Wait for completion with retries (Apple's servers can be slow/unreachable)
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if xcrun notarytool info "$SUBMISSION_ID" \
+            if xcrun notarytool wait "$SUBMISSION_ID" \
               --keychain-profile "AC_PASSWORD" \
               --keychain "$RUNNER_TEMP/signing.keychain-db" \
-              --wait; then
+              --timeout 15m; then
               echo "Notarization completed successfully"
               exit 0
             fi
