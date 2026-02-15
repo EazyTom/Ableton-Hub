@@ -52,10 +52,40 @@ jobs:
   # ── macOS DMG ────────────────────────────────────────────────
   build-macos:
     runs-on: macos-latest
+    env:
+      APPLE_ID: ${{ secrets.APP_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APP_TEAM_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APP_PASSWORD }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Import code signing certificate
+        env:
+          APP_CERT: ${{ secrets.APP_CERT }}
+          APP_CERT_PASSWORD: ${{ secrets.APP_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APP_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          echo "$APP_CERT" | base64 -D > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APP_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+      - name: Store notarytool credentials
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.APP_CERT_PASSWORD }}
+        run: |
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/signing.keychain-db"
+          xcrun notarytool store-credentials "AC_PASSWORD" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --keychain "$RUNNER_TEMP/signing.keychain-db"
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
@@ -92,7 +122,7 @@ jobs:
         run: briefcase build macOS
 
       - name: Package as DMG
-        run: briefcase package macOS -p dmg --adhoc-sign
+        run: briefcase package macOS -p dmg --identity "Developer ID Application: Tom Carlile (68W2S2YXQZ)"
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
