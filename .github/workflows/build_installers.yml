@@ -113,7 +113,10 @@ jobs:
           iconutil -c icns "$ICONSET_DIR" -o "resources/icons/AProject.icns" || echo "Warning: .icns generation failed, Briefcase will use default icon"
 
       - name: Install Briefcase
-        run: pip install briefcase
+        run: pip install "briefcase>=0.3.22"
+
+      - name: Verify Briefcase version
+        run: briefcase --version
 
       - name: Create Briefcase project
         run: briefcase create macOS
@@ -122,7 +125,7 @@ jobs:
         run: briefcase build macOS
 
       - name: Package as DMG
-        run: briefcase package macOS -p dmg --identity '${{ secrets.APP_IDENTITY }}' --no-notarize
+        run: briefcase package macOS -p dmg --no-notarize --identity '${{ secrets.APP_IDENTITY }}'
 
       - name: Notarize DMG
         env:
