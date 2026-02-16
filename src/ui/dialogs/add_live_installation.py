@@ -240,8 +240,7 @@ class AddLiveInstallationDialog(QDialog):
             if len(installations) == 1:
                 install.is_favorite = True
                 session.commit()
-                # Import LiveController using absolute import (src is in sys.path from main.py)
-                from src.ui.controllers.live_controller import LiveController
+                from ..controllers.live_controller import LiveController
 
                 live_controller = LiveController()
                 live_controller.installations_changed.emit()

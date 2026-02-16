@@ -217,7 +217,7 @@ class LiveController(QObject):
         # If no stored version found, parse the file as fallback
         if project_major_version is None:
             try:
-                from ..services.als_parser import ALSParser
+                from ...services.als_parser import ALSParser
 
                 parser = ALSParser(extract_markers=False)
                 metadata = parser.parse(Path(project_path))

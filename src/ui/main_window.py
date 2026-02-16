@@ -1879,7 +1879,7 @@ class MainWindow(QMainWindow):
         from ..database import LiveInstallation
         from ..services.live_launcher import LiveLauncher
         from ..services.live_detector import LiveVersion
-        from ..controllers.live_controller import LiveController
+        from .controllers.live_controller import LiveController
 
         session = get_session()
         try:
@@ -2039,8 +2039,7 @@ class MainWindow(QMainWindow):
             session.commit()
 
             # Auto-set default if only one installation exists
-            # Import LiveController using absolute import (src is in sys.path from main.py)
-            from src.ui.controllers.live_controller import LiveController
+            from .controllers.live_controller import LiveController
 
             live_controller = LiveController()
             # Check if we need to set default (after commit, so use new session)
