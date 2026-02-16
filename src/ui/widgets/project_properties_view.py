@@ -42,6 +42,7 @@ class ProjectPropertiesView(QWidget):
     project_selected = pyqtSignal(int)  # For similar project navigation
     tags_modified = pyqtSignal()  # Emitted when tags are created/modified
     project_saved = pyqtSignal()  # Emitted when changes are saved
+    no_live_installation_requested = pyqtSignal()  # Emitted when user needs to add Live (e.g. backup launch)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -1402,12 +1403,7 @@ class ProjectPropertiesView(QWidget):
         matching_install = live_controller.get_installation_for_project_path(backup_path)
 
         if not matching_install:
-            QMessageBox.warning(
-                self,
-                "No Live Installation Found",
-                "No Ableton Live installations are configured.\n\n"
-                "Please add a Live installation using the sidebar menu.",
-            )
+            self.no_live_installation_requested.emit()
             return
 
         exe_path = Path(matching_install.executable_path)

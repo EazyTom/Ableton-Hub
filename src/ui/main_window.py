@@ -280,6 +280,9 @@ class MainWindow(QMainWindow):
         self.project_properties_view.project_selected.connect(self._on_project_selected)
         self.project_properties_view.tags_modified.connect(self._refresh_sidebar)
         self.project_properties_view.project_saved.connect(self._on_project_saved)
+        self.project_properties_view.no_live_installation_requested.connect(
+            self._show_no_live_installation_dialog
+        )
         self.content_stack.addWidget(self.project_properties_view)
 
         self.splitter.addWidget(self.content_stack)
@@ -1002,14 +1005,18 @@ class MainWindow(QMainWindow):
         finally:
             session.close()
 
-    def _on_settings(self) -> None:
-        """Show settings dialog."""
+    def _on_settings(self, initial_tab: str | None = None) -> None:
+        """Show settings dialog.
+
+        Args:
+            initial_tab: Optional tab to open to ("live", "locations", etc.).
+        """
         from PyQt6.QtWidgets import QApplication
 
         from .dialogs.settings_dialog import SettingsDialog
         from .theme import AbletonTheme
 
-        dialog = SettingsDialog(self.config, self)
+        dialog = SettingsDialog(self.config, self, initial_tab=initial_tab)
         old_theme = self.config.ui.theme
         if dialog.exec():
             # Settings were saved, refresh UI if needed
@@ -1902,14 +1909,9 @@ class MainWindow(QMainWindow):
             if not matching_install:
                 matching_install = live_controller.get_default_installation()
 
-            # If still no installation found, show error
+            # If still no installation found, show actionable dialog
             if not matching_install:
-                QMessageBox.warning(
-                    self,
-                    "No Live Installation Found",
-                    "No Ableton Live installations are configured.\n\n"
-                    "Please add a Live installation using the sidebar menu.",
-                )
+                self._show_no_live_installation_dialog()
                 return
 
             # Launch with the selected installation
@@ -1947,6 +1949,25 @@ class MainWindow(QMainWindow):
                 )
         finally:
             session.close()
+
+    def _show_no_live_installation_dialog(self) -> None:
+        """Show dialog when no Live installation is configured, with actionable buttons."""
+        msg = QMessageBox(self)
+        msg.setWindowTitle("No Live Installation Found")
+        msg.setText(
+            "No Ableton Live installation is configured.\n\n"
+            "Double-clicking projects opens them in Ableton Live."
+        )
+        open_settings_btn = msg.addButton("Open Settings", QMessageBox.ButtonRole.AcceptRole)
+        add_install_btn = msg.addButton("Add Live Installation", QMessageBox.ButtonRole.AcceptRole)
+        msg.addButton("OK", QMessageBox.ButtonRole.RejectRole)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.move(self.geometry().center() - msg.rect().center())
+        result = msg.exec()
+        if msg.clickedButton() == open_settings_btn:
+            self._on_settings(initial_tab="live")
+        elif msg.clickedButton() == add_install_btn:
+            self._on_add_manual_installation()
 
     def _on_auto_detect_live_versions(self) -> None:
         """Auto-detect Live versions from default locations."""

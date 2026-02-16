@@ -12,6 +12,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QRadioButton,
@@ -22,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ...config import Config, save_config
+from ...database import LiveInstallation, Location, get_session
 from ...utils.logging import get_logs_directory
 from ..theme import AbletonTheme
 
@@ -29,15 +32,22 @@ from ..theme import AbletonTheme
 class SettingsDialog(QDialog):
     """Settings dialog for application configuration."""
 
-    def __init__(self, config: Config, parent: QWidget | None = None):
+    def __init__(
+        self,
+        config: Config,
+        parent: QWidget | None = None,
+        initial_tab: str | None = None,
+    ):
         """Initialize the settings dialog.
 
         Args:
             config: Application configuration object.
-            parent: Parent widget.
+            parent: Parent widget (typically MainWindow).
+            initial_tab: Optional tab to open to ("live", "locations", etc.).
         """
         super().__init__(parent)
         self.config = config
+        self._initial_tab = initial_tab
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -49,29 +59,43 @@ class SettingsDialog(QDialog):
         layout.setSpacing(16)
 
         # Tab widget for different settings categories
-        tabs = QTabWidget()
+        self.tabs = QTabWidget()
 
         # General tab
         general_tab = self._create_general_tab()
-        tabs.addTab(general_tab, "General")
+        self.tabs.addTab(general_tab, "General")
 
         # Scanning tab
         scanning_tab = self._create_scanning_tab()
-        tabs.addTab(scanning_tab, "Scanning")
+        self.tabs.addTab(scanning_tab, "Scanning")
+
+        # Live tab
+        live_tab = self._create_live_tab()
+        self.tabs.addTab(live_tab, "Live")
+
+        # Locations tab
+        locations_tab = self._create_locations_tab()
+        self.tabs.addTab(locations_tab, "Locations")
 
         # Export tab
         export_tab = self._create_export_tab()
-        tabs.addTab(export_tab, "Exports")
+        self.tabs.addTab(export_tab, "Exports")
 
         # Link tab
         link_tab = self._create_link_tab()
-        tabs.addTab(link_tab, "Link")
+        self.tabs.addTab(link_tab, "Link")
 
         # Logging tab
         logging_tab = self._create_logging_tab()
-        tabs.addTab(logging_tab, "Logging")
+        self.tabs.addTab(logging_tab, "Logging")
 
-        layout.addWidget(tabs)
+        layout.addWidget(self.tabs)
+
+        # Switch to initial tab if requested
+        if self._initial_tab == "live":
+            self.tabs.setCurrentWidget(live_tab)
+        elif self._initial_tab == "locations":
+            self.tabs.setCurrentWidget(locations_tab)
 
         # Buttons
         buttons = QHBoxLayout()
@@ -250,6 +274,198 @@ class SettingsDialog(QDialog):
 
         layout.addStretch()
         return widget
+
+    def _create_live_tab(self) -> QWidget:
+        """Create the Live installations tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(12)
+
+        live_group = QGroupBox("Ableton Live Installations")
+        live_layout = QVBoxLayout(live_group)
+
+        # List of current installations
+        self.live_list = QListWidget()
+        self.live_list.setMaximumHeight(180)
+        live_layout.addWidget(QLabel("Configured installations:"))
+        live_layout.addWidget(self.live_list)
+        self._refresh_live_list()
+
+        # Buttons
+        live_btn_layout = QHBoxLayout()
+        add_live_btn = QPushButton("Add Live Installation...")
+        add_live_btn.clicked.connect(self._on_add_live_installation)
+        live_btn_layout.addWidget(add_live_btn)
+
+        auto_detect_btn = QPushButton("Auto-Detect")
+        auto_detect_btn.clicked.connect(self._on_auto_detect_live)
+        live_btn_layout.addWidget(auto_detect_btn)
+
+        live_btn_layout.addStretch()
+        live_layout.addLayout(live_btn_layout)
+
+        info_label = QLabel(
+            "Add Ableton Live installations to open projects by double-clicking. "
+            "Use Auto-Detect to find installations in default locations."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #888; font-size: 10px;")
+        live_layout.addWidget(info_label)
+
+        layout.addWidget(live_group)
+        layout.addStretch()
+        return widget
+
+    def _create_locations_tab(self) -> QWidget:
+        """Create the Locations tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(12)
+
+        loc_group = QGroupBox("Project Locations")
+        loc_layout = QVBoxLayout(loc_group)
+
+        # List of current locations
+        self.locations_list = QListWidget()
+        self.locations_list.setMaximumHeight(180)
+        loc_layout.addWidget(QLabel("Configured locations:"))
+        loc_layout.addWidget(self.locations_list)
+        self._refresh_locations_list()
+
+        # Add button
+        add_loc_btn = QPushButton("Add Location...")
+        add_loc_btn.clicked.connect(self._on_add_location)
+        loc_layout.addWidget(add_loc_btn)
+
+        info_label = QLabel(
+            "Locations are folders that contain Ableton projects. "
+            "Add folders to scan and index your projects."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #888; font-size: 10px;")
+        loc_layout.addWidget(info_label)
+
+        layout.addWidget(loc_group)
+        layout.addStretch()
+        return widget
+
+    def _refresh_live_list(self) -> None:
+        """Refresh the Live installations list."""
+        self.live_list.clear()
+        with get_session() as session:
+            installations = (
+                session.query(LiveInstallation)
+                .order_by(LiveInstallation.version.desc())
+                .all()
+            )
+            for install in installations:
+                fav = " ★" if install.is_favorite else ""
+                path_short = install.executable_path
+                if len(path_short) > 50:
+                    path_short = "..." + path_short[-47:]
+                text = f"{install.name} (v{install.version}){fav}\n  {path_short}"
+                item = QListWidgetItem(text)
+                item.setData(100, install.id)
+                self.live_list.addItem(item)
+
+    def _refresh_locations_list(self) -> None:
+        """Refresh the locations list."""
+        self.locations_list.clear()
+        with get_session() as session:
+            locations = session.query(Location).order_by(Location.name).all()
+            for loc in locations:
+                path_short = loc.path
+                if len(path_short) > 50:
+                    path_short = "..." + path_short[-47:]
+                active = "✓" if loc.is_active else "○"
+                text = f"{loc.name} [{active}]\n  {path_short}"
+                item = QListWidgetItem(text)
+                item.setData(100, loc.id)
+                self.locations_list.addItem(item)
+
+    def _on_add_live_installation(self) -> None:
+        """Open Add Live Installation dialog."""
+        from .add_live_installation import AddLiveInstallationDialog
+
+        main_window = self.parent()
+        dialog = AddLiveInstallationDialog(main_window)
+        if dialog.exec():
+            self._refresh_live_list()
+            if main_window and hasattr(main_window, "_refresh_sidebar"):
+                main_window._refresh_sidebar()
+
+    def _on_auto_detect_live(self) -> None:
+        """Run auto-detect for Live installations."""
+        from ...services.live_detector import LiveDetector
+
+        detector = LiveDetector()
+        detected_versions = detector.get_versions()
+
+        if not detected_versions:
+            QMessageBox.information(
+                self,
+                "No Versions Found",
+                "No Ableton Live installations were detected in default locations.\n\n"
+                "You can manually add an installation using 'Add Live Installation...'",
+            )
+            return
+
+        with get_session() as session:
+            added_count = 0
+            skipped_count = 0
+
+            for version in detected_versions:
+                existing = (
+                    session.query(LiveInstallation)
+                    .filter(LiveInstallation.executable_path == str(version.path))
+                    .first()
+                )
+                if existing:
+                    skipped_count += 1
+                    continue
+
+                install = LiveInstallation(
+                    name=str(version),
+                    version=version.version,
+                    executable_path=str(version.path),
+                    build=version.build,
+                    is_suite=version.is_suite,
+                    is_auto_detected=True,
+                )
+                session.add(install)
+                added_count += 1
+
+            session.commit()
+
+        self._refresh_live_list()
+        main_window = self.parent()
+        if main_window and hasattr(main_window, "_refresh_sidebar"):
+            main_window._refresh_sidebar()
+
+        if added_count > 0:
+            msg = f"Added {added_count} installation(s)."
+            if skipped_count:
+                msg += f" {skipped_count} already configured."
+            QMessageBox.information(self, "Auto-Detect Complete", msg)
+        elif skipped_count > 0:
+            QMessageBox.information(
+                self,
+                "Auto-Detect Complete",
+                "All detected installations are already configured.",
+            )
+
+    def _on_add_location(self) -> None:
+        """Open Add Location dialog."""
+        from .add_location import AddLocationDialog
+
+        main_window = self.parent()
+        dialog = AddLocationDialog(main_window)
+        if dialog.exec():
+            self._refresh_locations_list()
+            if main_window and hasattr(main_window, "_refresh_sidebar"):
+                main_window._refresh_sidebar()
+            if main_window and hasattr(main_window, "location_panel"):
+                main_window.location_panel.refresh()
 
     def _create_export_tab(self) -> QWidget:
         """Create the export settings tab."""
