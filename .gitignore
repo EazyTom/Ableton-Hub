@@ -37,8 +37,10 @@ venv/
 .vscode/*
 
 
-# Cursor AI
-.cursor/
+# Cursor AI - ignore user-specific data, allow project rules
+.cursor/*
+.cursor/rules/
+.cursor/rules/*
 .cursorrules
 
 # PyInstaller / Build artifacts

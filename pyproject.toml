@@ -165,7 +165,7 @@ description = "Cross-platform desktop application for organizing Ableton project
 long_description = """Ableton Hub helps you organize, manage, and discover your \
 Ableton Live projects across multiple locations. Search, sort, tag, collect, \
 and preview your projects with advanced similarity analysis."""
-icon = "resources/icons/AProject"
+icon = "resources/icons/AProject.png"
 sources = ["src"]
 requires = [
     "PyQt6",

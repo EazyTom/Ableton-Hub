@@ -26,6 +26,7 @@ class LocationPanel(QWidget):
     location_added = pyqtSignal(int)  # Location ID
     location_removed = pyqtSignal(int)  # Location ID
     scan_requested = pyqtSignal(int)  # Location ID (0 for all)
+    find_audio_exports_requested = pyqtSignal(int)  # Location ID
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -203,6 +204,11 @@ class LocationPanel(QWidget):
 
         scan_action = menu.addAction("Scan Now")
         scan_action.triggered.connect(lambda: self.scan_requested.emit(location_id))
+
+        find_exports_action = menu.addAction("Find Audio Exports...")
+        find_exports_action.triggered.connect(
+            lambda: self.find_audio_exports_requested.emit(location_id)
+        )
 
         menu.addSeparator()
 

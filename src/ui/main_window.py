@@ -30,6 +30,7 @@ from .managers.toolbar_manager import ToolBarManager
 from .managers.view_manager import ViewManager
 from .theme import AbletonTheme
 from .widgets.collection_view import CollectionView
+from .widgets.find_audio_exports_view import FindAudioExportsView
 from .widgets.link_panel import LinkPanel
 from .widgets.location_panel import LocationPanel
 from .widgets.project_grid import ProjectGrid
@@ -221,6 +222,7 @@ class MainWindow(QMainWindow):
         self.sidebar.location_selected.connect(self._on_location_filter)
         self.sidebar.collection_selected.connect(self._on_collection_selected)
         self.sidebar.location_delete_requested.connect(self._on_delete_location_from_sidebar)
+        self.sidebar.find_audio_exports_requested.connect(self._on_find_audio_exports)
         self.sidebar.cleanup_orphaned_projects_requested.connect(self._on_cleanup_orphaned_projects)
         self.sidebar.collection_edit_requested.connect(self._on_edit_collection_from_sidebar)
         self.sidebar.collection_delete_requested.connect(self._on_delete_collection_from_sidebar)
@@ -254,6 +256,7 @@ class MainWindow(QMainWindow):
         self.location_panel = LocationPanel()
         self.location_panel.location_added.connect(self._on_location_added)
         self.location_panel.scan_requested.connect(self._on_scan_location)
+        self.location_panel.find_audio_exports_requested.connect(self._on_find_audio_exports)
         self.content_stack.addWidget(self.location_panel)
 
         # Link panel (index 3)
@@ -285,6 +288,11 @@ class MainWindow(QMainWindow):
         )
         self.content_stack.addWidget(self.project_properties_view)
 
+        # Find Audio Exports view (index 7)
+        self.find_audio_exports_view = FindAudioExportsView()
+        self.find_audio_exports_view.back_requested.connect(self._on_find_exports_back)
+        self.content_stack.addWidget(self.find_audio_exports_view)
+
         self.splitter.addWidget(self.content_stack)
 
         # Initialize ViewManager and register all views
@@ -299,6 +307,9 @@ class MainWindow(QMainWindow):
         )
         self.view_manager.register_view(
             ViewManager.VIEW_PROPERTIES, self.project_properties_view, 6
+        )
+        self.view_manager.register_view(
+            ViewManager.VIEW_FIND_EXPORTS, self.find_audio_exports_view, 7
         )
 
         # Set initial sizes
@@ -1435,6 +1446,10 @@ class MainWindow(QMainWindow):
         if self.view_manager.get_current_view() == ViewManager.VIEW_PROPERTIES:
             self.project_properties_view.cleanup()
 
+        # Clean up Find Audio Exports view when navigating away via sidebar
+        if self.view_manager.get_current_view() == ViewManager.VIEW_FIND_EXPORTS:
+            self.find_audio_exports_view.cleanup()
+
         # Reset missing projects view when navigating away from projects view
         if view != "projects" and self._show_missing_projects:
             self._show_missing_projects = False
@@ -1498,6 +1513,18 @@ class MainWindow(QMainWindow):
         self.project_properties_view.cleanup()
         self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
         self._load_projects()
+
+    def _on_find_audio_exports(self, location_id: int) -> None:
+        """Handle Find Audio Exports request from sidebar."""
+        self.find_audio_exports_view.set_location(location_id)
+        self.view_manager.switch_to_view(ViewManager.VIEW_FIND_EXPORTS)
+        self.sidebar.clear_selection()
+
+    def _on_find_exports_back(self) -> None:
+        """Handle back button from Find Audio Exports view."""
+        self.find_audio_exports_view.cleanup()
+        self.view_manager.switch_to_view(ViewManager.VIEW_LOCATIONS)
+        self.location_panel.refresh()
 
     def _on_project_saved(self) -> None:
         """Handle project being saved in properties view."""
@@ -2219,6 +2246,10 @@ class MainWindow(QMainWindow):
             # Stop project properties view workers
             if hasattr(self, "project_properties_view"):
                 self.project_properties_view.cleanup()
+
+            # Stop Find Audio Exports view workers
+            if hasattr(self, "find_audio_exports_view"):
+                self.find_audio_exports_view.cleanup()
 
             # Stop all timers
             if hasattr(self, "search_bar") and hasattr(self.search_bar, "_debounce_timer"):

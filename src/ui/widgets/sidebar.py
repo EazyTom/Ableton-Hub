@@ -111,6 +111,7 @@ class SidebarItem(QPushButton):
 
     edit_requested = pyqtSignal(int)  # Item ID
     delete_requested = pyqtSignal(int)  # Item ID
+    find_exports_requested = pyqtSignal(int)  # Location ID
     double_clicked = pyqtSignal()  # Double-click signal
 
     def __init__(
@@ -199,10 +200,14 @@ class SidebarItem(QPushButton):
                 self.delete_requested.emit(self.item_id)
         elif self.item_type == "location" and self.item_id:
             menu = QMenu(self)
+            find_exports_action = menu.addAction("Find Audio Exports...")
+            menu.addSeparator()
             remove_action = menu.addAction("Remove Location")
 
             action = menu.exec(self.mapToGlobal(pos))
-            if action == remove_action:
+            if action == find_exports_action:
+                self.find_exports_requested.emit(self.item_id)
+            elif action == remove_action:
                 self.delete_requested.emit(self.item_id)
 
 
@@ -213,6 +218,7 @@ class Sidebar(QWidget):
     navigation_changed = pyqtSignal(str)  # View name
     location_selected = pyqtSignal(int)  # Location ID
     location_delete_requested = pyqtSignal(int)  # Location ID
+    find_audio_exports_requested = pyqtSignal(int)  # Location ID
     cleanup_orphaned_projects_requested = pyqtSignal()
     auto_detect_live_versions_requested = pyqtSignal()
     add_manual_installation_requested = pyqtSignal()
@@ -1460,6 +1466,9 @@ class Sidebar(QWidget):
                 )
                 item.delete_requested.connect(
                     lambda lid=loc.id: self.location_delete_requested.emit(lid)
+                )
+                item.find_exports_requested.connect(
+                    lambda lid=loc.id: self.find_audio_exports_requested.emit(lid)
                 )
 
                 self.locations_layout.addWidget(item)

@@ -23,6 +23,7 @@ class ViewManager(QObject):
     VIEW_HEALTH = "health"
     VIEW_SIMILARITIES = "similarities"
     VIEW_PROPERTIES = "properties"
+    VIEW_FIND_EXPORTS = "find_exports"
 
     def __init__(self, content_stack: QStackedWidget, parent: QObject | None = None):
         """Initialize the view manager.
