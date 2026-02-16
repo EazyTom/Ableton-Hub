@@ -3,7 +3,7 @@
 # Single source of truth for version - reads from pyproject.toml via importlib.metadata
 # When installed via pip, this reads from package metadata
 # When running from source, falls back to the hardcoded version below
-_FALLBACK_VERSION = "1.0.6"
+_FALLBACK_VERSION = "1.0.7"
 
 try:
     from importlib.metadata import version as get_version
@@ -21,6 +21,14 @@ __email__ = "carlile.tom@gmail.com"
 WHATS_NEW = {
     "version": __version__,
     "features": [
+        (
+            "Bugfixes (thx PAG!)",
+            (
+                "Various bugfixes submitted by PAG; "
+                "improved handling when no Live installation is configured, "
+                "add Live installs and Locations from Settings menu"
+            ),
+        ),
         (
             "Jaccard Similarity Fixed",
             (

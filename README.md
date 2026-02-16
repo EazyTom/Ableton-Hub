@@ -4,7 +4,7 @@
 
 # Ableton Hub
 
-**Version 1.0.6**
+**Version 1.0.7**
 
 ## What is Ableton Hub?
 
@@ -574,6 +574,11 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 ## Roadmap
 - **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
+
+### v1.0.7 - Bugfixes (thx PAG!)
+- ✅ **No Live Installation Handling** - Friendly dialog when double-clicking project cards with actionable "Open Settings" and "Add Live Installation" buttons
+- ✅ **Settings: Live Tab** - Add Live installations and run Auto-Detect from Settings
+- ✅ **Settings: Locations Tab** - Add project locations from Settings menu
 
 ### v1.0.6 - Jaccard Similarity Fixed, Plugin/Device Detection Working
 - ✅ **Jaccard Similarity Fixed** - Plugin and device similarity matching now works correctly; fixed double-serialization bug that caused character-level set comparisons instead of plugin/device name matching
