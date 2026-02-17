@@ -154,14 +154,22 @@ def is_ableton_project(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() == ".als"
 
 
+_cached_resources_path: Path | None = None
+
+
 def get_resources_path() -> Path:
     """Get the path to the resources directory.
 
     Works both in development and when installed via pip.
+    Result is cached after first resolution to avoid repeated path checks.
 
     Returns:
         Path to the resources directory.
     """
+    global _cached_resources_path
+    if _cached_resources_path is not None:
+        return _cached_resources_path
+
     # Method 1: Use the src.resources package __file__ attribute
     try:
         import src.resources as resources_pkg
@@ -169,6 +177,7 @@ def get_resources_path() -> Path:
         if hasattr(resources_pkg, "__file__") and resources_pkg.__file__:
             resources_path = Path(resources_pkg.__file__).parent
             if resources_path.exists():
+                _cached_resources_path = resources_path
                 return resources_path
     except Exception:
         pass
@@ -177,14 +186,17 @@ def get_resources_path() -> Path:
     current_file = Path(__file__)
     resources_path = current_file.parent.parent / "resources"
     if resources_path.exists():
+        _cached_resources_path = resources_path
         return resources_path
 
     # Method 3: Original location (ableton_hub/resources/) for development
     old_resources_path = current_file.parent.parent.parent / "resources"
     if old_resources_path.exists():
+        _cached_resources_path = old_resources_path
         return old_resources_path
 
     # Last resort: return the expected path even if it doesn't exist
+    _cached_resources_path = resources_path
     return resources_path
 
 

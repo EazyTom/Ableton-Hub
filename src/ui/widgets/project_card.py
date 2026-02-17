@@ -12,6 +12,41 @@ from ...services.audio_player import AudioPlayer
 from ...services.audio_preview import AudioPreviewGenerator
 from ..theme import AbletonTheme
 
+# Cached default logo (resolved once, reused by all cards)
+_default_logo_loaded = False
+_default_logo_pixmap: QPixmap | None = None
+
+
+def _get_default_logo_pixmap() -> QPixmap | None:
+    """Return cached default logo pixmap, loading once on first use."""
+    global _default_logo_loaded, _default_logo_pixmap
+    if _default_logo_loaded:
+        return _default_logo_pixmap
+
+    _default_logo_loaded = True
+    from ...utils.paths import get_resources_path
+
+    logo_paths = [
+        Path(__file__).parent.parent.parent / "resources" / "images" / "als-icon.png",
+        get_resources_path() / "images" / "als-icon.png",
+    ]
+    logo_path = next((p for p in logo_paths if p.exists()), None)
+    if not logo_path:
+        return None
+
+    pixmap = QPixmap(str(logo_path))
+    if pixmap.isNull():
+        return None
+
+    scaled = pixmap.scaled(
+        156,
+        60,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+    _default_logo_pixmap = scaled
+    return _default_logo_pixmap
+
 
 class ProjectCard(QFrame):
     """Card widget representing a single project."""
@@ -184,25 +219,11 @@ class ProjectCard(QFrame):
 
     def _set_default_logo(self) -> None:
         """Set the default logo as preview when no waveform thumbnail is available."""
-        from ...utils.paths import get_resources_path
-
-        resources = get_resources_path()
-        logo_path = resources / "images" / "als-icon.png"
-
-        if logo_path.exists():
-            pixmap = QPixmap(str(logo_path))
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    156,
-                    60,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.preview_label.setPixmap(scaled)
-                return
-
-        # Fallback to music note emoji if icon file is missing
-        self.preview_label.setText("🎵")
+        pixmap = _get_default_logo_pixmap()
+        if pixmap is not None:
+            self.preview_label.setPixmap(pixmap)
+        else:
+            self.preview_label.setText("🎵")
 
     def _apply_style(self) -> None:
         """Apply visual style to the card.
