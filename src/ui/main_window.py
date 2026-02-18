@@ -145,6 +145,7 @@ class MainWindow(QMainWindow):
         self.menu_manager.toggle_show_missing_requested.connect(self._toggle_show_missing)
         self.menu_manager.refresh_requested.connect(self._refresh_view)
         self.menu_manager.global_search_requested.connect(self._on_global_search)
+        self.menu_manager.song_name_generator_requested.connect(self._on_song_name_generator)
         self.menu_manager.show_link_panel_requested.connect(self._show_link_panel)
         self.menu_manager.force_rescan_metadata_requested.connect(self._on_force_rescan_metadata)
         self.menu_manager.clear_thumbnail_cache_requested.connect(self._on_clear_thumbnail_cache)
@@ -157,6 +158,7 @@ class MainWindow(QMainWindow):
         self.menu_manager.reset_database_requested.connect(self._on_reset_database)
         self.menu_manager.view_logs_requested.connect(self._on_view_logs)
         self.menu_manager.user_guide_requested.connect(self._on_user_guide)
+        self.menu_manager.check_for_updates_requested.connect(self._check_for_updates)
         self.menu_manager.about_requested.connect(self._show_about)
 
         # Create menus
@@ -408,6 +410,10 @@ class MainWindow(QMainWindow):
 
         # Show FTUE and Add Location dialogs after UI is ready
         QTimer.singleShot(500, self._show_startup_dialogs)
+
+        # Check for updates 3 seconds after startup (if enabled)
+        if self.config.ui.check_for_updates_at_startup:
+            QTimer.singleShot(3000, self._check_for_updates)
 
         # Start file watcher for automatic updates
         # Auto-scan on startup after app is fully loaded
@@ -1151,6 +1157,13 @@ class MainWindow(QMainWindow):
         """Show global search dialog."""
         pass  # TODO: Implement global search dialog
 
+    def _on_song_name_generator(self) -> None:
+        """Show random song name generator dialog."""
+        from .dialogs.song_name_generator_dialog import SongNameGeneratorDialog
+
+        dialog = SongNameGeneratorDialog(self)
+        dialog.exec()
+
     def _show_link_panel(self) -> None:
         """Show the Link network panel."""
         self.view_manager.switch_to_view(ViewManager.VIEW_LINK)
@@ -1308,6 +1321,20 @@ class MainWindow(QMainWindow):
 
         dialog = FTUEDialog(self, show_startup_checkbox=True)
         dialog.exec()
+
+    def _check_for_updates(self) -> None:
+        """Check GitHub for the latest release and show UpdateDialog if newer."""
+        from .dialogs.update_dialog import UpdateDialog
+        from ..services.update_checker import UpdateChecker
+
+        checker = UpdateChecker(self)
+        checker.update_available.connect(
+            lambda v, r, d: UpdateDialog(v, r, d, self).exec()
+        )
+        checker.check_failed.connect(
+            lambda err: self.logger.debug(f"Update check failed: {err}")
+        )
+        checker.check()
 
     def _show_about(self) -> None:
         """Show about dialog with compact README content."""

@@ -86,6 +86,7 @@ class UIConfig:
     # Gradient modes only: "rainbow", "random", or gradient options (solid colors disabled)
     waveform_color_mode: str = "random"
     show_ftue_at_startup: bool = True
+    check_for_updates_at_startup: bool = True
 
 
 @dataclass

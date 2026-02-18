@@ -29,6 +29,7 @@ class MenuBarManager(QObject):
     toggle_show_missing_requested = pyqtSignal()
     refresh_requested = pyqtSignal()
     global_search_requested = pyqtSignal()
+    song_name_generator_requested = pyqtSignal()
     show_link_panel_requested = pyqtSignal()
     force_rescan_metadata_requested = pyqtSignal()
     clear_thumbnail_cache_requested = pyqtSignal()
@@ -37,6 +38,7 @@ class MenuBarManager(QObject):
     reset_database_requested = pyqtSignal()
     view_logs_requested = pyqtSignal()
     user_guide_requested = pyqtSignal()
+    check_for_updates_requested = pyqtSignal()
     about_requested = pyqtSignal()
 
     def __init__(self, main_window: QMainWindow, parent: QObject | None = None):
@@ -169,6 +171,12 @@ class MenuBarManager(QObject):
         tools_menu.addAction(global_search_action)
         self._actions["global_search"] = global_search_action
 
+        song_names_action = QAction("Random Song Name Generator...", self._main_window)
+        song_names_action.setToolTip("Generate 10 random song names for project naming")
+        song_names_action.triggered.connect(self.song_name_generator_requested.emit)
+        tools_menu.addAction(song_names_action)
+        self._actions["song_names"] = song_names_action
+
         tools_menu.addSeparator()
 
         link_panel_action = QAction("Ableton Link WiFi...", self._main_window)
@@ -235,6 +243,11 @@ class MenuBarManager(QObject):
         user_guide_action.triggered.connect(self.user_guide_requested.emit)
         help_menu.addAction(user_guide_action)
         self._actions["user_guide"] = user_guide_action
+
+        check_updates_action = QAction("Check for Updates", self._main_window)
+        check_updates_action.triggered.connect(self.check_for_updates_requested.emit)
+        help_menu.addAction(check_updates_action)
+        self._actions["check_updates"] = check_updates_action
 
         help_menu.addSeparator()
 

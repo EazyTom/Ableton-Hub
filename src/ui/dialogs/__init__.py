@@ -9,6 +9,8 @@ from .project_details import ProjectDetailsDialog
 from .select_exports_dialog import SelectExportsDialog
 from .similar_projects_dialog import SimilarProjectsDialog
 from .smart_collection import SmartCollectionDialog
+from .song_name_generator_dialog import SongNameGeneratorDialog
+from .update_dialog import UpdateDialog
 
 __all__ = [
     "AddLocationDialog",
@@ -20,4 +22,6 @@ __all__ = [
     "AddLiveInstallationDialog",
     "SimilarProjectsDialog",
     "SelectExportsDialog",
+    "SongNameGeneratorDialog",
+    "UpdateDialog",
 ]

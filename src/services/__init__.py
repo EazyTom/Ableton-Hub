@@ -24,6 +24,7 @@ from .marker_extractor import MarkerExtractor
 from .remote_sync import RemoteSync
 from .scanner import ProjectScanner
 from .smart_collections import SmartCollectionService
+from .update_checker import UpdateChecker
 from .watcher import FileWatcher
 
 # ML/AI Services - lazy-loaded to avoid slow startup
@@ -97,6 +98,7 @@ __all__ = [
     "LiveDetector",
     "LiveVersion",
     "LiveLauncher",
+    "UpdateChecker",
     # ML/AI services (lazy-loaded)
     "ASDParser",
     "ClipAnalysisData",
