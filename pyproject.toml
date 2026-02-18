@@ -25,25 +25,27 @@ classifiers = [
 ]
 
 dependencies = [
-    "PyQt6>=6.6.0",
+    "PyQt6>=6.10.0",
     "SQLAlchemy>=2.0.0",
-    "watchdog>=4.0.0",
-    "zeroconf>=0.131.0",
-    "qasync>=0.27.0",
-    "aiosqlite>=0.20.0",
-    "Pillow>=10.0.0",
-    "rapidfuzz>=3.6.0",
+    "watchdog>=6.0.0",
+    "zeroconf>=0.148.0",
+    "qasync>=0.28.0",
+    "aiosqlite>=0.22.0",
+    "Pillow>=12.0.0",
+    "rapidfuzz>=3.14.0",
     # Enhanced XML Parsing (for deeper ALS analysis) - Optional, falls back to stdlib
-    "lxml>=5.0.0",
+    "lxml>=6.0.0",
     # ML/AI Features - Lazy loaded at runtime with graceful fallback
-    "scikit-learn>=1.5.0",
-    "numpy>=1.26.0",
-    "pandas>=2.1.0",
-    "librosa>=0.10.0",
-    "soundfile>=0.12.0",
+    "scikit-learn>=1.8.0",
+    "numpy>=2.0.0",
+    "pandas>=3.0.0",
+    "librosa>=0.11.0",
+    "soundfile>=0.13.0",
     # Timeline Marker Extraction (dawtool depends on hexdump which is source-only,
     # so it works via pip but not in Briefcase's --only-binary macOS environment)
     "dawtool @ git+https://github.com/EazyTom/dawtool",
+    # Markdown rendering for FTUE / User Guide
+    "markdown>=3.5.0",
 ]
 
 [project.optional-dependencies]
@@ -168,16 +170,18 @@ and preview your projects with advanced similarity analysis."""
 icon = "resources/icons/AProject.png"
 sources = ["src"]
 requires = [
-    "PyQt6",
+    "PyQt6>=6.10.0",
     "SQLAlchemy>=2.0.0",
-    "watchdog>=4.0.0",
-    "zeroconf",
-    "qasync",
-    "aiosqlite",
-    "Pillow",
-    "rapidfuzz",
+    "watchdog>=6.0.0",
+    "zeroconf>=0.148.0",
+    "qasync>=0.28.0",
+    "aiosqlite>=0.22.0",
+    "Pillow>=12.0.0",
+    "rapidfuzz>=3.14.0",
     # Enhanced XML Parsing
-    "lxml",
+    "lxml>=6.0.0",
+    # Markdown rendering for FTUE / User Guide
+    "markdown>=3.5.0",
 ]
 
 [tool.briefcase.app.src.macOS]
@@ -189,11 +193,11 @@ min_os_version = "12.0"
 universal_build = false
 requires = [
     "dawtool @ git+https://github.com/EazyTom/dawtool",
-    "scikit-learn",
-    "numpy",
-    "pandas",
-    "librosa",
-    "soundfile",
+    "scikit-learn>=1.8.0",
+    "numpy>=2.0.0",
+    "pandas>=3.0.0",
+    "librosa>=0.11.0",
+    "soundfile>=0.13.0",
 ]
 
 [tool.briefcase.app.src.windows]
@@ -202,9 +206,9 @@ requires = [
 #   - ML/AI features (scikit-learn, etc.)
 requires = [
     "dawtool @ git+https://github.com/EazyTom/dawtool",
-    "scikit-learn",
-    "numpy",
-    "pandas",
-    "librosa",
-    "soundfile",
+    "scikit-learn>=1.8.0",
+    "numpy>=2.0.0",
+    "pandas>=3.0.0",
+    "librosa>=0.11.0",
+    "soundfile>=0.13.0",
 ]

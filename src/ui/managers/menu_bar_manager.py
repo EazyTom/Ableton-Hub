@@ -28,7 +28,6 @@ class MenuBarManager(QObject):
     toggle_sidebar_requested = pyqtSignal()
     toggle_show_missing_requested = pyqtSignal()
     refresh_requested = pyqtSignal()
-    new_collection_requested = pyqtSignal()
     global_search_requested = pyqtSignal()
     show_link_panel_requested = pyqtSignal()
     force_rescan_metadata_requested = pyqtSignal()
@@ -37,6 +36,7 @@ class MenuBarManager(QObject):
     cleanup_backup_projects_requested = pyqtSignal()
     reset_database_requested = pyqtSignal()
     view_logs_requested = pyqtSignal()
+    user_guide_requested = pyqtSignal()
     about_requested = pyqtSignal()
 
     def __init__(self, main_window: QMainWindow, parent: QObject | None = None):
@@ -59,7 +59,6 @@ class MenuBarManager(QObject):
         self._create_file_menu()
         self._create_edit_menu()
         self._create_view_menu()
-        self._create_collections_menu()
         self._create_tools_menu()
         self._create_help_menu()
 
@@ -159,17 +158,6 @@ class MenuBarManager(QObject):
         view_menu.addAction(refresh_action)
         self._actions["refresh"] = refresh_action
 
-    def _create_collections_menu(self) -> None:
-        """Create Collections menu."""
-        collection_menu = cast(QMenu, self._menubar.addMenu("&Collections"))
-        self._menus["collections"] = collection_menu
-
-        new_collection_action = QAction("New Collection...", self._main_window)
-        new_collection_action.setShortcut(QKeySequence("Ctrl+N"))
-        new_collection_action.triggered.connect(self.new_collection_requested.emit)
-        collection_menu.addAction(new_collection_action)
-        self._actions["new_collection"] = new_collection_action
-
     def _create_tools_menu(self) -> None:
         """Create Tools menu."""
         tools_menu = cast(QMenu, self._menubar.addMenu("&Tools"))
@@ -241,6 +229,12 @@ class MenuBarManager(QObject):
         view_logs_action.triggered.connect(self.view_logs_requested.emit)
         help_menu.addAction(view_logs_action)
         self._actions["view_logs"] = view_logs_action
+
+        user_guide_action = QAction("User Guide", self._main_window)
+        user_guide_action.setShortcut(QKeySequence("F1"))
+        user_guide_action.triggered.connect(self.user_guide_requested.emit)
+        help_menu.addAction(user_guide_action)
+        self._actions["user_guide"] = user_guide_action
 
         help_menu.addSeparator()
 

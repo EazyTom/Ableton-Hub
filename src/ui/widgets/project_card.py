@@ -359,6 +359,24 @@ class ProjectCard(QFrame):
         if sample_count > 0:
             tooltip_html += f"Samples: {sample_count}<br/>"
 
+        # Arrangement length (arrangement timeline clips only)
+        if (
+            self.project.arrangement_length
+            and self.project.arrangement_length > 0
+        ):
+            arr_bars = int(self.project.arrangement_length)
+            arr_len_str = f"{arr_bars} bars"
+            if (
+                hasattr(self.project, "arrangement_duration_seconds")
+                and self.project.arrangement_duration_seconds
+                and self.project.arrangement_duration_seconds > 0
+            ):
+                dur_sec = int(self.project.arrangement_duration_seconds)
+                minutes = dur_sec // 60
+                seconds = dur_sec % 60
+                arr_len_str += f" ({minutes}:{seconds:02d})"
+            tooltip_html += f"Arrangement: {arr_len_str}<br/>"
+
         # Session clip length (longest recorded sample)
         if (
             hasattr(self.project, "furthest_sample_end")

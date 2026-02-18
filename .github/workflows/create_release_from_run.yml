@@ -1,0 +1,54 @@
+# Create a GitHub Release from a previous Build Installers run.
+# Use when: release job failed but artifacts exist, or you ran manual build and want to publish.
+name: Create Release from Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Workflow run ID (from the build run's URL, e.g. 123456789012345678)"
+        required: true
+      tag:
+        description: "Release tag (e.g. v1.0.7). Uses tag from run if empty."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            # Try to get tag from the source run (head_branch may contain tag for tag pushes)
+            RAW=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.event.inputs.run_id }} -q '.head_branch // .head_sha' 2>/dev/null)
+            TAG=$(echo "$RAW" | sed 's|^refs/tags/||')
+            if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+              echo "::error::Could not resolve tag from run. Please provide the tag input (e.g. v1.0.7)."
+              exit 1
+            fi
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download artifacts from build run
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          run_id: ${{ github.event.inputs.run_id }}
+          workflow: build_installers.yml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            **/*.msi
+            **/*.dmg
+          generate_release_notes: true
+          draft: true

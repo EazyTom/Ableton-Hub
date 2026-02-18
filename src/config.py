@@ -85,6 +85,7 @@ class UIConfig:
     date_format: str = "%Y-%m-%d %H:%M"
     # Gradient modes only: "rainbow", "random", or gradient options (solid colors disabled)
     waveform_color_mode: str = "random"
+    show_ftue_at_startup: bool = True
 
 
 @dataclass

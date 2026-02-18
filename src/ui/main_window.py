@@ -144,7 +144,6 @@ class MainWindow(QMainWindow):
         self.menu_manager.toggle_sidebar_requested.connect(self._toggle_sidebar)
         self.menu_manager.toggle_show_missing_requested.connect(self._toggle_show_missing)
         self.menu_manager.refresh_requested.connect(self._refresh_view)
-        self.menu_manager.new_collection_requested.connect(self._on_new_collection)
         self.menu_manager.global_search_requested.connect(self._on_global_search)
         self.menu_manager.show_link_panel_requested.connect(self._show_link_panel)
         self.menu_manager.force_rescan_metadata_requested.connect(self._on_force_rescan_metadata)
@@ -157,6 +156,7 @@ class MainWindow(QMainWindow):
         )
         self.menu_manager.reset_database_requested.connect(self._on_reset_database)
         self.menu_manager.view_logs_requested.connect(self._on_view_logs)
+        self.menu_manager.user_guide_requested.connect(self._on_user_guide)
         self.menu_manager.about_requested.connect(self._show_about)
 
         # Create menus
@@ -384,10 +384,30 @@ class MainWindow(QMainWindow):
         finally:
             session.close()
 
+    def _show_startup_dialogs(self) -> None:
+        """Show FTUE dialog (if enabled) and Add Location (if no locations)."""
+        # Show FTUE / User Guide if enabled
+        if self.config.ui.show_ftue_at_startup:
+            from .dialogs.ftue_dialog import FTUEDialog
+
+            dialog = FTUEDialog(self, show_startup_checkbox=True)
+            dialog.exec()
+
+        # If no locations, prompt user to add one
+        session = get_session()
+        try:
+            if session.query(Location).count() == 0:
+                self._on_add_location()
+        finally:
+            session.close()
+
     def _initial_load(self) -> None:
         """Load initial data on startup."""
         self._refresh_sidebar()
         self._load_projects()
+
+        # Show FTUE and Add Location dialogs after UI is ready
+        QTimer.singleShot(500, self._show_startup_dialogs)
 
         # Start file watcher for automatic updates
         # Auto-scan on startup after app is fully loaded
@@ -1280,6 +1300,13 @@ class MainWindow(QMainWindow):
         from .dialogs.log_viewer_dialog import LogViewerDialog
 
         dialog = LogViewerDialog(self)
+        dialog.exec()
+
+    def _on_user_guide(self) -> None:
+        """Show User Guide / FTUE dialog."""
+        from .dialogs.ftue_dialog import FTUEDialog
+
+        dialog = FTUEDialog(self, show_startup_checkbox=True)
         dialog.exec()
 
     def _show_about(self) -> None:

@@ -3,13 +3,15 @@
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
+    QApplication,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QPushButton,
+    QStyle,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -68,7 +70,7 @@ class FindAudioExportsView(QWidget):
             QPushButton {{
                 background: transparent;
                 border: none;
-                color: {AbletonTheme.COLORS['accent']};
+                color: {AbletonTheme.COLORS['text_primary']};
                 font-weight: bold;
                 padding: 8px 12px;
             }}
@@ -90,12 +92,32 @@ class FindAudioExportsView(QWidget):
         self._rescan_btn = QPushButton("Rescan")
         self._rescan_btn.clicked.connect(self._start_scan)
         self._rescan_btn.setEnabled(False)
+        self._rescan_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {AbletonTheme.COLORS['surface_light']};
+                color: {AbletonTheme.COLORS['text_primary']};
+                border: 1px solid {AbletonTheme.COLORS['border']};
+            }}
+            QPushButton:hover {{
+                background-color: {AbletonTheme.COLORS['surface_hover']};
+            }}
+        """)
         header_layout.addWidget(self._rescan_btn)
 
         main_layout.addWidget(header)
 
-        # Table
+        # Table - no orange highlighting (override theme selection/hover)
         self._table = QTableWidget()
+        self._table.setObjectName("findExportsTable")
+        self._table.setStyleSheet(f"""
+            QTableView#findExportsTable::item:hover {{
+                background-color: {AbletonTheme.COLORS['surface_hover']};
+            }}
+            QTableView#findExportsTable::item:selected {{
+                background-color: {AbletonTheme.COLORS['surface_light']};
+                color: {AbletonTheme.COLORS['text_primary']};
+            }}
+        """)
         self._table.setColumnCount(6)
         self._table.setHorizontalHeaderLabels(
             ["", "Name", "Size", "Path", "Modified", "Associate to Project"]
@@ -162,7 +184,23 @@ class FindAudioExportsView(QWidget):
                 .order_by(Project.name)
                 .all()
             )
-            self._projects = [(p.id, p.name) for p in projects]
+            # Deduplicate: prefer projects whose file exists, then by normalized name
+            projects_sorted = sorted(
+                projects,
+                key=lambda p: (
+                    0 if Path(p.file_path).exists() else 1,
+                    (p.name or "").strip().lower(),
+                ),
+            )
+            seen_keys: set[str] = set()
+            self._projects = []
+            for p in projects_sorted:
+                key = (p.name or "").strip().lower()
+                if not key:
+                    continue
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    self._projects.append((p.id, p.name))
 
             # Load existing exports under this location path
             # Only keep unmapped exports; track mapped paths to exclude from list
@@ -226,21 +264,36 @@ class FindAudioExportsView(QWidget):
         row = self._table.rowCount()
         self._table.insertRow(row)
 
-        # Play button (column 0)
-        play_btn = QPushButton("▶")
-        play_btn.setFixedSize(28, 28)
+        # Play button (column 0) - square, no hover, top-center aligned
+        play_btn = QPushButton()
+        play_icon = QApplication.instance().style().standardIcon(
+            QStyle.StandardPixmap.SP_MediaPlay
+        )
+        play_btn.setIcon(play_icon)
+        play_btn.setIconSize(QSize(18, 18))
+        play_btn.setFlat(True)
+        play_btn.setFixedSize(15, 15)
         play_btn.setToolTip("Play / Stop")
         play_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {AbletonTheme.COLORS['surface_hover']};
+                background-color: {AbletonTheme.COLORS['surface']};
                 border: none;
-                border-radius: 4px;
+                border-radius: 0;
                 color: {AbletonTheme.COLORS['text_primary']};
+                padding: 0;
+            }}
+            QPushButton:hover, QPushButton:pressed, QPushButton:focus {{
+                background-color: {AbletonTheme.COLORS['surface']};
             }}
         """)
         play_btn.setProperty("file_path", path)
         play_btn.clicked.connect(lambda checked, fp=path: self._on_play_clicked(fp))
-        self._table.setCellWidget(row, 0, play_btn)
+        btn_container = QWidget()
+        btn_layout = QHBoxLayout(btn_container)
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+        btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        btn_layout.addWidget(play_btn)
+        self._table.setCellWidget(row, 0, btn_container)
 
         # Name (column 1)
         name_item = QTableWidgetItem(p.name)
@@ -263,8 +316,25 @@ class FindAudioExportsView(QWidget):
         mod_dt = datetime.fromtimestamp(mtime)
         self._table.setItem(row, 4, QTableWidgetItem(mod_dt.strftime("%Y-%m-%d %H:%M")))
 
-        # Project dropdown (column 5)
+        # Project dropdown (column 5) - no orange
         combo = QComboBox()
+        combo.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {AbletonTheme.COLORS['surface']};
+                color: {AbletonTheme.COLORS['text_primary']};
+                border: 1px solid {AbletonTheme.COLORS['border']};
+            }}
+            QComboBox:hover {{
+                background-color: {AbletonTheme.COLORS['surface_hover']};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background-color: {AbletonTheme.COLORS['surface_light']};
+                color: {AbletonTheme.COLORS['text_primary']};
+            }}
+        """)
         combo.addItem("—", None)
         for pid, pname in self._projects:
             combo.addItem(pname, pid)
@@ -299,20 +369,34 @@ class FindAudioExportsView(QWidget):
                 return row
         return None
 
+    def _get_play_button(self, row: int) -> QPushButton | None:
+        """Get the play button for a row (may be inside a container)."""
+        cell = self._table.cellWidget(row, 0)
+        if cell:
+            btn = cell.findChild(QPushButton)
+            return btn if isinstance(btn, QPushButton) else None
+        return None
+
     def _update_play_button_for_path(self, path: str, is_playing: bool) -> None:
         """Update play button appearance for the row with this path."""
         row = self._find_row_for_path(path)
         if row is not None:
-            play_btn = self._table.cellWidget(row, 0)
-            if play_btn and isinstance(play_btn, QPushButton):
-                play_btn.setText("⏹" if is_playing else "▶")
+            play_btn = self._get_play_button(row)
+            if play_btn:
+                icon = QApplication.instance().style().standardIcon(
+                    QStyle.StandardPixmap.SP_MediaStop if is_playing else QStyle.StandardPixmap.SP_MediaPlay
+                )
+                play_btn.setIcon(icon)
 
     def _update_all_play_buttons(self, is_playing: bool) -> None:
         """Update all play buttons to the given state."""
+        icon = QApplication.instance().style().standardIcon(
+            QStyle.StandardPixmap.SP_MediaStop if is_playing else QStyle.StandardPixmap.SP_MediaPlay
+        )
         for row in range(self._table.rowCount()):
-            play_btn = self._table.cellWidget(row, 0)
-            if play_btn and isinstance(play_btn, QPushButton):
-                play_btn.setText("⏹" if is_playing else "▶")
+            play_btn = self._get_play_button(row)
+            if play_btn:
+                play_btn.setIcon(icon)
 
     def _on_playback_stopped(self) -> None:
         """Handle playback stopped - update play button."""
