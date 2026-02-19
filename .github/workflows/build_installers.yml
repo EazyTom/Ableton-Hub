@@ -122,7 +122,7 @@ jobs:
         run: briefcase create macOS
 
       - name: Build macOS app
-        run: briefcase build macOS
+        run: briefcase build macOS --update-resources
 
       - name: Package as DMG
         run: briefcase package macOS -p dmg --no-notarize --identity '${{ secrets.APP_IDENTITY }}'
