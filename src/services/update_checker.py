@@ -40,7 +40,9 @@ def _is_newer(latest: str, current: str) -> bool:
 class UpdateChecker(QObject):
     """Checks GitHub for the latest release and emits signals with update info."""
 
-    update_available = pyqtSignal(str, str, str)  # latest_version, release_url, download_url (or release_url if no asset)
+    update_available = pyqtSignal(
+        str, str, str
+    )  # latest_version, release_url, download_url (or release_url if no asset)
     check_failed = pyqtSignal(str)
     no_update_available = pyqtSignal()
 
@@ -82,7 +84,9 @@ class UpdateChecker(QObject):
                 return
 
             download_url = self._get_platform_download_url(release) or release_url
-            self._logger.info(f"Update available: {latest_version} (current: {self._current_version})")
+            self._logger.info(
+                f"Update available: {latest_version} (current: {self._current_version})"
+            )
             self.update_available.emit(latest_version, release_url, download_url)
 
         except json.JSONDecodeError as e:

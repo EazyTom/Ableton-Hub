@@ -354,9 +354,7 @@ class SettingsDialog(QDialog):
         self.live_list.clear()
         with get_session() as session:
             installations = (
-                session.query(LiveInstallation)
-                .order_by(LiveInstallation.version.desc())
-                .all()
+                session.query(LiveInstallation).order_by(LiveInstallation.version.desc()).all()
             )
             for install in installations:
                 fav = " ★" if install.is_favorite else ""

@@ -52,13 +52,11 @@ class UpdateDialog(QDialog):
 
         # Header with plant emojis
         header = QLabel("🌱 🌿 Update Available 🌿 🌱")
-        header.setStyleSheet(
-            f"""
+        header.setStyleSheet(f"""
             font-size: 18px;
             font-weight: bold;
             color: {AbletonTheme.COLORS['text_primary']};
-            """
-        )
+            """)
         layout.addWidget(header)
 
         # Message
@@ -71,9 +69,7 @@ class UpdateDialog(QDialog):
 
         # Don't check for updates checkbox
         self.dont_check_checkbox = QCheckBox("Don't check for updates at startup")
-        self.dont_check_checkbox.setStyleSheet(
-            f"color: {AbletonTheme.COLORS['text_primary']};"
-        )
+        self.dont_check_checkbox.setStyleSheet(f"color: {AbletonTheme.COLORS['text_primary']};")
         layout.addWidget(self.dont_check_checkbox)
 
         # Buttons
@@ -81,8 +77,7 @@ class UpdateDialog(QDialog):
         button_layout.addStretch()
 
         later_btn = QPushButton("Later")
-        later_btn.setStyleSheet(
-            f"""
+        later_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {AbletonTheme.COLORS['surface_light']};
                 color: {AbletonTheme.COLORS['text_primary']};
@@ -93,13 +88,11 @@ class UpdateDialog(QDialog):
             QPushButton:hover {{
                 background-color: {AbletonTheme.COLORS['surface_hover']};
             }}
-            """
-        )
+            """)
         later_btn.clicked.connect(self._on_later)
 
         download_btn = QPushButton("Download")
-        download_btn.setStyleSheet(
-            f"""
+        download_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {AbletonTheme.COLORS['accent']};
                 color: {AbletonTheme.COLORS['text_on_accent']};
@@ -111,8 +104,7 @@ class UpdateDialog(QDialog):
             QPushButton:hover {{
                 background-color: {AbletonTheme.COLORS['accent_hover']};
             }}
-            """
-        )
+            """)
         download_btn.clicked.connect(self._on_download)
 
         button_layout.addWidget(later_btn)

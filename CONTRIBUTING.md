@@ -139,7 +139,7 @@ Before every new version release, run the comprehensive release validation to en
 python tests/test_release.py --verbose
 
 # Windows (using batch file)
-test_release.bat --verbose
+scripts\test_release.bat --verbose
 
 # Skip code quality checks (faster)
 python tests/test_release.py --skip-code-quality

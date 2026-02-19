@@ -17,11 +17,36 @@ from ..theme import AbletonTheme
 
 # Bright neon/vivid hex colors - guaranteed visible on dark background
 _BRIGHT_COLORS = [
-    "#ff6b6b", "#ff8787", "#ffa502", "#ffbe0b", "#ffdd59", "#e8ff6b",
-    "#7bed9f", "#2ed573", "#00ff88", "#70a1ff", "#5352ed", "#a55eea",
-    "#ff6b81", "#ff9ff3", "#54a0ff", "#00d2d3", "#1dd1a1", "#feca57",
-    "#ff9f43", "#ee5a24", "#5f27cd", "#00cec9", "#81ecec", "#74b9ff",
-    "#a29bfe", "#fd79a8", "#fdcb6e", "#e17055", "#6c5ce7", "#00b894",
+    "#ff6b6b",
+    "#ff8787",
+    "#ffa502",
+    "#ffbe0b",
+    "#ffdd59",
+    "#e8ff6b",
+    "#7bed9f",
+    "#2ed573",
+    "#00ff88",
+    "#70a1ff",
+    "#5352ed",
+    "#a55eea",
+    "#ff6b81",
+    "#ff9ff3",
+    "#54a0ff",
+    "#00d2d3",
+    "#1dd1a1",
+    "#feca57",
+    "#ff9f43",
+    "#ee5a24",
+    "#5f27cd",
+    "#00cec9",
+    "#81ecec",
+    "#74b9ff",
+    "#a29bfe",
+    "#fd79a8",
+    "#fdcb6e",
+    "#e17055",
+    "#6c5ce7",
+    "#00b894",
 ]
 
 _TEXT_EDIT_STYLE = """
@@ -53,7 +78,9 @@ class SongNameGeneratorDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        info = QLabel("Click Generate to create 10 new random song names. Select and copy any name.")
+        info = QLabel(
+            "Click Generate to create 10 new random song names. Select and copy any name."
+        )
         info.setWordWrap(True)
         info.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']};")
         layout.addWidget(info)
@@ -84,8 +111,7 @@ class SongNameGeneratorDialog(QDialog):
         btn_layout.addStretch()
 
         generate_btn = QPushButton("Generate")
-        generate_btn.setStyleSheet(
-            f"""
+        generate_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {AbletonTheme.COLORS['accent']};
                 color: {AbletonTheme.COLORS['text_on_accent']};
@@ -97,8 +123,7 @@ class SongNameGeneratorDialog(QDialog):
             QPushButton:hover {{
                 background-color: {AbletonTheme.COLORS['accent_hover']};
             }}
-            """
-        )
+            """)
         generate_btn.clicked.connect(self._refresh_names)
         btn_layout.addWidget(generate_btn)
 

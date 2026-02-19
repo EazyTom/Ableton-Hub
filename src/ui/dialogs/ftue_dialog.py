@@ -45,8 +45,7 @@ class FTUEDialog(QDialog):
 
         self.text_browser = QTextBrowser()
         self.text_browser.setOpenExternalLinks(True)
-        self.text_browser.setStyleSheet(
-            f"""
+        self.text_browser.setStyleSheet(f"""
             QTextBrowser {{
                 background-color: {AbletonTheme.COLORS['surface']};
                 border: 1px solid {AbletonTheme.COLORS['border']};
@@ -54,8 +53,7 @@ class FTUEDialog(QDialog):
                 padding: 10px;
                 font-size: 12px;
             }}
-        """
-        )
+        """)
 
         # Load and render FTUE content
         html_content = self._load_and_render_ftue()
@@ -65,9 +63,7 @@ class FTUEDialog(QDialog):
         # Checkbox: Don't show at startup
         if self._show_startup_checkbox:
             self.dont_show_checkbox = QCheckBox("Don't show this guide at startup")
-            self.dont_show_checkbox.setStyleSheet(
-                f"color: {AbletonTheme.COLORS['text_primary']};"
-            )
+            self.dont_show_checkbox.setStyleSheet(f"color: {AbletonTheme.COLORS['text_primary']};")
             layout.addWidget(self.dont_show_checkbox)
 
         # Buttons
@@ -77,8 +73,7 @@ class FTUEDialog(QDialog):
         ok_btn = button_box.button(QDialogButtonBox.StandardButton.Ok)
         if ok_btn:
             ok_btn.setText("Close")
-            ok_btn.setStyleSheet(
-                f"""
+            ok_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {AbletonTheme.COLORS['accent']};
                     color: {AbletonTheme.COLORS['text_on_accent']};
@@ -90,8 +85,7 @@ class FTUEDialog(QDialog):
                 QPushButton:hover {{
                     background-color: {AbletonTheme.COLORS['accent_hover']};
                 }}
-            """
-            )
+            """)
 
         layout.addWidget(button_box)
 

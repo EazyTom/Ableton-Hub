@@ -360,10 +360,7 @@ class ProjectCard(QFrame):
             tooltip_html += f"Samples: {sample_count}<br/>"
 
         # Arrangement length (arrangement timeline clips only)
-        if (
-            self.project.arrangement_length
-            and self.project.arrangement_length > 0
-        ):
+        if self.project.arrangement_length and self.project.arrangement_length > 0:
             arr_bars = int(self.project.arrangement_length)
             arr_len_str = f"{arr_bars} bars"
             if (

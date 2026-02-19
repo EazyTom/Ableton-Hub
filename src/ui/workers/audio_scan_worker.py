@@ -82,9 +82,7 @@ class AudioScanWorker(QThread):
                     if item.suffix.lower() in AUDIO_EXTENSIONS:
                         self._found_count += 1
                         stat = item.stat()
-                        self.file_found.emit(
-                            str(item), stat.st_size, stat.st_mtime
-                        )
+                        self.file_found.emit(str(item), stat.st_size, stat.st_mtime)
                 elif item.is_dir():
                     if not self._is_excluded(item):
                         self._scan_folder(item)

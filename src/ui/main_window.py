@@ -1328,12 +1328,8 @@ class MainWindow(QMainWindow):
         from ..services.update_checker import UpdateChecker
 
         checker = UpdateChecker(self)
-        checker.update_available.connect(
-            lambda v, r, d: UpdateDialog(v, r, d, self).exec()
-        )
-        checker.check_failed.connect(
-            lambda err: self.logger.debug(f"Update check failed: {err}")
-        )
+        checker.update_available.connect(lambda v, r, d: UpdateDialog(v, r, d, self).exec())
+        checker.check_failed.connect(lambda err: self.logger.debug(f"Update check failed: {err}"))
         checker.check()
 
     def _show_about(self) -> None:

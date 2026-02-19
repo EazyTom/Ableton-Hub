@@ -134,15 +134,11 @@ class FindAudioExportsView(QWidget):
         self._table.horizontalHeader().setSectionResizeMode(
             2, QHeaderView.ResizeMode.ResizeToContents
         )
-        self._table.horizontalHeader().setSectionResizeMode(
-            3, QHeaderView.ResizeMode.Stretch
-        )
+        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self._table.horizontalHeader().setSectionResizeMode(
             4, QHeaderView.ResizeMode.ResizeToContents
         )
-        self._table.horizontalHeader().setSectionResizeMode(
-            5, QHeaderView.ResizeMode.Stretch
-        )
+        self._table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
         main_layout.addWidget(self._table)
 
         # Status
@@ -266,9 +262,7 @@ class FindAudioExportsView(QWidget):
 
         # Play button (column 0) - square, no hover, top-center aligned
         play_btn = QPushButton()
-        play_icon = QApplication.instance().style().standardIcon(
-            QStyle.StandardPixmap.SP_MediaPlay
-        )
+        play_icon = QApplication.instance().style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         play_btn.setIcon(play_icon)
         play_btn.setIconSize(QSize(18, 18))
         play_btn.setFlat(True)
@@ -338,9 +332,7 @@ class FindAudioExportsView(QWidget):
         combo.addItem("—", None)
         for pid, pname in self._projects:
             combo.addItem(pname, pid)
-        combo.currentIndexChanged.connect(
-            lambda idx, r=row: self._on_project_changed(r, idx)
-        )
+        combo.currentIndexChanged.connect(lambda idx, r=row: self._on_project_changed(r, idx))
         self._table.setCellWidget(row, 5, combo)
 
         # Pre-select if already in exports (unmapped - would have "—" selected)
@@ -383,15 +375,27 @@ class FindAudioExportsView(QWidget):
         if row is not None:
             play_btn = self._get_play_button(row)
             if play_btn:
-                icon = QApplication.instance().style().standardIcon(
-                    QStyle.StandardPixmap.SP_MediaStop if is_playing else QStyle.StandardPixmap.SP_MediaPlay
+                icon = (
+                    QApplication.instance()
+                    .style()
+                    .standardIcon(
+                        QStyle.StandardPixmap.SP_MediaStop
+                        if is_playing
+                        else QStyle.StandardPixmap.SP_MediaPlay
+                    )
                 )
                 play_btn.setIcon(icon)
 
     def _update_all_play_buttons(self, is_playing: bool) -> None:
         """Update all play buttons to the given state."""
-        icon = QApplication.instance().style().standardIcon(
-            QStyle.StandardPixmap.SP_MediaStop if is_playing else QStyle.StandardPixmap.SP_MediaPlay
+        icon = (
+            QApplication.instance()
+            .style()
+            .standardIcon(
+                QStyle.StandardPixmap.SP_MediaStop
+                if is_playing
+                else QStyle.StandardPixmap.SP_MediaPlay
+            )
         )
         for row in range(self._table.rowCount()):
             play_btn = self._get_play_button(row)
@@ -460,9 +464,7 @@ class FindAudioExportsView(QWidget):
         else:
             self._status_label.setText(f"Found {unmapped} unmapped audio file(s).")
 
-    def _safely_stop_thread(
-        self, thread: QThread | None, worker: AudioScanWorker | None
-    ) -> None:
+    def _safely_stop_thread(self, thread: QThread | None, worker: AudioScanWorker | None) -> None:
         """Safely stop the scan worker without blocking UI."""
         still_running = []
         for t in self._orphaned_threads:

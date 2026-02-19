@@ -282,7 +282,7 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 
 Use PowerShell or Command Prompt — no bash/Linux commands.
 
-- **Release validation:** `python tests/test_release.py --verbose` or `test_release.bat --verbose`
+- **Release validation:** `python tests/test_release.py --verbose` or `scripts\test_release.bat --verbose`
 - **Skip code quality:** `python tests/test_release.py --skip-code-quality`
 - **Skip ML tests:** `python tests/test_release.py --skip-ml`
 - **Unit tests:** `pytest`; coverage: `pytest --cov=src --cov-report=html`
