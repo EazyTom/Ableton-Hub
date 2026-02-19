@@ -1,21 +1,14 @@
 name: Build Installers
 
 on:
+  # Manual trigger from GitHub Actions UI
   workflow_dispatch:
     inputs:
-      platforms:
-        description: "Platforms to build"
-        required: true
-        default: "all"
-        type: choice
-        options:
-          - all
-          - windows
-          - macos
-      ref:
-        description: "Branch, tag, or commit to build (e.g. main, v1.0.7)"
+      version:
+        description: "Version tag (e.g. v1.0.6)"
         required: false
         default: ""
+  # Auto-trigger on version tags
   push:
     tags:
       - "v*"
@@ -23,28 +16,19 @@ on:
 permissions:
   contents: write
 
-# Resolve which platforms to build (all on tag push; selected on manual dispatch)
-env:
-  BUILD_WINDOWS: ${{ github.event_name == 'push' || github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'windows' }}
-  BUILD_MACOS: ${{ github.event_name == 'push' || github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'macos' }}
-
 jobs:
   # ── Windows MSI ──────────────────────────────────────────────
   build-windows:
-    if: env.BUILD_WINDOWS == 'true'
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Install Briefcase
         run: pip install briefcase
@@ -67,7 +51,6 @@ jobs:
 
   # ── macOS DMG ────────────────────────────────────────────────
   build-macos:
-    if: env.BUILD_MACOS == 'true'
     runs-on: macos-latest
     env:
       APPLE_ID: ${{ secrets.APP_ID }}
@@ -77,8 +60,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Import code signing certificate
         env:
@@ -110,7 +91,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: "pip"
 
       - name: Generate macOS .icns icon
         run: |
@@ -199,9 +179,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # Globs match whatever artifacts exist (handles single-platform builds)
           files: |
-            **/*.msi
-            **/*.dmg
+            AbletonHub-Windows-MSI/**/*.msi
+            AbletonHub-macOS-DMG/**/*.dmg
           generate_release_notes: true
           draft: true
