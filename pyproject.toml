@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ableton-hub"
-version = "1.0.7"
+version = "1.0.8"
 description = "Cross-platform desktop application for organizing Ableton projects"
 readme = "README.md"
 license = {text = "MIT"}
@@ -155,7 +155,7 @@ reportMissingTypeStubs = "none"
 [tool.briefcase]
 project_name = "Ableton Hub"
 bundle = "com.abletonhub"
-version = "1.0.7"
+version = "1.0.8"
 url = "https://github.com/EazyTom/ableton-hub"
 license.file = "LICENSE"
 author = "Tom Carlile"

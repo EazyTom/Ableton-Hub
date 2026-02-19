@@ -4,7 +4,7 @@
 
 # Ableton Hub
 
-**Version 1.0.7**
+**Version 1.0.8**
 
 ## What is Ableton Hub?
 
@@ -574,6 +574,14 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 ## Roadmap
 - **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
+
+### v1.0.8 - FTUE, Find Audio Export, Random Song Name
+- ✅ **FTUE Startup Guide** - First-time user experience guide walks through setup: adding locations, detecting Live versions, and key features
+- ✅ **Auto-Add Location** - Automatically add default Ableton project folders when starting fresh or from the sidebar
+- ✅ **Find Audio Export Tool** - Map exports to projects in a dedicated list view; find orphaned exports and link them to the right .als files
+- ✅ **Random Song Name Generator** - Generate creative project names for new ideas when starting blank sessions
+- ✅ **Dependency Upgrades** - Updated dependencies for macOS and Windows installers; improved compatibility and security
+- ✅ **Stability Fixes** - Code cleanup and stability improvements across the app; more reliable scanning, watcher, and UI
 
 ### v1.0.7 - Bugfixes (thx PAG!)
 - ✅ **No Live Installation Handling** - Friendly dialog when double-clicking project cards with actionable "Open Settings" and "Add Live Installation" buttons

@@ -3,7 +3,7 @@
 # Single source of truth for version - reads from pyproject.toml via importlib.metadata
 # When installed via pip, this reads from package metadata
 # When running from source, falls back to the hardcoded version below
-_FALLBACK_VERSION = "1.0.7"
+_FALLBACK_VERSION = "1.0.8"
 
 try:
     from importlib.metadata import version as get_version
@@ -22,57 +22,45 @@ WHATS_NEW = {
     "version": __version__,
     "features": [
         (
-            "Bugfixes (thx PAG!)",
+            "FTUE Startup Guide",
             (
-                "Various bugfixes submitted by PAG; "
-                "improved handling when no Live installation is configured, "
-                "add Live installs and Locations from Settings menu"
+                "First-time user experience guide walks you through setup: "
+                "adding locations, detecting Live versions, and key features"
             ),
         ),
         (
-            "Jaccard Similarity Fixed",
+            "Auto-Add Location",
             (
-                "Plugin and device similarity matching now works correctly; "
-                "fixed double-serialization bug that caused set comparisons on individual "
-                "characters instead of plugin/device names"
+                "Automatically add default Ableton project folders as locations "
+                "when starting fresh or from the sidebar"
             ),
         ),
         (
-            "Plugin Detection Working",
+            "Find Audio Export Tool",
             (
-                "Fixed VST2/VST3/AU plugin detection that was reading XML attributes "
-                "instead of child elements; added VST3 support via Vst3PluginInfo"
+                "Map exports to projects in a dedicated list view; "
+                "find orphaned exports and link them to the right .als files"
             ),
         ),
         (
-            "Device Detection Rewritten",
+            "Random Song Name Generator",
             (
-                "Replaced broken hardcoded device list with dynamic detection from "
-                "XML Devices containers; catches all native Ableton devices including "
-                "Drift, Meld, Echo, Hybrid Reverb, and any future devices"
+                "Generate creative project names for new ideas; "
+                "handy tool when starting blank sessions"
             ),
         ),
         (
-            "Arrangement vs Session Clips",
+            "Dependency Upgrades",
             (
-                "Arrangement length now only counts clips on the arrangement timeline; "
-                "session clip lengths (recorded samples) tracked separately and shown "
-                "in tooltip and Project Information"
+                "Updated dependencies for macOS and Windows installers; "
+                "improved compatibility and security"
             ),
         ),
         (
-            "More Project Metadata",
+            "Stability Fixes",
             (
-                "Project Information now shows time signature, track type breakdown "
-                "(Audio/MIDI/Return), timeline markers, annotation, and session clip length"
-            ),
-        ),
-        (
-            "JSON Storage Fix",
-            (
-                "Fixed double-encoding of all JSON fields (plugins, devices, samples, "
-                "markers, export filenames) in scanner and watcher; "
-                "all dict builders now use safe deserialization helpers"
+                "Code cleanup and stability improvements across the app; "
+                "more reliable scanning, watcher, and UI"
             ),
         ),
     ],
@@ -80,6 +68,60 @@ WHATS_NEW = {
 
 # Previous release highlights (for reference in About dialog)
 PREVIOUS_FEATURES = [
+    (
+        "Bugfixes (thx PAG!)",
+        (
+            "Various bugfixes submitted by PAG; "
+            "improved handling when no Live installation is configured, "
+            "add Live installs and Locations from Settings menu"
+        ),
+    ),
+    (
+        "Jaccard Similarity Fixed",
+        (
+            "Plugin and device similarity matching now works correctly; "
+            "fixed double-serialization bug that caused set comparisons on individual "
+            "characters instead of plugin/device names"
+        ),
+    ),
+    (
+        "Plugin Detection Working",
+        (
+            "Fixed VST2/VST3/AU plugin detection that was reading XML attributes "
+            "instead of child elements; added VST3 support via Vst3PluginInfo"
+        ),
+    ),
+    (
+        "Device Detection Rewritten",
+        (
+            "Replaced broken hardcoded device list with dynamic detection from "
+            "XML Devices containers; catches all native Ableton devices including "
+            "Drift, Meld, Echo, Hybrid Reverb, and any future devices"
+        ),
+    ),
+    (
+        "Arrangement vs Session Clips",
+        (
+            "Arrangement length now only counts clips on the arrangement timeline; "
+            "session clip lengths (recorded samples) tracked separately and shown "
+            "in tooltip and Project Information"
+        ),
+    ),
+    (
+        "More Project Metadata",
+        (
+            "Project Information now shows time signature, track type breakdown "
+            "(Audio/MIDI/Return), timeline markers, annotation, and session clip length"
+        ),
+    ),
+    (
+        "JSON Storage Fix",
+        (
+            "Fixed double-encoding of all JSON fields (plugins, devices, samples, "
+            "markers, export filenames) in scanner and watcher; "
+            "all dict builders now use safe deserialization helpers"
+        ),
+    ),
     (
         "Faster UI Navigation",
         (
