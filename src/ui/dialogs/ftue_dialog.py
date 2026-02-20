@@ -60,9 +60,10 @@ class FTUEDialog(QDialog):
         self.text_browser.setHtml(html_content)
         layout.addWidget(self.text_browser)
 
-        # Checkbox: Don't show at startup
+        # Checkbox: Don't show at startup (sync with current config)
         if self._show_startup_checkbox:
             self.dont_show_checkbox = QCheckBox("Don't show this guide at startup")
+            self.dont_show_checkbox.setChecked(not self._config.ui.show_ftue_at_startup)
             self.dont_show_checkbox.setStyleSheet(f"color: {AbletonTheme.COLORS['text_primary']};")
             layout.addWidget(self.dont_show_checkbox)
 
@@ -121,9 +122,9 @@ class FTUEDialog(QDialog):
         return f'<div style="color: #e0e0e0;">{styled}</div>'
 
     def _on_accept(self) -> None:
-        """Handle OK/Close - save 'don't show at startup' if checked."""
+        """Handle OK/Close - save startup preference from checkbox state."""
         if self._show_startup_checkbox and hasattr(self, "dont_show_checkbox"):
-            if self.dont_show_checkbox.isChecked():
-                self._config.ui.show_ftue_at_startup = False
-                save_config()
+            # Checked = don't show at startup; Unchecked = show at startup
+            self._config.ui.show_ftue_at_startup = not self.dont_show_checkbox.isChecked()
+            save_config()
         self.accept()

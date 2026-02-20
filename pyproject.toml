@@ -41,8 +41,7 @@ dependencies = [
     "pandas>=3.0.0",
     "librosa>=0.11.0",
     "soundfile>=0.13.0",
-    # Timeline Marker Extraction (dawtool depends on hexdump which is source-only,
-    # so it works via pip but not in Briefcase's --only-binary macOS environment)
+    # Timeline Marker Extraction (Ableton Live .als marker extraction)
     "dawtool @ git+https://github.com/EazyTom/dawtool",
     # Markdown rendering for FTUE / User Guide
     "markdown>=3.5.0",

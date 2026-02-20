@@ -33,7 +33,7 @@ class MarkerExtractor:
         if not self._available:
             self.logger.warning(
                 "dawtool not available - timeline marker extraction will be disabled. "
-                "Install with: pip install git+https://github.com/offlinemark/dawtool"
+                "Install with: pip install 'dawtool @ git+https://github.com/EazyTom/dawtool'"
             )
 
     @property
