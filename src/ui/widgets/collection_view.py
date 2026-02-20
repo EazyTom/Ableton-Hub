@@ -1,11 +1,13 @@
 """Collection management view widget."""
 
+from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -16,6 +18,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QStyle,
     QSizePolicy,
     QStackedWidget,
     QTableWidget,
@@ -26,6 +29,7 @@ from PyQt6.QtWidgets import (
 from sqlalchemy.orm import joinedload
 
 from ...database import Collection, CollectionType, Project, ProjectCollection, get_session
+from ...services.audio_player import AudioPlayer
 from ..theme import AbletonTheme
 
 
@@ -208,6 +212,7 @@ class CollectionDetailView(QWidget):
         super().__init__(parent)
 
         self._collection: Collection | None = None
+        self._audio_player = AudioPlayer.instance()
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -320,8 +325,8 @@ class CollectionDetailView(QWidget):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Export
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)  # Actions - fixed width
 
-        # Set Actions column to a wider fixed width
-        header.resizeSection(5, 280)
+        # Set Actions column to a wider fixed width (includes play button)
+        header.resizeSection(5, 320)
 
         self.track_table.cellDoubleClicked.connect(self._on_track_double_click)
         self.track_table.cellChanged.connect(self._on_track_name_changed)
@@ -332,6 +337,18 @@ class CollectionDetailView(QWidget):
 
     def set_collection(self, collection_id: int) -> None:
         """Load and display a collection."""
+        # Connect playback signals for play button updates
+        try:
+            self._audio_player.playback_stopped.disconnect(self._on_playback_stopped)
+        except (TypeError, RuntimeError):
+            pass
+        try:
+            self._audio_player.playback_finished.disconnect(self._on_playback_stopped)
+        except (TypeError, RuntimeError):
+            pass
+        self._audio_player.playback_stopped.connect(self._on_playback_stopped)
+        self._audio_player.playback_finished.connect(self._on_playback_stopped)
+
         session = get_session()
         try:
             # Eagerly load relationships
@@ -590,7 +607,29 @@ class CollectionDetailView(QWidget):
             actions_layout.setAlignment(Qt.AlignmentFlag.AlignTop)  # Align buttons to top
             actions_layout.addStretch()  # Push buttons to the right
 
-            # Export selection button (first button, before other actions)
+            # Play button - same behavior as Find Audio Exports
+            play_path = self._get_playable_path_for_track(pc)
+            play_btn = QPushButton()
+            play_icon = QApplication.instance().style().standardIcon(
+                QStyle.StandardPixmap.SP_MediaPlay
+            )
+            play_btn.setIcon(play_icon)
+            play_btn.setIconSize(QSize(18, 18))
+            play_btn.setFlat(True)
+            play_btn.setFixedSize(40, 40)
+            play_btn.setToolTip("Play / Stop")
+            play_btn.setStyleSheet(
+                "QPushButton { padding: 0px; margin: 0px; border: none; text-align: center; }"
+            )
+            play_btn.setProperty("file_path", play_path or "")
+            play_btn.setEnabled(bool(play_path))
+            if play_path:
+                play_btn.clicked.connect(
+                    lambda checked, fp=play_path: self._on_play_clicked(fp)
+                )
+            actions_layout.addWidget(play_btn)
+
+            # Export selection button
             export_select_btn = QPushButton("🎞️")
             export_select_btn.setFixedSize(40, 40)
             export_select_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -772,6 +811,92 @@ class CollectionDetailView(QWidget):
         remove_action.triggered.connect(lambda: self._remove_track(pc_id))
 
         menu.exec(self.track_table.viewport().mapToGlobal(pos))
+
+    def _get_playable_path_for_track(self, pc: ProjectCollection) -> str | None:
+        """Resolve the playable audio path for a track. Uses pc.export or most recent project export."""
+        if not pc.project:
+            return None
+        if pc.export and Path(pc.export.export_path).exists():
+            return pc.export.export_path
+        exports = getattr(pc.project, "exports", None) or []
+        if not exports:
+            return None
+        # Prefer most recent by export_date; fall back to first existing
+        sorted_exports = sorted(
+            exports,
+            key=lambda e: (e.export_date is not None, e.export_date or datetime.min),
+            reverse=True,
+        )
+        for exp in sorted_exports:
+            if exp.export_path and Path(exp.export_path).exists():
+                return exp.export_path
+        return None
+
+    def _on_play_clicked(self, path: str) -> None:
+        """Handle play button click - toggle play/stop for this row's file."""
+        if not path:
+            return
+        if self._audio_player.current_file == path and self._audio_player.is_playing:
+            self._audio_player.stop()
+            self._update_play_button_for_path(path, False)
+            return
+        self._update_all_play_buttons(False)
+        if self._audio_player.play(path):
+            self._update_play_button_for_path(path, True)
+
+    def _get_play_button(self, row: int) -> QPushButton | None:
+        """Get the play button for a row (first button in Actions cell)."""
+        cell = self.track_table.cellWidget(row, 5)
+        if cell:
+            btn = cell.findChild(QPushButton)
+            return btn if isinstance(btn, QPushButton) else None
+        return None
+
+    def _find_row_for_path(self, path: str) -> int | None:
+        """Find table row containing the given file path (stored in play button property)."""
+        for row in range(self.track_table.rowCount()):
+            play_btn = self._get_play_button(row)
+            if play_btn and play_btn.property("file_path") == path:
+                return row
+        return None
+
+    def _update_play_button_for_path(self, path: str, is_playing: bool) -> None:
+        """Update play button appearance for the row with this path."""
+        row = self._find_row_for_path(path)
+        if row is not None:
+            play_btn = self._get_play_button(row)
+            if play_btn:
+                icon = (
+                    QApplication.instance()
+                    .style()
+                    .standardIcon(
+                        QStyle.StandardPixmap.SP_MediaStop
+                        if is_playing
+                        else QStyle.StandardPixmap.SP_MediaPlay
+                    )
+                )
+                play_btn.setIcon(icon)
+
+    def _update_all_play_buttons(self, is_playing: bool) -> None:
+        """Update all play buttons to the given icon state."""
+        icon = (
+            QApplication.instance()
+            .style()
+            .standardIcon(
+                QStyle.StandardPixmap.SP_MediaStop
+                if is_playing
+                else QStyle.StandardPixmap.SP_MediaPlay
+            )
+        )
+        for row in range(self.track_table.rowCount()):
+            play_btn = self._get_play_button(row)
+            if play_btn:
+                play_btn.setIcon(icon)
+
+    def _on_playback_stopped(self) -> None:
+        """Handle playback stopped - update play button."""
+        if self._audio_player.current_file:
+            self._update_play_button_for_path(self._audio_player.current_file, False)
 
     def _set_track_artwork(self, pc_id: int) -> None:
         """Set artwork for a track."""

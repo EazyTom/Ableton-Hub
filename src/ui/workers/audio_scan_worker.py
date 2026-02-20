@@ -39,7 +39,8 @@ class AudioScanWorker(QThread):
     def _is_excluded(self, path: Path) -> bool:
         """Check if a path should be excluded from scanning.
 
-        Skips Backup folders, .git, Ableton Project Info, etc.
+        Skips Backup folders, Samples (Ableton set samples, not exports),
+        .git, Ableton Project Info, etc.
         """
         path_str = str(path).replace("\\", "/")
         name = path.name
@@ -50,8 +51,12 @@ class AudioScanWorker(QThread):
         exclude_patterns = [
             "/Backup/",
             "\\Backup\\",
+            "/Backup",
+            "\\Backup",
             "/Samples/",
             "\\Samples\\",
+            "/Samples",
+            "\\Samples",
             "/.git/",
             "\\.git\\",
             "/Ableton Project Info/",
