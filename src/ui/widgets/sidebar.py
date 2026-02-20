@@ -18,6 +18,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from sqlalchemy.orm import joinedload
+
 from ...database import Collection, Location, Tag, get_session
 from ...utils.logging import get_logger
 from ..theme import AbletonTheme
@@ -1439,6 +1441,7 @@ class Sidebar(QWidget):
         try:
             locations = (
                 session.query(Location)
+                .options(joinedload(Location.projects))
                 .filter(Location.is_active == True)
                 .order_by(Location.sort_order, Location.name)
                 .all()
@@ -1489,7 +1492,10 @@ class Sidebar(QWidget):
         session = get_session()
         try:
             collections = (
-                session.query(Collection).order_by(Collection.sort_order, Collection.name).all()
+                session.query(Collection)
+                .options(joinedload(Collection.project_collections))
+                .order_by(Collection.sort_order, Collection.name)
+                .all()
             )
 
             for coll in collections:

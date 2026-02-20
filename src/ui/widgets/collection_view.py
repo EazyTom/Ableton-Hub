@@ -351,7 +351,7 @@ class CollectionDetailView(QWidget):
 
         session = get_session()
         try:
-            # Eagerly load relationships
+            # Eagerly load relationships (including ProjectCollection.export to avoid DetachedInstanceError)
             self._collection = (
                 session.query(Collection)
                 .options(
@@ -361,6 +361,7 @@ class CollectionDetailView(QWidget):
                     joinedload(Collection.project_collections)
                     .joinedload(ProjectCollection.project)
                     .joinedload(Project.exports),
+                    joinedload(Collection.project_collections).joinedload(ProjectCollection.export),
                 )
                 .get(collection_id)
             )
@@ -1229,7 +1230,10 @@ class CollectionView(QWidget):
         session = get_session()
         try:
             self._collections = (
-                session.query(Collection).order_by(Collection.sort_order, Collection.name).all()
+                session.query(Collection)
+                .options(joinedload(Collection.project_collections))
+                .order_by(Collection.sort_order, Collection.name)
+                .all()
             )
             self._populate_grid()
         finally:

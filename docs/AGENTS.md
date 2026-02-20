@@ -217,6 +217,7 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 - **Session:** Use `session_scope()` context manager or `get_session()`; always close
 - **Migrations:** Add to `MIGRATIONS` list in `src/database/migrations.py`; use `PRAGMA table_info` to check column existence before `ALTER TABLE`
 - **FTS5:** `projects_fts` virtual table; triggers keep it in sync; search via `search_projects_fts()`
+- **DetachedInstanceError prevention:** When storing ORM objects for use after `session.close()`, eagerly load all relationships that will be accessed later. Use `joinedload()` or `selectinload()` in the query. Common cases: UI widgets holding `Project`/`Collection` for display; callbacks (e.g. button clicks) that access `project.exports`, `pc.export`, `collection.project_collections`.
 
 ### 3.5 Configuration
 
@@ -275,6 +276,7 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 - Do NOT assume `.als` files are modified — read-only parsing only
 - Do NOT add migrations without checking column existence (SQLite `ALTER TABLE` limitations)
 - Do NOT use `== True` or `== None` in general Python, but SQLAlchemy filters require them (ruff E712, E711 ignored)
+- Do NOT access lazy-loaded relationships on ORM objects after the session is closed — use `joinedload()`/`selectinload()` when the object will outlive the session
 
 ---
 

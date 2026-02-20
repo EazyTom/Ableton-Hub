@@ -607,9 +607,19 @@ class ProjectPropertiesView(QWidget):
 
     def _load_project_sync(self) -> None:
         """Load project data synchronously (fast operations only)."""
+        from sqlalchemy.orm import joinedload
+
         session = get_session()
         try:
-            self._project = session.query(Project).get(self.project_id)
+            self._project = (
+                session.query(Project)
+                .options(
+                    joinedload(Project.location),
+                    joinedload(Project.exports),
+                    joinedload(Project.project_collections).joinedload(ProjectCollection.collection),
+                )
+                .get(self.project_id)
+            )
             if not self._project:
                 self.title_label.setText("Project not found")
                 return

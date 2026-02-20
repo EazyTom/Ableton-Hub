@@ -270,9 +270,19 @@ class ProjectDetailsDialog(QDialog):
 
     def _load_project(self) -> None:
         """Load project data."""
+        from sqlalchemy.orm import joinedload
+
         session = get_session()
         try:
-            self._project = session.query(Project).get(self.project_id)
+            self._project = (
+                session.query(Project)
+                .options(
+                    joinedload(Project.location),
+                    joinedload(Project.exports),
+                    joinedload(Project.project_collections).joinedload(ProjectCollection.collection),
+                )
+                .get(self.project_id)
+            )
             if not self._project:
                 QMessageBox.warning(self, "Error", "Project not found.")
                 self.reject()
