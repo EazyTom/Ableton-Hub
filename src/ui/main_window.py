@@ -242,7 +242,8 @@ class MainWindow(QMainWindow):
         # Projects view (index 0)
         self.project_grid = ProjectGrid()
         self.project_grid.project_selected.connect(self._on_project_selected)
-        self.project_grid.project_double_clicked.connect(self._on_project_open)
+        self.project_grid.project_double_clicked.connect(self.show_project_properties)
+        self.project_grid.project_open_in_live_requested.connect(self._on_project_open_in_live)
         self.project_grid.sort_requested.connect(self._on_grid_sort_requested)
         self.project_grid.tags_modified.connect(self._refresh_sidebar)
         # Store reference to main window for refresh
@@ -1949,7 +1950,7 @@ class MainWindow(QMainWindow):
             self.recommendations_panel.set_project(project_id)
         # Could show details panel
 
-    def _on_project_open(self, project_id: int) -> None:
+    def _on_project_open_in_live(self, project_id: int) -> None:
         """Open a project with Ableton Live."""
         from pathlib import Path
 
@@ -2033,7 +2034,7 @@ class MainWindow(QMainWindow):
         msg.setWindowTitle("No Live Installation Found")
         msg.setText(
             "No Ableton Live installation is configured.\n\n"
-            "Double-clicking projects opens them in Ableton Live."
+            "Opening projects in Live requires a configured installation."
         )
         open_settings_btn = msg.addButton("Open Settings", QMessageBox.ButtonRole.AcceptRole)
         add_install_btn = msg.addButton("Add Live Installation", QMessageBox.ButtonRole.AcceptRole)

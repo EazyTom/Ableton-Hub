@@ -1,5 +1,7 @@
 """Project grid/list view widget."""
 
+import subprocess
+import sys
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
@@ -32,6 +34,7 @@ class ProjectGrid(QWidget):
     # Signals
     project_selected = pyqtSignal(int)  # Project ID
     project_double_clicked = pyqtSignal(int)  # Project ID
+    project_open_in_live_requested = pyqtSignal(int)  # Project ID
     selection_changed = pyqtSignal(list)  # List of project IDs
     sort_requested = pyqtSignal(str, str)  # Column name, direction (asc/desc)
     tags_modified = pyqtSignal()  # Emitted when tags are created/modified
@@ -424,8 +427,18 @@ class ProjectGrid(QWidget):
         """Show context menu for a project."""
         menu = QMenu(self)
 
-        open_action = menu.addAction("Open in File Manager")
-        open_action.triggered.connect(lambda: self.project_double_clicked.emit(project_id))
+        open_properties_action = menu.addAction("Open Project Details")
+        open_properties_action.triggered.connect(
+            lambda: self.project_double_clicked.emit(project_id)
+        )
+
+        open_in_live_action = menu.addAction("Open Project in Live")
+        open_in_live_action.triggered.connect(
+            lambda: self.project_open_in_live_requested.emit(project_id)
+        )
+
+        open_folder_action = menu.addAction("Open in File Manager")
+        open_folder_action.triggered.connect(lambda: self._open_in_file_manager(project_id))
 
         menu.addSeparator()
 
@@ -509,6 +522,23 @@ class ProjectGrid(QWidget):
         properties_action.triggered.connect(lambda: self._show_properties(project_id))
 
         menu.exec(pos)
+
+    def _open_in_file_manager(self, project_id: int) -> None:
+        """Open the project folder in file manager, with the project file selected."""
+        session = get_session()
+        try:
+            project = session.query(Project).get(project_id)
+            if project and project.file_path:
+                path = Path(project.file_path)
+                if path.exists():
+                    if sys.platform == "win32":
+                        subprocess.run(["explorer", "/select,", str(path)])
+                    elif sys.platform == "darwin":
+                        subprocess.run(["open", "-R", str(path)])
+                    else:
+                        subprocess.run(["xdg-open", str(path.parent)])
+        finally:
+            session.close()
 
     def _toggle_favorite(self, project_id: int) -> None:
         """Toggle favorite status for a project."""
