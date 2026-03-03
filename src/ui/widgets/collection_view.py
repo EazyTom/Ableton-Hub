@@ -611,8 +611,8 @@ class CollectionDetailView(QWidget):
             # Play button - same behavior as Find Audio Exports
             play_path = self._get_playable_path_for_track(pc)
             play_btn = QPushButton()
-            play_icon = QApplication.instance().style().standardIcon(
-                QStyle.StandardPixmap.SP_MediaPlay
+            play_icon = (
+                QApplication.instance().style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
             )
             play_btn.setIcon(play_icon)
             play_btn.setIconSize(QSize(18, 18))
@@ -625,9 +625,7 @@ class CollectionDetailView(QWidget):
             play_btn.setProperty("file_path", play_path or "")
             play_btn.setEnabled(bool(play_path))
             if play_path:
-                play_btn.clicked.connect(
-                    lambda checked, fp=play_path: self._on_play_clicked(fp)
-                )
+                play_btn.clicked.connect(lambda checked, fp=play_path: self._on_play_clicked(fp))
             actions_layout.addWidget(play_btn)
 
             # Export selection button

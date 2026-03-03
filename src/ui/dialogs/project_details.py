@@ -279,7 +279,9 @@ class ProjectDetailsDialog(QDialog):
                 .options(
                     joinedload(Project.location),
                     joinedload(Project.exports),
-                    joinedload(Project.project_collections).joinedload(ProjectCollection.collection),
+                    joinedload(Project.project_collections).joinedload(
+                        ProjectCollection.collection
+                    ),
                 )
                 .get(self.project_id)
             )

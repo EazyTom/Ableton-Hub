@@ -4,7 +4,7 @@
 
 # Ableton Hub
 
-**Version 1.0.8**
+**Version 1.0.9**
 
 ## What is Ableton Hub?
 
@@ -260,8 +260,8 @@ New to Ableton Hub? Check out the **[First Time Setup Guide](docs/FIRST_TIME_SET
 > If viewing on mobile, expand the "View Diagram (Mobile)" section below for an image version.
 
 ```mermaid
-graph TB
-    subgraph ui["UI Layer - PyQt6"]
+flowchart TB
+    subgraph ui["App UI Layer"]
         MainWindow["Main Window"]
         Sidebar["Sidebar Navigation"]
         ProjectGrid["Project Grid/List View"]
@@ -271,37 +271,40 @@ graph TB
         SimilaritiesPanel["Similarities Panel"]
         HealthDashboard["Health Dashboard"]
     end
-    
-    subgraph services["Service Layer"]
-        Scanner["Project Scanner"]
-        Watcher["File System Watcher"]
-        ALSParser["ALS Parser"]
-        LiveDetector["Live Version Detector"]
-        LiveLauncher["Live Launcher"]
-        LinkScanner["Link Network Scanner"]
-        ExportTracker["Export Tracker"]
-        SmartCollections["Smart Collections"]
-        DuplicateDetector["Duplicate Detector"]
-        HealthCalculator["Health Calculator"]
-        SimilarityAnalyzer["Similarity Analyzer"]
-        RecommendationEngine["Recommendation Engine"]
-        AudioPlayer["Audio Player"]
-        ArchiveService["Archive Service"]
+
+    subgraph row2[" "]
+        direction LR
+        subgraph ext["External Resources"]
+            ProjectFiles[".als Project Files"]
+            ExportedAudio["Exported Audio Files"]
+            LiveInstallations["Ableton Live Installations"]
+            LinkNetwork["Ableton Link Network"]
+        end
+
+        subgraph svc["Service Layer"]
+            Scanner["Project Scanner"]
+            Watcher["File System Watcher"]
+            ALSParser["ALS Parser"]
+            LiveDetector["Live Version Detector"]
+            LiveLauncher["Live Launcher"]
+            LinkScanner["Link Network Scanner"]
+            ExportTracker["Export Tracker"]
+            SmartCollections["Smart Collections"]
+            DuplicateDetector["Duplicate Detector"]
+            HealthCalculator["Health Calculator"]
+            SimilarityAnalyzer["Similarity Analyzer"]
+            RecommendationEngine["Recommendation Engine"]
+            AudioPlayer["Audio Player"]
+            ArchiveService["Archive Service"]
+        end
+
+        subgraph data["Data Storage"]
+            SQLite[("SQLite Database with FTS5")]
+            Config["Configuration"]
+            Cache["Thumbnail Cache"]
+        end
     end
-    
-    subgraph storage["Data Storage"]
-        SQLite[("SQLite Database with FTS5")]
-        Config["Configuration"]
-        Cache["Thumbnail Cache"]
-    end
-    
-    subgraph external["External Resources"]
-        ProjectFiles[".als Project Files"]
-        ExportedAudio["Exported Audio Files"]
-        LiveInstallations["Ableton Live Installations"]
-        LinkNetwork["Ableton Link Network"]
-    end
-    
+
     MainWindow --> Sidebar
     MainWindow --> ProjectGrid
     MainWindow --> SearchBar
@@ -309,7 +312,9 @@ graph TB
     MainWindow --> ProjectPropertiesView
     MainWindow --> SimilaritiesPanel
     MainWindow --> HealthDashboard
-    
+
+    ui --> svc
+
     Sidebar --> Scanner
     ProjectGrid --> SQLite
     SearchBar --> SQLite
@@ -319,23 +324,23 @@ graph TB
     SimilaritiesPanel --> SimilarityAnalyzer
     SimilaritiesPanel --> RecommendationEngine
     HealthDashboard --> HealthCalculator
-    
+
     Scanner --> ALSParser
     Scanner --> ProjectFiles
     Scanner --> SQLite
     Watcher --> ProjectFiles
     Watcher --> SQLite
     ALSParser --> ProjectFiles
-    
+
     LiveDetector --> LiveInstallations
     LiveLauncher --> LiveInstallations
     LiveLauncher --> ProjectFiles
-    
+
     LinkScanner --> LinkNetwork
-    
+
     ExportTracker --> ExportedAudio
     ExportTracker --> SQLite
-    
+
     SmartCollections --> SQLite
     SmartCollections --> SimilarityAnalyzer
     DuplicateDetector --> SQLite
@@ -346,9 +351,16 @@ graph TB
     AudioPlayer --> ExportedAudio
     ArchiveService --> ProjectFiles
     ArchiveService --> SQLite
-    
+
     MainWindow --> Config
     ProjectGrid --> Cache
+
+    linkStyle default stroke:#0abde3,stroke-width:2px
+    linkStyle 0,1,2,3,4,5,6,39 stroke:#9b59b6,stroke-width:2px
+    linkStyle 9,10,12,21,28,31,32,33,35,38 stroke:#f1c40f,stroke-width:2px
+    linkStyle 18,20,22,23,24,25,26,27,36,37 stroke:#e67e22,stroke-width:2px
+    style ext fill:none,stroke:#e74c3c,stroke-width:3px
+    style data fill:none,stroke:#27ae60,stroke-width:3px
 ```
 
 <details>
@@ -574,6 +586,12 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 ## Roadmap
 - **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
+
+### v1.0.9 - Audio Preview in Collections, Bugfixes, Icon Fixes
+- ✅ **Audio Preview in Collections** - Preview audio exports directly from collection views; play tracks without opening the full project
+- ✅ **UI Loading Bugfixes** - Fixed various UI loading issues; more reliable startup and view transitions
+- ✅ **Icon Fixes** - Custom app icon now displays correctly on Windows and macOS installers; no more default BeeWare icon
+- ✅ **dawtool Markers Fixed** - Timeline marker extraction from .als files now works correctly; fixed dawtool integration for marker parsing
 
 ### v1.0.8 - FTUE, Find Audio Export, Random Song Name
 - ✅ **FTUE Startup Guide** - First-time user experience guide walks through setup: adding locations, detecting Live versions, and key features

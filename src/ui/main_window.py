@@ -102,14 +102,16 @@ class MainWindow(QMainWindow):
             # Try icons in order of preference (PNG works on all platforms)
             if sys.platform == "win32":
                 icon_paths = [
-                    resources / "icons" / "AProject.ico",
+                    resources / "icons" / "hub-icon.ico",
+                    resources / "icons" / "hub-icon.png",
                     resources / "images" / "als-icon.png",
                 ]
             else:
                 # macOS/Linux - prefer PNG
                 icon_paths = [
+                    resources / "icons" / "hub-icon.png",
+                    resources / "icons" / "hub-icon.ico",
                     resources / "images" / "als-icon.png",
-                    resources / "icons" / "AProject.ico",
                 ]
 
             for icon_path in icon_paths:

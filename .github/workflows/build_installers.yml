@@ -37,8 +37,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path resources/icons | Out-Null
-          Copy-Item -Force src/resources/icons/AProject.ico resources/icons/ -ErrorAction SilentlyContinue
-          Copy-Item -Force src/resources/icons/AProject.png resources/icons/ -ErrorAction SilentlyContinue
+          Copy-Item -Force src/resources/icons/hub-icon.ico resources/icons/ -ErrorAction SilentlyContinue
+          Copy-Item -Force src/resources/icons/hub-icon.png resources/icons/ -ErrorAction SilentlyContinue
 
       - name: Create Briefcase project
         run: briefcase create windows
@@ -102,14 +102,14 @@ jobs:
       - name: Sync app icons for Briefcase
         run: |
           mkdir -p resources/icons
-          cp -f src/resources/icons/AProject.ico resources/icons/ 2>/dev/null || true
-          cp -f src/resources/icons/AProject.png resources/icons/ 2>/dev/null || true
+          cp -f src/resources/icons/hub-icon.ico resources/icons/ 2>/dev/null || true
+          cp -f src/resources/icons/hub-icon.png resources/icons/ 2>/dev/null || true
 
       - name: Generate macOS .icns icon
         run: |
           # Generate .icns from the PNG icon using macOS sips + iconutil
-          SRC_PNG="resources/icons/AProject.png"
-          ICONSET_DIR="resources/icons/AProject.iconset"
+          SRC_PNG="resources/icons/hub-icon.png"
+          ICONSET_DIR="resources/icons/hub-icon.iconset"
           if [ ! -f "$SRC_PNG" ]; then
             echo "Error: Icon source not found at $SRC_PNG"
             exit 1
@@ -127,7 +127,7 @@ jobs:
           sips -z 512 512 "$SRC_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png"
 
           # Convert iconset to .icns (fail job if this fails - prevents default BeeWare icon)
-          iconutil -c icns "$ICONSET_DIR" -o "resources/icons/AProject.icns"
+          iconutil -c icns "$ICONSET_DIR" -o "resources/icons/hub-icon.icns"
 
       - name: Install Briefcase
         run: pip install "briefcase>=0.3.22"

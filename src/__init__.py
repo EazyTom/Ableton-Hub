@@ -3,7 +3,7 @@
 # Single source of truth for version - reads from pyproject.toml via importlib.metadata
 # When installed via pip, this reads from package metadata
 # When running from source, falls back to the hardcoded version below
-_FALLBACK_VERSION = "1.0.8"
+_FALLBACK_VERSION = "1.0.9"
 
 try:
     from importlib.metadata import version as get_version
@@ -22,45 +22,31 @@ WHATS_NEW = {
     "version": __version__,
     "features": [
         (
-            "FTUE Startup Guide",
+            "Audio Preview in Collections",
             (
-                "First-time user experience guide walks you through setup: "
-                "adding locations, detecting Live versions, and key features"
+                "Preview audio exports directly from collection views; "
+                "play tracks without opening the full project"
             ),
         ),
         (
-            "Auto-Add Location",
+            "UI Loading Bugfixes",
             (
-                "Automatically add default Ableton project folders as locations "
-                "when starting fresh or from the sidebar"
+                "Fixed various UI loading issues; "
+                "more reliable startup and view transitions"
             ),
         ),
         (
-            "Find Audio Export Tool",
+            "Icon Fixes",
             (
-                "Map exports to projects in a dedicated list view; "
-                "find orphaned exports and link them to the right .als files"
+                "Custom app icon now displays correctly on Windows and macOS installers; "
+                "no more default BeeWare icon"
             ),
         ),
         (
-            "Random Song Name Generator",
+            "dawtool Markers Fixed",
             (
-                "Generate creative project names for new ideas; "
-                "handy tool when starting blank sessions"
-            ),
-        ),
-        (
-            "Dependency Upgrades",
-            (
-                "Updated dependencies for macOS and Windows installers; "
-                "improved compatibility and security"
-            ),
-        ),
-        (
-            "Stability Fixes",
-            (
-                "Code cleanup and stability improvements across the app; "
-                "more reliable scanning, watcher, and UI"
+                "Timeline marker extraction from .als files now works correctly; "
+                "fixed dawtool integration for marker parsing"
             ),
         ),
     ],
@@ -68,6 +54,27 @@ WHATS_NEW = {
 
 # Previous release highlights (for reference in About dialog)
 PREVIOUS_FEATURES = [
+    (
+        "FTUE Startup Guide",
+        (
+            "First-time user experience guide walks through setup: "
+            "adding locations, detecting Live versions, and key features"
+        ),
+    ),
+    (
+        "Find Audio Export Tool",
+        (
+            "Map exports to projects in a dedicated list view; "
+            "find orphaned exports and link them to the right .als files"
+        ),
+    ),
+    (
+        "Random Song Name Generator",
+        (
+            "Generate creative project names for new ideas; "
+            "handy tool when starting blank sessions"
+        ),
+    ),
     (
         "Bugfixes (thx PAG!)",
         (
