@@ -33,11 +33,18 @@ jobs:
       - name: Install Briefcase
         run: pip install briefcase
 
+      - name: Sync app icons for Briefcase
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path resources/icons | Out-Null
+          Copy-Item -Force src/resources/icons/AProject.ico resources/icons/ -ErrorAction SilentlyContinue
+          Copy-Item -Force src/resources/icons/AProject.png resources/icons/ -ErrorAction SilentlyContinue
+
       - name: Create Briefcase project
         run: briefcase create windows
 
       - name: Build Windows app
-        run: briefcase build windows
+        run: briefcase build windows --update-resources
 
       - name: Package as MSI
         run: briefcase package windows -p msi --adhoc-sign
@@ -92,25 +99,35 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Sync app icons for Briefcase
+        run: |
+          mkdir -p resources/icons
+          cp -f src/resources/icons/AProject.ico resources/icons/ 2>/dev/null || true
+          cp -f src/resources/icons/AProject.png resources/icons/ 2>/dev/null || true
+
       - name: Generate macOS .icns icon
         run: |
           # Generate .icns from the PNG icon using macOS sips + iconutil
           SRC_PNG="resources/icons/AProject.png"
           ICONSET_DIR="resources/icons/AProject.iconset"
+          if [ ! -f "$SRC_PNG" ]; then
+            echo "Error: Icon source not found at $SRC_PNG"
+            exit 1
+          fi
           mkdir -p "$ICONSET_DIR"
 
           # Generate required icon sizes (sips handles upscaling if source is smaller)
           for size in 16 32 64 128 256 512; do
-            sips -z $size $size "$SRC_PNG" --out "$ICONSET_DIR/icon_${size}x${size}.png" 2>/dev/null || true
+            sips -z $size $size "$SRC_PNG" --out "$ICONSET_DIR/icon_${size}x${size}.png"
           done
           # Retina variants
-          sips -z 32 32 "$SRC_PNG" --out "$ICONSET_DIR/icon_16x16@2x.png" 2>/dev/null || true
-          sips -z 64 64 "$SRC_PNG" --out "$ICONSET_DIR/icon_32x32@2x.png" 2>/dev/null || true
-          sips -z 256 256 "$SRC_PNG" --out "$ICONSET_DIR/icon_128x128@2x.png" 2>/dev/null || true
-          sips -z 512 512 "$SRC_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png" 2>/dev/null || true
+          sips -z 32 32 "$SRC_PNG" --out "$ICONSET_DIR/icon_16x16@2x.png"
+          sips -z 64 64 "$SRC_PNG" --out "$ICONSET_DIR/icon_32x32@2x.png"
+          sips -z 256 256 "$SRC_PNG" --out "$ICONSET_DIR/icon_128x128@2x.png"
+          sips -z 512 512 "$SRC_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png"
 
-          # Convert iconset to .icns
-          iconutil -c icns "$ICONSET_DIR" -o "resources/icons/AProject.icns" || echo "Warning: .icns generation failed, Briefcase will use default icon"
+          # Convert iconset to .icns (fail job if this fails - prevents default BeeWare icon)
+          iconutil -c icns "$ICONSET_DIR" -o "resources/icons/AProject.icns"
 
       - name: Install Briefcase
         run: pip install "briefcase>=0.3.22"
