@@ -189,12 +189,6 @@ def get_resources_path() -> Path:
         _cached_resources_path = resources_path
         return resources_path
 
-    # Method 3: Original location (ableton_hub/resources/) for development
-    old_resources_path = current_file.parent.parent.parent / "resources"
-    if old_resources_path.exists():
-        _cached_resources_path = old_resources_path
-        return old_resources_path
-
     # Last resort: return the expected path even if it doesn't exist
     _cached_resources_path = resources_path
     return resources_path

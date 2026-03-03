@@ -87,6 +87,8 @@ class UIConfig:
     waveform_color_mode: str = "random"
     show_ftue_at_startup: bool = True
     check_for_updates_at_startup: bool = True
+    soundcheck_at_startup: bool = True  # Play soundcheck to test audio output on startup
+    soundcheck_path: str = ""  # Custom sound file; empty = use default soundcheck.ogg
 
 
 @dataclass

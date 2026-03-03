@@ -238,7 +238,7 @@ ableton_hub/
 │   │   └── dialogs/                # Modal dialogs
 │   └── utils/                      # Utility functions
 ├── tests/                          # Test suite
-├── resources/                      # Icons, images, styles
+├── src/resources/                 # Icons, images, styles, sfx
 │   ├── images/                     # Application images
 │   ├── icons/                      # Application icons
 │   └── styles/                     # Stylesheets

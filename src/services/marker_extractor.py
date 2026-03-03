@@ -10,13 +10,15 @@ from typing import Any
 from ..utils.logging import get_logger
 
 # Try to import dawtool - make it optional
+_DAWTOOL_IMPORT_ERROR = ""
 try:
     import dawtool
 
     DAWTOOL_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     DAWTOOL_AVAILABLE = False
     dawtool = None
+    _DAWTOOL_IMPORT_ERROR = str(e)
 
 
 class MarkerExtractor:
@@ -31,9 +33,11 @@ class MarkerExtractor:
         self._available: bool = DAWTOOL_AVAILABLE
 
         if not self._available:
+            err = _DAWTOOL_IMPORT_ERROR or "unknown"
             self.logger.warning(
                 "dawtool not available - timeline marker extraction will be disabled. "
-                "Install with: pip install 'dawtool @ git+https://github.com/EazyTom/dawtool'"
+                "Install with: pip install 'dawtool @ git+https://github.com/EazyTom/dawtool' "
+                f"(ImportError: {err})"
             )
 
     @property

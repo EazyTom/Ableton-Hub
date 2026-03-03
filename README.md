@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="resources/images/hub-logo.png" alt="Ableton Hub Logo" width="200"/>
+  <img src="src/resources/images/hub-logo.png" alt="Ableton Hub Logo" width="200"/>
 </div>
 
 # Ableton Hub
@@ -22,7 +22,7 @@ Ableton Hub is a desktop application that helps you organize, manage, and discov
 Built with Python and PyQt6 (GUI framework), Ableton Hub provides powerful tools for music producers to maintain their project libraries and group projects based on their similarities.
 
 <div align="center">
-  <img src="resources/images/ableton-hub-screenshot.png" alt="Ableton Hub Logo" />
+  <img src="src/resources/images/ableton-hub-screenshot.png" alt="Ableton Hub Logo" />
 </div>
 
 ## Features
@@ -369,7 +369,7 @@ flowchart TB
 If the Mermaid diagram above doesn't render (e.g., on GitHub mobile app), view the architecture diagram below:
 
 <div align="center">
-  <img src="resources/images/system-diagram.png" alt="Ableton Hub System Architecture Diagram" width="100%"/>
+  <img src="src/resources/images/system-diagram.png" alt="Ableton Hub System Architecture Diagram" width="100%"/>
 </div>
 
 </details>

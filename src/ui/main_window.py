@@ -390,6 +390,31 @@ class MainWindow(QMainWindow):
         finally:
             session.close()
 
+    def _play_startup_soundcheck(self) -> None:
+        """Play soundcheck at startup to verify audio output."""
+        try:
+            from ..services.soundcheck_service import SoundcheckService
+
+            self._soundcheck_service = SoundcheckService(self)
+            self._soundcheck_service.error_occurred.connect(
+                lambda msg: self.logger.warning(f"Soundcheck: {msg}")
+            )
+            self._soundcheck_service.playback_started.connect(self._on_soundcheck_playback_started)
+            self._soundcheck_service.finished.connect(self._on_soundcheck_finished)
+            custom_path = getattr(self.config.ui, "soundcheck_path", "") or ""
+            self._soundcheck_service.play_soundcheck(custom_path=custom_path)
+        except Exception as e:
+            self.logger.warning(f"Soundcheck failed: {e}", exc_info=True)
+
+    def _on_soundcheck_playback_started(self, display_name: str) -> None:
+        """Update status bar when soundcheck starts playing."""
+        self.scan_status_label.setText(f"Soundcheck: {display_name}")
+
+    def _on_soundcheck_finished(self) -> None:
+        """Clear soundcheck status from status bar when finished."""
+        if self.scan_status_label.text().startswith("Soundcheck:"):
+            self.scan_status_label.setText("")
+
     def _show_startup_dialogs(self) -> None:
         """Show FTUE dialog (if enabled) and Add Location (if no locations)."""
         # Show FTUE / User Guide if enabled
@@ -414,6 +439,10 @@ class MainWindow(QMainWindow):
 
         # Show FTUE and Add Location dialogs after UI is ready
         QTimer.singleShot(500, self._show_startup_dialogs)
+
+        # Play soundcheck at startup (if enabled) to test audio output
+        if self.config.ui.soundcheck_at_startup:
+            QTimer.singleShot(800, self._play_startup_soundcheck)
 
         # Check for updates 3 seconds after startup (if enabled)
         if self.config.ui.check_for_updates_at_startup:

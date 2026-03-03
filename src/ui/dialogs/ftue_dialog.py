@@ -67,6 +67,12 @@ class FTUEDialog(QDialog):
             self.dont_show_checkbox.setStyleSheet(f"color: {AbletonTheme.COLORS['text_primary']};")
             layout.addWidget(self.dont_show_checkbox)
 
+        # Checkbox: Play soundcheck at startup (tests audio output)
+        self.soundcheck_checkbox = QCheckBox("Play soundcheck at startup (tests audio output)")
+        self.soundcheck_checkbox.setChecked(self._config.ui.soundcheck_at_startup)
+        self.soundcheck_checkbox.setStyleSheet(f"color: {AbletonTheme.COLORS['text_primary']};")
+        layout.addWidget(self.soundcheck_checkbox)
+
         # Buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         button_box.accepted.connect(self._on_accept)
@@ -126,5 +132,7 @@ class FTUEDialog(QDialog):
         if self._show_startup_checkbox and hasattr(self, "dont_show_checkbox"):
             # Checked = don't show at startup; Unchecked = show at startup
             self._config.ui.show_ftue_at_startup = not self.dont_show_checkbox.isChecked()
-            save_config()
+        if hasattr(self, "soundcheck_checkbox"):
+            self._config.ui.soundcheck_at_startup = self.soundcheck_checkbox.isChecked()
+        save_config()
         self.accept()

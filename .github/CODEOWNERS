@@ -20,8 +20,8 @@ requirements.txt @EazyTom
 /src/ @EazyTom
 /tests/ @EazyTom
 
-# Resources
-/resources/ @EazyTom
+# Resources (icons, images, styles, sfx)
+/src/resources/ @EazyTom
 
 # GitHub workflows and templates
 /.github/ @EazyTom

@@ -215,6 +215,29 @@ class SettingsDialog(QDialog):
         self.show_status_bar.setChecked(self.config.ui.show_status_bar)
         other_layout.addWidget(self.show_status_bar)
 
+        self.soundcheck_at_startup = QCheckBox("Play soundcheck at startup (tests audio output)")
+        self.soundcheck_at_startup.setChecked(
+            getattr(self.config.ui, "soundcheck_at_startup", True)
+        )
+        other_layout.addWidget(self.soundcheck_at_startup)
+
+        sound_layout = QHBoxLayout()
+        sound_layout.addWidget(QLabel("Startup sound:"))
+        self.soundcheck_path_edit = QLineEdit()
+        self.soundcheck_path_edit.setPlaceholderText("Default (soundcheck.mp3)")
+        self.soundcheck_path_edit.setText(getattr(self.config.ui, "soundcheck_path", "") or "")
+        sound_layout.addWidget(self.soundcheck_path_edit)
+
+        browse_btn = QPushButton("Browse...")
+        browse_btn.clicked.connect(self._browse_soundcheck_file)
+        sound_layout.addWidget(browse_btn)
+
+        clear_btn = QPushButton("Default")
+        clear_btn.clicked.connect(lambda: self.soundcheck_path_edit.clear())
+        sound_layout.addWidget(clear_btn)
+
+        other_layout.addLayout(sound_layout)
+
         layout.addWidget(other_group)
 
         layout.addStretch()
@@ -634,6 +657,17 @@ class SettingsDialog(QDialog):
         if directory:
             self.log_dir_edit.setText(directory)
 
+    def _browse_soundcheck_file(self) -> None:
+        """Browse for startup sound file."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Startup Sound",
+            self.soundcheck_path_edit.text() or "",
+            "Audio Files (*.wav *.mp3 *.flac *.ogg *.aiff *.aif *.m4a);;All Files (*)",
+        )
+        if path:
+            self.soundcheck_path_edit.setText(path)
+
     def _on_ok(self) -> None:
         """Handle OK button click - save settings."""
         # Theme selection
@@ -656,6 +690,8 @@ class SettingsDialog(QDialog):
 
         self.config.ui.confirm_delete = self.confirm_delete.isChecked()
         self.config.ui.show_status_bar = self.show_status_bar.isChecked()
+        self.config.ui.soundcheck_at_startup = self.soundcheck_at_startup.isChecked()
+        self.config.ui.soundcheck_path = self.soundcheck_path_edit.text().strip()
 
         # Scanning settings
         self.config.scan.auto_scan_on_startup = self.auto_scan_startup.isChecked()

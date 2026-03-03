@@ -71,7 +71,7 @@ where = ["."]
 include = ["src", "src.*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.png", "*.ico", "*.json", "*.md"]
+"*" = ["*.png", "*.ico", "*.json", "*.md", "*.mp3", "*.ogg"]
 
 [tool.black]
 line-length = 100
@@ -166,7 +166,7 @@ description = "Cross-platform desktop application for organizing Ableton project
 long_description = """Ableton Hub helps you organize, manage, and discover your \
 Ableton Live projects across multiple locations. Search, sort, tag, collect, \
 and preview your projects with advanced similarity analysis."""
-icon = "resources/icons/hub-icon"
+icon = "src/resources/icons/hub-icon"
 sources = ["src"]
 requires = [
     "PyQt6>=6.10.0",

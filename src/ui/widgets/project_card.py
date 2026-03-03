@@ -26,12 +26,8 @@ def _get_default_logo_pixmap() -> QPixmap | None:
     _default_logo_loaded = True
     from ...utils.paths import get_resources_path
 
-    logo_paths = [
-        Path(__file__).parent.parent.parent / "resources" / "images" / "als-icon.png",
-        get_resources_path() / "images" / "als-icon.png",
-    ]
-    logo_path = next((p for p in logo_paths if p.exists()), None)
-    if not logo_path:
+    logo_path = get_resources_path() / "images" / "als-icon.png"
+    if not logo_path.exists():
         return None
 
     pixmap = QPixmap(str(logo_path))
