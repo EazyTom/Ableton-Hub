@@ -30,6 +30,7 @@ from sqlalchemy.orm import joinedload
 
 from ...database import Collection, CollectionType, Project, ProjectCollection, get_session
 from ...services.audio_player import AudioPlayer
+from ...utils.paths import normalize_path
 from ..theme import AbletonTheme
 
 
@@ -590,7 +591,7 @@ class CollectionDetailView(QWidget):
                     )
                 except Exception:
                     has_export = False
-                export_item = QTableWidgetItem("✓" if has_export else "")
+                export_item = QTableWidgetItem("✓" if has_export else "✕")
                 export_item.setFlags(export_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.track_table.setItem(row, 4, export_item)
             else:
@@ -618,6 +619,7 @@ class CollectionDetailView(QWidget):
             play_btn.setIconSize(QSize(18, 18))
             play_btn.setFlat(True)
             play_btn.setFixedSize(40, 40)
+            play_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             play_btn.setToolTip("Play / Stop")
             play_btn.setStyleSheet(
                 "QPushButton { padding: 0px; margin: 0px; border: none; text-align: center; }"
@@ -815,8 +817,10 @@ class CollectionDetailView(QWidget):
         """Resolve the playable audio path for a track. Uses pc.export or most recent project export."""
         if not pc.project:
             return None
-        if pc.export and Path(pc.export.export_path).exists():
-            return pc.export.export_path
+        if pc.export and pc.export.export_path:
+            p = Path(pc.export.export_path)
+            if p.exists():
+                return str(p.resolve())
         exports = getattr(pc.project, "exports", None) or []
         if not exports:
             return None
@@ -827,15 +831,23 @@ class CollectionDetailView(QWidget):
             reverse=True,
         )
         for exp in sorted_exports:
-            if exp.export_path and Path(exp.export_path).exists():
-                return exp.export_path
+            if exp.export_path:
+                p = Path(exp.export_path)
+                if p.exists():
+                    return str(p.resolve())
         return None
 
     def _on_play_clicked(self, path: str) -> None:
         """Handle play button click - toggle play/stop for this row's file."""
         if not path:
             return
-        if self._audio_player.current_file == path and self._audio_player.is_playing:
+        norm_path = normalize_path(path)
+        current_norm = (
+            normalize_path(self._audio_player.current_file)
+            if self._audio_player.current_file
+            else None
+        )
+        if current_norm == norm_path and self._audio_player.is_playing:
             self._audio_player.stop()
             self._update_play_button_for_path(path, False)
             return
@@ -853,10 +865,13 @@ class CollectionDetailView(QWidget):
 
     def _find_row_for_path(self, path: str) -> int | None:
         """Find table row containing the given file path (stored in play button property)."""
+        norm_path = normalize_path(path)
         for row in range(self.track_table.rowCount()):
             play_btn = self._get_play_button(row)
-            if play_btn and play_btn.property("file_path") == path:
-                return row
+            if play_btn:
+                btn_path = play_btn.property("file_path") or ""
+                if btn_path and normalize_path(btn_path) == norm_path:
+                    return row
         return None
 
     def _update_play_button_for_path(self, path: str, is_playing: bool) -> None:
@@ -894,8 +909,9 @@ class CollectionDetailView(QWidget):
 
     def _on_playback_stopped(self) -> None:
         """Handle playback stopped - update play button."""
-        if self._audio_player.current_file:
-            self._update_play_button_for_path(self._audio_player.current_file, False)
+        current = self._audio_player.current_file
+        if current:
+            self._update_play_button_for_path(current, False)
 
     def _set_track_artwork(self, pc_id: int) -> None:
         """Set artwork for a track."""

@@ -18,12 +18,28 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from sqlalchemy import not_
+
 from ...database import Export, Location, Project, get_session
 from ...services.audio_player import AudioPlayer
 from ...services.export_tracker import ExportTracker
 from ...utils.paths import normalize_path
 from ..theme import AbletonTheme
 from ..workers import AudioScanWorker
+
+
+class _SortableTableWidgetItem(QTableWidgetItem):
+    """Table item that sorts by UserRole (for numeric/date columns)."""
+
+    def __lt__(self, other: QTableWidgetItem) -> bool:
+        self_val = self.data(Qt.ItemDataRole.UserRole)
+        other_val = other.data(Qt.ItemDataRole.UserRole) if other else None
+        if self_val is not None and other_val is not None:
+            try:
+                return self_val < other_val
+            except TypeError:
+                pass
+        return super().__lt__(other)
 
 
 class FindAudioExportsView(QWidget):
@@ -90,7 +106,7 @@ class FindAudioExportsView(QWidget):
         header_layout.addStretch()
 
         self._rescan_btn = QPushButton("Rescan")
-        self._rescan_btn.clicked.connect(self._start_scan)
+        self._rescan_btn.clicked.connect(self._on_rescan_clicked)
         self._rescan_btn.setEnabled(False)
         self._rescan_btn.setStyleSheet(f"""
             QPushButton {{
@@ -125,6 +141,8 @@ class FindAudioExportsView(QWidget):
         self._table.setAlternatingRowColors(True)
         self._table.setShowGrid(False)
         self._table.verticalHeader().setVisible(False)
+        self._table.setSortingEnabled(True)
+        self._table.horizontalHeader().setSectionsClickable(True)
         self._table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents
         )
@@ -148,6 +166,76 @@ class FindAudioExportsView(QWidget):
         )
         main_layout.addWidget(self._status_label)
 
+    def set_all_locations(self) -> None:
+        """Load unlinked exports from all locations via filesystem scan."""
+        self._location_id = None
+        self._location = None
+        self._path_to_export.clear()
+        self._mapped_paths.clear()
+
+        session = get_session()
+        try:
+            self._location_label.setText("Unlinked Exports (All Locations)")
+
+            # Load projects from all locations for the dropdown
+            projects = (
+                session.query(Project)
+                .filter(
+                    not_(Project.file_path.ilike("%/Backup/%")),
+                    not_(Project.file_path.ilike("%\\Backup\\%")),
+                )
+                .order_by(Project.name)
+                .all()
+            )
+            projects_sorted = sorted(
+                projects,
+                key=lambda p: (
+                    0 if Path(p.file_path).exists() else 1,
+                    (p.name or "").strip().lower(),
+                ),
+            )
+            seen_keys: set[str] = set()
+            self._projects = []
+            for p in projects_sorted:
+                key = (p.name or "").strip().lower()
+                if not key:
+                    continue
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    self._projects.append((p.id, p.name))
+
+            # Load mapped paths (to exclude from unlinked list during scan)
+            mapped = session.query(Export).filter(Export.project_id.isnot(None)).all()
+            for exp in mapped:
+                self._mapped_paths.add(normalize_path(exp.export_path))
+
+            # Load existing unlinked exports (for export_name when file exists in DB)
+            unlinked = (
+                session.query(Export)
+                .filter(Export.project_id.is_(None))
+                .order_by(Export.export_path)
+                .all()
+            )
+            for exp in unlinked:
+                norm_path = normalize_path(exp.export_path)
+                self._path_to_export[norm_path] = exp
+
+        finally:
+            session.close()
+
+        self._rescan_btn.setEnabled(True)
+        try:
+            self._audio_player.playback_stopped.disconnect(self._on_playback_stopped)
+        except (TypeError, RuntimeError):
+            pass
+        try:
+            self._audio_player.playback_finished.disconnect(self._on_playback_stopped)
+        except (TypeError, RuntimeError):
+            pass
+        self._audio_player.playback_stopped.connect(self._on_playback_stopped)
+        self._audio_player.playback_finished.connect(self._on_playback_stopped)
+        self._start_scan_all_locations()
+
     def set_location(self, location_id: int) -> None:
         """Set the location to scan and start the scan.
 
@@ -167,12 +255,10 @@ class FindAudioExportsView(QWidget):
 
             self._location_label.setText(f"Find Audio Exports — {self._location.name}")
 
-            # Load projects for this location, excluding backup paths
-            from sqlalchemy import not_
-
+            # Load projects from ALL locations for the dropdown (so locations without
+            # projects can still associate exports to projects from other locations)
             projects = (
                 session.query(Project)
-                .filter(Project.location_id == location_id)
                 .filter(
                     not_(Project.file_path.ilike("%/Backup/%")),
                     not_(Project.file_path.ilike("%\\Backup\\%")),
@@ -227,62 +313,65 @@ class FindAudioExportsView(QWidget):
         self._audio_player.playback_finished.connect(self._on_playback_stopped)
         self._start_scan()
 
-    def _start_scan(self) -> None:
-        """Start the audio scan worker."""
-        if not self._location:
-            return
-
-        self._stop_workers()
-
+    def _load_unlinked_from_db(self) -> None:
+        """Populate table from unlinked exports in database (all-locations mode)."""
+        self._table.setSortingEnabled(False)
         self._table.setRowCount(0)
         self._unmapped_count = 0
-        self._status_label.setText("Scanning for audio files...")
 
-        location_path = Path(self._location.path)
-        if not location_path.exists():
-            self._status_label.setText("Location path does not exist.")
-            return
+        for norm_path, exp in self._path_to_export.items():
+            path = exp.export_path
+            p = Path(path)
+            if p.exists():
+                stat = p.stat()
+                size, mtime = stat.st_size, stat.st_mtime
+            else:
+                size = exp.file_size or 0
+                mtime = exp.export_date.timestamp() if exp.export_date is not None else 0.0
+            self._add_export_row(path, exp.export_name, size, mtime, exp)
 
-        self._scan_worker = AudioScanWorker(location_path)
-        self._scan_thread = self._scan_worker
-        self._scan_worker.file_found.connect(self._on_file_found)
-        self._scan_worker.scan_complete.connect(self._on_scan_complete)
-        self._scan_worker.start()
+        count = len(self._path_to_export)
+        if count == 0:
+            self._status_label.setText("No unlinked exports found.")
+        else:
+            self._status_label.setText(f"Found {count} unlinked export(s) across all locations.")
+        self._table.setSortingEnabled(True)
 
-    def _on_file_found(self, path: str, size: int, mtime: float) -> None:
-        """Handle a file found during scan."""
-        norm_path = normalize_path(path)
-        if norm_path in self._mapped_paths:
-            return  # Skip files already mapped to a project
-
+    def _add_export_row(
+        self, path: str, name: str, size: int, mtime: float, export: Export | None = None
+    ) -> None:
+        """Add a row to the table (shared by scan and DB load)."""
         self._unmapped_count += 1
         p = Path(path)
         row = self._table.rowCount()
         self._table.insertRow(row)
 
-        # Play button (column 0) - square, no hover, top-center aligned
+        # Play button (column 0)
         play_btn = QPushButton()
         play_icon = QApplication.instance().style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         play_btn.setIcon(play_icon)
         play_btn.setIconSize(QSize(18, 18))
         play_btn.setFlat(True)
         play_btn.setFixedSize(15, 15)
+        play_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         play_btn.setToolTip("Play / Stop")
         play_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {AbletonTheme.COLORS['surface']};
+                background: transparent;
                 border: none;
                 border-radius: 0;
                 color: {AbletonTheme.COLORS['text_primary']};
                 padding: 0;
             }}
             QPushButton:hover, QPushButton:pressed, QPushButton:focus {{
-                background-color: {AbletonTheme.COLORS['surface']};
+                background: transparent;
+                border: none;
             }}
         """)
         play_btn.setProperty("file_path", path)
         play_btn.clicked.connect(lambda checked, fp=path: self._on_play_clicked(fp))
         btn_container = QWidget()
+        btn_container.setStyleSheet("background: transparent;")
         btn_layout = QHBoxLayout(btn_container)
         btn_layout.setContentsMargins(0, 0, 0, 0)
         btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
@@ -290,27 +379,31 @@ class FindAudioExportsView(QWidget):
         self._table.setCellWidget(row, 0, btn_container)
 
         # Name (column 1)
-        name_item = QTableWidgetItem(p.name)
+        name_item = QTableWidgetItem(name or p.name)
         name_item.setData(Qt.ItemDataRole.UserRole, path)
         self._table.setItem(row, 1, name_item)
 
-        # Size (column 2)
+        # Size (column 2) - UserRole for numeric sort
         if size >= 1024 * 1024:
             size_str = f"{size / (1024 * 1024):.2f} MB"
         else:
             size_str = f"{size / 1024:.1f} KB"
-        self._table.setItem(row, 2, QTableWidgetItem(size_str))
+        size_item = _SortableTableWidgetItem(size_str)
+        size_item.setData(Qt.ItemDataRole.UserRole, size)
+        self._table.setItem(row, 2, size_item)
 
         # Path (column 3)
         path_item = QTableWidgetItem(path)
         path_item.setToolTip(path)
         self._table.setItem(row, 3, path_item)
 
-        # Modified (column 4)
+        # Modified (column 4) - UserRole for chronological sort
         mod_dt = datetime.fromtimestamp(mtime)
-        self._table.setItem(row, 4, QTableWidgetItem(mod_dt.strftime("%Y-%m-%d %H:%M")))
+        mod_item = _SortableTableWidgetItem(mod_dt.strftime("%Y-%m-%d %H:%M"))
+        mod_item.setData(Qt.ItemDataRole.UserRole, mtime)
+        self._table.setItem(row, 4, mod_item)
 
-        # Project dropdown (column 5) - no orange
+        # Project dropdown (column 5)
         combo = QComboBox()
         combo.setStyleSheet(f"""
             QComboBox {{
@@ -335,8 +428,74 @@ class FindAudioExportsView(QWidget):
         combo.currentIndexChanged.connect(lambda idx, r=row: self._on_project_changed(r, idx))
         self._table.setCellWidget(row, 5, combo)
 
-        # Pre-select if already in exports (unmapped - would have "—" selected)
-        # No pre-select needed since we only show unmapped
+    def _on_rescan_clicked(self) -> None:
+        """Handle Rescan button - scan all locations or single location."""
+        if self._location is None:
+            self.set_all_locations()
+            return
+        self._start_scan()
+
+    def _start_scan_all_locations(self) -> None:
+        """Scan all location paths for unlinked audio exports."""
+        self._stop_workers()
+
+        self._table.setSortingEnabled(False)
+        self._table.setRowCount(0)
+        self._unmapped_count = 0
+
+        session = get_session()
+        try:
+            locations = session.query(Location).filter(Location.is_active.is_(True)).all()
+            paths = [Path(loc.path) for loc in locations if loc.path]
+        finally:
+            session.close()
+
+        existing_paths = [p for p in paths if p.exists() and p.is_dir()]
+        if not existing_paths:
+            self._status_label.setText("No locations to scan.")
+            self._table.setSortingEnabled(True)
+            return
+
+        self._status_label.setText("Scanning all locations for audio files...")
+        self._scan_worker = AudioScanWorker(existing_paths)
+        self._scan_thread = self._scan_worker
+        self._scan_worker.file_found.connect(self._on_file_found)
+        self._scan_worker.scan_complete.connect(self._on_scan_complete)
+        self._scan_worker.start()
+
+    def _start_scan(self) -> None:
+        """Start the audio scan worker for a single location."""
+        if not self._location:
+            return
+
+        self._stop_workers()
+
+        self._table.setSortingEnabled(False)
+        self._table.setRowCount(0)
+        self._unmapped_count = 0
+        self._status_label.setText("Scanning for audio files...")
+
+        location_path = Path(self._location.path)
+        if not location_path.exists():
+            self._status_label.setText("Location path does not exist.")
+            return
+
+        self._scan_worker = AudioScanWorker(location_path)
+        self._scan_thread = self._scan_worker
+        self._scan_worker.file_found.connect(self._on_file_found)
+        self._scan_worker.scan_complete.connect(self._on_scan_complete)
+        self._scan_worker.start()
+
+    def _on_file_found(self, path: str, size: int, mtime: float) -> None:
+        """Handle a file found during scan."""
+        norm_path = normalize_path(path)
+        if norm_path in self._mapped_paths:
+            return  # Skip files already mapped to a project
+
+        existing = self._path_to_export.get(norm_path)
+        self._add_export_row(
+            path, Path(path).name if not existing else existing.export_name, size, mtime, existing
+        )
 
     def _on_play_clicked(self, path: str) -> None:
         """Handle play button click - toggle play/stop for this row's file."""
@@ -458,6 +617,7 @@ class FindAudioExportsView(QWidget):
 
     def _on_scan_complete(self, count: int) -> None:
         """Handle scan completion."""
+        self._table.setSortingEnabled(True)
         unmapped = getattr(self, "_unmapped_count", 0)
         if unmapped == 0:
             self._status_label.setText("No unmapped audio files found.")

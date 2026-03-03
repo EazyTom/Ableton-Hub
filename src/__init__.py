@@ -1,17 +1,42 @@
 """Ableton Hub - Cross-platform Ableton project organizer."""
 
-# Single source of truth for version - reads from pyproject.toml via importlib.metadata
-# When installed via pip, this reads from package metadata
-# When running from source, falls back to the hardcoded version below
+from pathlib import Path
+
+# Single source of truth for version - prefer pyproject.toml when running from source,
+# else importlib.metadata when installed, else hardcoded fallback
 _FALLBACK_VERSION = "1.0.9"
 
-try:
-    from importlib.metadata import version as get_version
 
-    __version__ = get_version("ableton-hub")
-except Exception:
-    # Not installed as package, use fallback
-    __version__ = _FALLBACK_VERSION
+def _get_version_from_pyproject() -> str | None:
+    """Read version from pyproject.toml when running from source (dev directory)."""
+    try:
+        # This file is at src/__init__.py; pyproject.toml is at project root
+        pkg_root = Path(__file__).resolve().parent.parent
+        pyproject = pkg_root / "pyproject.toml"
+        if pyproject.exists():
+            for line in pyproject.read_text(encoding="utf-8").splitlines():
+                if line.strip().startswith("version = "):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_version() -> str:
+    """Resolve version: pyproject.toml (source) > importlib.metadata (installed) > fallback."""
+    # Prefer pyproject.toml when running from source (avoids stale metadata from old pip install)
+    from_pyproject = _get_version_from_pyproject()
+    if from_pyproject:
+        return from_pyproject
+    try:
+        from importlib.metadata import version as get_version
+
+        return get_version("ableton-hub")
+    except Exception:
+        return _FALLBACK_VERSION
+
+
+__version__ = _resolve_version()
 
 __author__ = "Tom Carlile"
 __email__ = "carlile.tom@gmail.com"
@@ -30,10 +55,7 @@ WHATS_NEW = {
         ),
         (
             "UI Loading Bugfixes",
-            (
-                "Fixed various UI loading issues; "
-                "more reliable startup and view transitions"
-            ),
+            ("Fixed various UI loading issues; " "more reliable startup and view transitions"),
         ),
         (
             "Icon Fixes",

@@ -30,9 +30,17 @@ def _parse_version(s: str) -> tuple[int, ...]:
 
 
 def _is_newer(latest: str, current: str) -> bool:
-    """Return True if latest version is newer than current."""
+    """Return True if latest version is strictly newer than current (equal = not newer)."""
     try:
         return _parse_version(latest) > _parse_version(current)
+    except Exception:
+        return False
+
+
+def _versions_equal(latest: str, current: str) -> bool:
+    """Return True if versions are equal (for logging)."""
+    try:
+        return _parse_version(latest) == _parse_version(current)
     except Exception:
         return False
 
@@ -79,7 +87,12 @@ class UpdateChecker(QObject):
             release_url = release.get("html_url", "https://github.com/EazyTom/ableton-hub/releases")
 
             if not _is_newer(latest_version, self._current_version):
-                self._logger.debug(f"Already up to date: {self._current_version}")
+                if _versions_equal(latest_version, self._current_version):
+                    self._logger.debug(
+                        f"Already on latest: {self._current_version} (matches release {latest_version})"
+                    )
+                else:
+                    self._logger.debug(f"Already up to date: {self._current_version}")
                 self.no_update_available.emit()
                 return
 

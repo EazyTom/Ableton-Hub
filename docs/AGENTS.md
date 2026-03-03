@@ -238,7 +238,7 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 | ALS Parsing | `src/services/als_parser.py` | .als metadata extraction |
 | Exports | `src/services/export_tracker.py`, `utils/fuzzy_match.py` | Export detection, matching; `AUDIO_EXTENSIONS` |
 | Audio playback | `src/services/audio_player.py` | Singleton; WAV, MP3, FLAC, etc. |
-| Find Audio Exports | `src/ui/widgets/find_audio_exports_view.py`, `src/ui/workers/audio_scan_worker.py` | Location-scoped export discovery and mapping |
+| Find Audio Exports | `src/ui/widgets/find_audio_exports_view.py`, `src/ui/workers/audio_scan_worker.py` | Location-scoped export discovery and mapping; View menu "Show Unlinked Exports" loads unmapped exports across all locations via `set_all_locations()`; column headers toggle sort order when clicked (Name, Size, Path, Modified); **Associate to Project** dropdown always loads projects from ALL locations so users can link exports to projects from other locations (e.g. when a location has no projects) |
 | Similarity | `src/services/similarity_analyzer.py`, `ml_feature_extractor.py`, `ml_clustering.py` | Jaccard, cosine, ML |
 | UI Main | `src/ui/main_window.py` | Central orchestration |
 | Controllers | `src/ui/controllers/*.py` | Project, Scan, Location, Collection, View, Live |

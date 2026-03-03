@@ -8,19 +8,21 @@ from ...services.export_tracker import AUDIO_EXTENSIONS
 
 
 class AudioScanWorker(QThread):
-    """Background worker for recursively scanning a location for audio files."""
+    """Background worker for recursively scanning location(s) for audio files."""
 
     file_found = pyqtSignal(str, int, float)  # path, size, mtime
     scan_complete = pyqtSignal(int)  # total count
 
-    def __init__(self, location_path: Path):
+    def __init__(self, location_paths: Path | list[Path]):
         """Initialize the audio scan worker.
 
         Args:
-            location_path: Root path to scan recursively for audio files.
+            location_paths: Root path(s) to scan recursively for audio files.
+                Can be a single Path or a list of Paths for multi-location scan.
         """
         super().__init__()
-        self._location_path = Path(location_path)
+        paths = location_paths if isinstance(location_paths, list) else [location_paths]
+        self._location_paths = [Path(p) for p in paths]
         self._stop_requested = False
         self._found_count = 0
 
@@ -29,11 +31,12 @@ class AudioScanWorker(QThread):
         self._stop_requested = False
         self._found_count = 0
 
-        if not self._location_path.exists() or not self._location_path.is_dir():
-            self.scan_complete.emit(0)
-            return
+        for location_path in self._location_paths:
+            if self._stop_requested:
+                break
+            if location_path.exists() and location_path.is_dir():
+                self._scan_folder(location_path)
 
-        self._scan_folder(self._location_path)
         self.scan_complete.emit(self._found_count)
 
     def _is_excluded(self, path: Path) -> bool:

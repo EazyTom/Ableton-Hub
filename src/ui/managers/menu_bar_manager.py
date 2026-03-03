@@ -27,6 +27,7 @@ class MenuBarManager(QObject):
     list_view_requested = pyqtSignal()
     toggle_sidebar_requested = pyqtSignal()
     toggle_show_missing_requested = pyqtSignal()
+    show_unlinked_exports_requested = pyqtSignal()
     refresh_requested = pyqtSignal()
     global_search_requested = pyqtSignal()
     song_name_generator_requested = pyqtSignal()
@@ -151,6 +152,12 @@ class MenuBarManager(QObject):
         show_missing_action.triggered.connect(self.toggle_show_missing_requested.emit)
         view_menu.addAction(show_missing_action)
         self._actions["show_missing"] = show_missing_action
+
+        show_unlinked_action = QAction("Show Unlinked Exports", self._main_window)
+        show_unlinked_action.setToolTip("View unmapped audio exports across all locations")
+        show_unlinked_action.triggered.connect(self.show_unlinked_exports_requested.emit)
+        view_menu.addAction(show_unlinked_action)
+        self._actions["show_unlinked_exports"] = show_unlinked_action
 
         view_menu.addSeparator()
 

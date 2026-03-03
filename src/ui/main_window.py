@@ -145,6 +145,7 @@ class MainWindow(QMainWindow):
         self.menu_manager.list_view_requested.connect(lambda: self._set_view_mode("list"))
         self.menu_manager.toggle_sidebar_requested.connect(self._toggle_sidebar)
         self.menu_manager.toggle_show_missing_requested.connect(self._toggle_show_missing)
+        self.menu_manager.show_unlinked_exports_requested.connect(self._on_show_unlinked_exports)
         self.menu_manager.refresh_requested.connect(self._refresh_view)
         self.menu_manager.global_search_requested.connect(self._on_global_search)
         self.menu_manager.song_name_generator_requested.connect(self._on_song_name_generator)
@@ -1566,6 +1567,12 @@ class MainWindow(QMainWindow):
         self.project_properties_view.cleanup()
         self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
         self._load_projects()
+
+    def _on_show_unlinked_exports(self) -> None:
+        """Handle Show Unlinked Exports from View menu."""
+        self.find_audio_exports_view.set_all_locations()
+        self.view_manager.switch_to_view(ViewManager.VIEW_FIND_EXPORTS)
+        self.sidebar.clear_selection()
 
     def _on_find_audio_exports(self, location_id: int) -> None:
         """Handle Find Audio Exports request from sidebar."""
