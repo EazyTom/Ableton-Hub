@@ -39,8 +39,20 @@ jobs:
       - name: Build Windows app
         run: briefcase build windows --update-resources
 
-      - name: Package as MSI
-        run: briefcase package windows -p msi --adhoc-sign
+      - name: Install SimplySign Desktop
+        run: |
+          $url = "https://files.certum.eu/software/SimplySignDesktop/Windows/9.4.0.84/SimplySignDesktop-9.4.0.84-64-bit-en.msi"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\SimplySign.msi"
+          Start-Process msiexec.exe -ArgumentList "/i `"$env:RUNNER_TEMP\SimplySign.msi`" /qn /norestart" -Wait
+
+      - name: Authenticate SimplySign
+        env:
+          CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
+          CERTUM_THUMBPRINT: ${{ secrets.CERTUM_THUMBPRINT }}
+        run: powershell -ExecutionPolicy Bypass -File scripts/Connect-SimplySign.ps1
+
+      - name: Package as MSI (signed)
+        run: briefcase package windows -p msi --identity "${{ secrets.CERTUM_THUMBPRINT }}"
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
