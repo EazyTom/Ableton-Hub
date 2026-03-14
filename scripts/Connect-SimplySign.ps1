@@ -38,9 +38,9 @@ try {
 }
 
 $Base32 = $q['secret']
-$Digits = ($q['digits'] -as [int]) ?? 6
-$Period = ($q['period'] -as [int]) ?? 30
-$Algorithm = (($q['algorithm']) ?? 'SHA1').ToUpper()
+$Digits = if ($q['digits']) { [int]$q['digits'] } else { 6 }
+$Period = if ($q['period']) { [int]$q['period'] } else { 30 }
+$Algorithm = (if ($q['algorithm']) { $q['algorithm'] } else { 'SHA1' }).ToUpper()
 
 if (-not $Base32) { throw "Could not parse 'secret' from otpauth URI." }
 if ($Algorithm -notin 'SHA1','SHA256','SHA512') { throw "Unsupported algorithm: $Algorithm (use SHA1, SHA256, or SHA512)." }
