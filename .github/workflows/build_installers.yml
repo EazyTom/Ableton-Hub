@@ -44,6 +44,7 @@ jobs:
           $url = "https://files.certum.eu/software/SimplySignDesktop/Windows/9.4.0.84/SimplySignDesktop-9.4.0.84-64-bit-en.msi"
           Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\SimplySign.msi"
           Start-Process msiexec.exe -ArgumentList "/i `"$env:RUNNER_TEMP\SimplySign.msi`" /qn /norestart" -Wait
+          Start-Sleep -Seconds 3
 
       - name: Authenticate SimplySign
         env:

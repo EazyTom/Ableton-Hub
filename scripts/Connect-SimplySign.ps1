@@ -16,14 +16,30 @@
 param(
     [string]$OtpUri = $env:CERTUM_OTP_URI,
     [string]$Thumbprint = $env:CERTUM_THUMBPRINT,
-    [string]$ExePath = "C:\Program Files (x86)\Certum\SimplySign Desktop\SimplySignDesktop.exe"
+    [string]$ExePath = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 if (-not $OtpUri) { throw "CERTUM_OTP_URI (or -OtpUri) is required." }
 if (-not $Thumbprint) { throw "CERTUM_THUMBPRINT (or -Thumbprint) is required." }
-if (-not (Test-Path $ExePath)) { throw "SimplySign Desktop not found at: $ExePath" }
+
+# Resolve exe path: try explicit path, then common locations, then search
+$candidates = @(
+    $ExePath,
+    "C:\Program Files\Certum\SimplySign Desktop\SimplySignDesktop.exe",
+    "C:\Program Files (x86)\Certum\SimplySign Desktop\SimplySignDesktop.exe"
+)
+$ExePath = ""
+foreach ($p in $candidates) {
+    if ($p -and (Test-Path $p)) { $ExePath = $p; break }
+}
+if (-not $ExePath) {
+    $found = Get-ChildItem -Path "C:\Program Files\Certum","C:\Program Files (x86)\Certum" -Filter "SimplySignDesktop.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) { $ExePath = $found.FullName }
+}
+if (-not $ExePath) { throw "SimplySign Desktop not found. Install step may have failed." }
+Write-Host "Using SimplySign at: $ExePath"
 
 # Parse otpauth:// URI
 $uri = [Uri]$OtpUri
