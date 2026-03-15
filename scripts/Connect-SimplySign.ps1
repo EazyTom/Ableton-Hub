@@ -16,6 +16,7 @@
 param(
     [string]$OtpUri = $env:CERTUM_OTP_URI,
     [string]$Thumbprint = $env:CERTUM_THUMBPRINT,
+    [string]$Email = $env:CERTUM_EMAIL,
     [string]$ExePath = ""
 )
 
@@ -155,7 +156,14 @@ if (-not $focused) {
 }
 
 Start-Sleep -Milliseconds 500
-$wshell.SendKeys("$otp{ENTER}")
+# SimplySign prompts for Email then Token (OTP). Send email + TAB + OTP + ENTER if email provided.
+# Escape SendKeys special chars in email: + ^ % ~ ( ) [ ] { }
+if ($Email) {
+    $emailEscaped = $Email -replace '\+', '{+}' -replace '\^', '{^}' -replace '%', '{%}' -replace '~', '{~}'
+    $wshell.SendKeys("$emailEscaped{TAB}$otp{ENTER}")
+} else {
+    $wshell.SendKeys("$otp{ENTER}")
+}
 Write-Host "OTP sent. Waiting for certificate to mount..."
 
 # Verify certificate appears
