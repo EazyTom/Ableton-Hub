@@ -27,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -55,7 +55,7 @@ jobs:
         run: briefcase package windows -p msi --identity "${{ secrets.CERTUM_THUMBPRINT }}"
 
       - name: Upload MSI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: AbletonHub-Windows-MSI
           path: dist/*.msi
@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Import code signing certificate
         env:
@@ -100,7 +100,7 @@ jobs:
             --keychain "$RUNNER_TEMP/signing.keychain-db"
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -176,7 +176,7 @@ jobs:
           xcrun stapler staple "$DMG_PATH"
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: AbletonHub-macOS-DMG
           path: dist/*.dmg
@@ -190,7 +190,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
