@@ -122,22 +122,39 @@ Write-Host "Generated TOTP (current window)."
 # Launch SimplySign Desktop
 $proc = Start-Process -FilePath $ExePath -PassThru
 Write-Host "Waiting for SimplySign Desktop window..."
-Start-Sleep -Seconds 5
+
+# Use SetForegroundWindow (more reliable than AppActivate with PID)
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
 
 $wshell = New-Object -ComObject WScript.Shell
-$focused = $wshell.AppActivate($proc.Id)
-if (-not $focused) { $focused = $wshell.AppActivate('SimplySign Desktop') }
+$windowTitles = @('SimplySign Desktop', 'SimplySign', 'Certum', 'Sign in', 'Login')
+$focused = $false
 
-for ($i = 0; -not $focused -and $i -lt 10; $i++) {
-    Start-Sleep -Milliseconds 500
-    $focused = $wshell.AppActivate($proc.Id) -or $wshell.AppActivate('SimplySign Desktop')
+for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Seconds 1
+    $proc.Refresh()
+    if ($proc.MainWindowHandle -ne [IntPtr]::Zero) {
+        [void][Win32]::SetForegroundWindow($proc.MainWindowHandle)
+        $focused = $true
+        break
+    }
+    foreach ($title in $windowTitles) {
+        if ($wshell.AppActivate($title)) { $focused = $true; break }
+    }
+    if ($focused) { break }
 }
 
 if (-not $focused) {
-    throw "Could not bring SimplySign Desktop to the foreground."
+    throw "Could not bring SimplySign Desktop to the foreground. Ensure the runner is running with run.cmd (not as a service) and SimplySign shows a login window."
 }
 
-Start-Sleep -Milliseconds 400
+Start-Sleep -Milliseconds 500
 $wshell.SendKeys("$otp{ENTER}")
 Write-Host "OTP sent. Waiting for certificate to mount..."
 
