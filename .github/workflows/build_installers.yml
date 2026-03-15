@@ -55,7 +55,7 @@ jobs:
         run: powershell -ExecutionPolicy Bypass -File scripts/Connect-SimplySign.ps1
 
       - name: Package as MSI (signed)
-        run: briefcase package windows -p msi --identity "${{ secrets.CERTUM_THUMBPRINT }}"
+        run: briefcase package windows -p msi --identity "${{ secrets.CERTUM_THUMBPRINT }}" --timestamp-url "http://time.certum.pl"
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v6
