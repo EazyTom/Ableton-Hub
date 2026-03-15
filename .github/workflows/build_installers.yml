@@ -18,8 +18,12 @@ permissions:
 
 jobs:
   # ── Windows MSI ──────────────────────────────────────────────
+  # Uses self-hosted runner for SimplySign (requires interactive desktop).
+  # Start the runner with run.cmd on your Windows desktop before triggering a build.
   build-windows:
-    runs-on: windows-latest
+    # Only run from this repo—prevents forks from using your self-hosted runner
+    if: github.repository == 'EazyTom/ableton-hub'
+    runs-on: [self-hosted, Windows, X64]
 
     steps:
       - name: Checkout repository

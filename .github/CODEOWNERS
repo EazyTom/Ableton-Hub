@@ -23,5 +23,6 @@ requirements.txt @EazyTom
 # Resources (icons, images, styles, sfx)
 /src/resources/ @EazyTom
 
-# GitHub workflows and templates
+# GitHub workflows and templates (requires approval before merge)
 /.github/ @EazyTom
+/.github/workflows/ @EazyTom
