@@ -16,6 +16,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── Windows MSI ──────────────────────────────────────────────
   # Uses self-hosted runner for SimplySign (requires interactive desktop).
@@ -190,7 +193,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
