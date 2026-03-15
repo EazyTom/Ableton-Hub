@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (e.g. v1.0.6)"
+        description: "Version tag (e.g. v1.0.10)"
         required: false
         default: ""
   # Auto-trigger on version tags

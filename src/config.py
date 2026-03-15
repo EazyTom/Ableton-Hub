@@ -102,7 +102,7 @@ class Config:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     first_run: bool = True
-    version: str = "1.0.8"
+    version: str = "1.0.10"
 
 
 class ConfigManager:

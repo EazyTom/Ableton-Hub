@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Single source of truth for version - prefer pyproject.toml when running from source,
 # else importlib.metadata when installed, else hardcoded fallback
-_FALLBACK_VERSION = "1.0.9"
+_FALLBACK_VERSION = "1.0.10"
 
 
 def _get_version_from_pyproject() -> str | None:
@@ -46,6 +46,13 @@ __email__ = "carlile.tom@gmail.com"
 WHATS_NEW = {
     "version": __version__,
     "features": [
+        (
+            "Trusted Windows MSI Installer",
+            (
+                "Windows installer is now code-signed with Certum SimplySign; "
+                "SmartScreen and browsers will recognize it as trusted"
+            ),
+        ),
         (
             "Audio Preview in Collections",
             (
