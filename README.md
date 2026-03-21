@@ -4,12 +4,7 @@
 
 # Ableton Hub
 
-**Version 1.0.10** — The "cross-platform trusted installer" release - 🔒🔒 Bravo! 🔒🔒
-
-<div align="center">
-     <img src="resources/images/trusted-open-source.png" alt="Trusted Open Source" width="90"/>
-</div>
-
+**Version 1.0.10** — The "cross-platform trusted installer" release - 🔒 Bravo! 🔒
 ## What is Ableton Hub?
 
 Ableton Hub is a desktop application that helps you organize, manage, and discover your Ableton Live projects across multiple locations. Whether your projects are on your computer, external drives, network shares, or cloud storage, Ableton Hub scans and indexes them all in one place. Creating collections of your projects and mapping exports to projects with deep learning of your project stats.
@@ -591,10 +586,15 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 - **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
 
-### v1.0.10 - Trusted Installer Release
+### v1.0.10 - Trusted Installer Release 
 - ✅ **Trusted Open Source** - Official trusted installer release; verified, signed installers for Windows (MSI) and macOS (DMG)
 - ✅ **Security & Integrity** - Installers built with reproducible tooling; SHA256 checksums available for all release assets
 - ✅ **Open Source Certified** - Meets trusted open source standards for transparency and community verification
+
+<div align="center">
+     <img src="resources/images/trusted-open-source.png" alt="Trusted Open Source" width="90"/>
+</div>
+
 
 ### v1.0.9 - Audio Preview in Collections, Bugfixes, Icon Fixes
 - ✅ **Audio Preview in Collections** - Preview audio exports directly from collection views; play tracks without opening the full project

@@ -117,6 +117,13 @@ This document tracks all features that have been implemented and those planned f
 - ✅ Real-time Link network status
 - ✅ Device information display (name, IP address)
 
+#### Release Infrastructure & UX (v1.0.3–v1.0.10)
+- ✅ Startup Soundcheck service — plays audio on launch to verify output; custom sound file support; 440 Hz sine fallback if no file found
+- ✅ Automatic Update Checker — queries GitHub releases API on startup; UpdateDialog with download link; configurable via `check_for_updates_at_startup`
+- ✅ FTUE first-launch dialog — renders `FTUE.md` as HTML for new users
+- ✅ Song Name Generator — service and dialog for generating random creative project names
+- ✅ Select Exports Dialog — two-column UI (DB exports + filesystem browse) for manually linking audio exports to projects
+
 #### User Interface
 - ✅ Multiple themes (Orange, Blue, Green, Pink)
 - ✅ Grid and list views with toggle
@@ -130,7 +137,7 @@ This document tracks all features that have been implemented and those planned f
 ## 🔄 In Progress / Infrastructure Complete
 
 ### ML Clustering Visualization
-- ✅ ML Clustering service (K-means, DBSCAN, Hierarchical) - **Complete**
+- ✅ ML Clustering service (K-means, DBSCAN, Hierarchical) - **Complete** — includes `ClusterInfo` dataclass with `avg_tempo`, `common_plugins`, `common_devices`, `suggested_label`, `silhouette_score`
 - ⏳ Cluster visualization UI widget - **Not started**
 - ⏳ Auto-organize by cluster feature - **Not started**
 
@@ -178,21 +185,22 @@ This document tracks all features that have been implemented and those planned f
 ## Technical Dependencies
 
 ### Currently Installed
-- PyQt6 >= 6.6.0 (UI Framework)
+- PyQt6 >= 6.10.0 (UI Framework)
 - SQLAlchemy >= 2.0.0 (Database ORM)
-- watchdog >= 3.0.0 (File System Monitoring)
-- zeroconf >= 0.131.0 (Ableton Link Discovery)
-- qasync >= 0.27.0 (Async Qt Integration)
-- aiosqlite >= 0.19.0 (Async SQLite)
-- Pillow >= 10.0.0 (Image Processing)
-- rapidfuzz >= 3.0.0 (Fuzzy Matching)
-- scikit-learn >= 1.3.0 (ML Clustering)
-- numpy >= 1.24.0 (Numerical Computing)
-- pandas >= 2.0.0 (Data Analysis)
-- librosa >= 0.10.0 (Audio Analysis)
-- soundfile >= 0.12.0 (Audio File I/O)
-- lxml >= 4.9.0 (XML Parsing)
+- watchdog >= 6.0.0 (File System Monitoring)
+- zeroconf >= 0.148.0 (Ableton Link Discovery)
+- qasync >= 0.28.0 (Async Qt Integration)
+- aiosqlite >= 0.22.0 (Async SQLite)
+- Pillow >= 12.0.0 (Image Processing)
+- rapidfuzz >= 3.14.0 (Fuzzy Matching)
+- scikit-learn >= 1.8.0 (ML Clustering)
+- numpy >= 2.0.0 (Numerical Computing)
+- pandas >= 3.0.0 (Data Analysis)
+- librosa >= 0.11.0 (Audio Analysis)
+- soundfile >= 0.13.0 (Audio File I/O)
+- lxml >= 6.0.0 (XML Parsing)
+- markdown >= 3.5.0 (FTUE / User Guide rendering)
 
 ---
 
-*Last updated: January 2026*
+*Last updated: March 2026 (v1.0.10)*

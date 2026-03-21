@@ -8,7 +8,8 @@ One-stop reference for AI agents working on this codebase. Read this before maki
 
 | Item | Value |
 |------|-------|
-| **Tech stack** | Python 3.11+, PyQt6 6.6+, SQLAlchemy 2.0+, SQLite with FTS5 |
+| **Tech stack** | Python 3.11+, PyQt6 6.10+, SQLAlchemy 2.0+, SQLite with FTS5 |
+| **Current version** | v1.0.10 |
 | **Entry point** | `src/main.py` → `main()` |
 | **App setup** | `src/app.py` → `AbletonHubApp` |
 | **Config** | Dataclasses in `src/config.py`; JSON persistence via `ConfigManager` |
@@ -119,6 +120,11 @@ graph TB
 - `plugins`, `devices`, `sample_references`, `timeline_markers`, `export_filenames` — assign Python lists directly, never `json.dumps()`
 - `feature_vector` — exception: scanner uses `json.dumps()` for the float list; model has `get_feature_vector_list()` for reading
 - `tags` — DEPRECATED; use `project_tags` junction table
+
+### Project Table — Scalar Columns (migrations 16–19)
+
+- `arrangement_length` = arrangement timeline clips only; `furthest_sample_end` = session clips (max sample end across session view)
+- `sample_duration_seconds`, `annotation`, `master_track_name` — cached from ALS to avoid re-parsing on view
 
 ### FTS5 Virtual Table
 
@@ -240,6 +246,9 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 | Audio playback | `src/services/audio_player.py` | Singleton; WAV, MP3, FLAC, etc. |
 | Find Audio Exports | `src/ui/widgets/find_audio_exports_view.py`, `src/ui/workers/audio_scan_worker.py` | Location-scoped export discovery and mapping; View menu "Show Unlinked Exports" loads unmapped exports across all locations via `set_all_locations()`; column headers toggle sort order when clicked (Name, Size, Path, Modified); **Associate to Project** dropdown always loads projects from ALL locations so users can link exports to projects from other locations (e.g. when a location has no projects) |
 | Similarity | `src/services/similarity_analyzer.py`, `ml_feature_extractor.py`, `ml_clustering.py` | Jaccard, cosine, ML |
+| Soundcheck | `src/services/soundcheck_service.py` | `SoundcheckService`; plays startup audio with fade; 440Hz fallback; `UIConfig.soundcheck_at_startup`, `soundcheck_path` |
+| Update Checker | `src/services/update_checker.py`, `src/ui/dialogs/update_dialog.py` | Queries GitHub releases; `UIConfig.check_for_updates_at_startup`; `UpdateDialog` shows download link |
+| FTUE | `src/ui/dialogs/ftue_dialog.py` | Renders `FTUE.md` as HTML on first launch |
 | UI Main | `src/ui/main_window.py` | Central orchestration |
 | Controllers | `src/ui/controllers/*.py` | Project, Scan, Location, Collection, View, Live |
 | Managers | `src/ui/managers/*.py` | MenuBar, ToolBar, ViewManager |
@@ -261,7 +270,7 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 
 ## 6. Dependencies and Version Constraints
 
-- **Core:** PyQt6>=6.6.0, SQLAlchemy>=2.0.0, Python>=3.11
+- **Core:** PyQt6>=6.10.0, SQLAlchemy>=2.0.0, Python>=3.11
 - **Optional/lazy:** scikit-learn, numpy, pandas, librosa, soundfile (ML); lxml (ALS parsing)
 - **Briefcase:** Separate `requires` for macOS vs Windows (ML deps on Windows; dawtool on both)
 - **Ruff ignores:** E402, E712, E711, F401, N806, N803, N802, UP022, C401, I001, W293, W291 — see `pyproject.toml`
@@ -380,6 +389,10 @@ When scanning or listing files, exclude these paths (case-insensitive):
 - Hidden: names starting with `.`
 
 See `AudioScanWorker._is_excluded()` and `scanner._is_excluded()` in `src/services/scanner.py`.
+
+### ML Cluster Visualization (future)
+
+When building the cluster visualization widget (`cluster_view.py`), use the `ClusterInfo` dataclass from `ml_clustering.py` as the data contract. Fields: `cluster_id`, `project_ids`, `avg_tempo`, `common_plugins`, `common_devices`, `suggested_label`, `silhouette_score`. Call `run_clustering(projects)` to get cluster results.
 
 ### UI Styling
 

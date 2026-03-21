@@ -2,7 +2,40 @@
 
 This document contains detailed implementation plans for future features.
 
-**Last Updated**: February 2, 2026
+**Last Updated**: March 17, 2026
+
+---
+
+## ✅ Recently Completed (v1.0.3–v1.0.10)
+
+### Release Infrastructure & UX
+
+#### Startup Soundcheck ✅
+- **Status**: Complete
+- **Implementation**: Plays audio on launch to verify output; configurable via Settings
+- **Features**: Custom sound file support; 440 Hz sine fallback if no file found; fade-in/fade-out
+- **Files**: `src/services/soundcheck_service.py`, `src/config.py`, `src/ui/dialogs/settings_dialog.py`
+
+#### Automatic Update Checker ✅
+- **Status**: Complete
+- **Implementation**: Queries GitHub releases API on startup (3s delay); configurable via `check_for_updates_at_startup`
+- **Features**: UpdateDialog with platform-specific download link; Help menu entry
+- **Files**: `src/services/update_checker.py`, `src/ui/dialogs/update_dialog.py`
+
+#### FTUE First-Launch Dialog ✅
+- **Status**: Complete
+- **Implementation**: Renders `FTUE.md` as HTML for new users
+- **Files**: `src/ui/dialogs/ftue_dialog.py`
+
+#### Song Name Generator ✅
+- **Status**: Complete
+- **Implementation**: Service and dialog for generating random creative project names
+- **Files**: `src/services/song_name_generator.py`, `src/ui/dialogs/song_name_generator_dialog.py`
+
+#### Select Exports Dialog ✅
+- **Status**: Complete
+- **Implementation**: Two-column UI (DB exports + filesystem browse) for manually linking audio exports to projects
+- **Files**: `src/ui/dialogs/select_exports_dialog.py`
 
 ---
 
@@ -155,6 +188,8 @@ src/ui/widgets/workflow_dashboard.py
 **Priority**: Medium  
 **Estimated Effort**: 2 weeks  
 **Dependencies**: ML Clustering Service (complete)
+
+**Backend API Note**: `ml_clustering.py` returns `ClusterInfo` dataclass with `cluster_id`, `project_ids`, `avg_tempo`, `common_plugins`, `common_devices`, `suggested_label`, `silhouette_score` — this is the data contract for the cluster visualization UI.
 
 **Goal**: Visualize project clusters and enable smart organization.
 
@@ -504,4 +539,4 @@ The following infrastructure improvements have been completed and provide a soli
 
 ---
 
-*Last updated: February 2, 2026*
+*Last updated: March 17, 2026*
