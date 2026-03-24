@@ -16,6 +16,8 @@ NOTE: Heavy imports (numpy, sklearn) are deferred until first use
 to avoid slowing down application startup.
 """
 
+import math
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -600,3 +602,214 @@ class MLClusteringService:
     def get_last_result(self) -> ClusteringResult | None:
         """Get the result of the last clustering operation."""
         return self._last_result
+
+
+# --- Metadata-only feature pipeline (Similarity Cluster Tree; no .als / MLFeatureExtractor) ---
+
+# Block weights (tempo + plugins/devices strongest; FR-002 / FR-003)
+WEIGHT_TEMPO = 3.0
+WEIGHT_PLUGIN_BLOCK = 2.0
+WEIGHT_DEVICE_BLOCK = 2.0
+WEIGHT_STRUCTURAL = 1.0
+WEIGHT_FEATURE_VECTOR = 1.0
+WEIGHT_KEY_SCALE_TS = 0.5
+WEIGHT_MISC = 0.5
+
+PLUGIN_HASH_DIM = 32
+DEVICE_HASH_DIM = 32
+FEATURE_VECTOR_DIM = 64
+KEY_HASH_DIM = 8
+SCALE_HASH_DIM = 8
+TIME_SIG_HASH_DIM = 8
+
+# 2 tempo + plugins + devices + track/arr + audio/midi/return + fv + has_fv + key + scale + ts + auto + markers + live
+METADATA_FEATURE_DIM = (
+    2
+    + PLUGIN_HASH_DIM
+    + DEVICE_HASH_DIM
+    + 2
+    + 3
+    + FEATURE_VECTOR_DIM
+    + 1
+    + KEY_HASH_DIM
+    + SCALE_HASH_DIM
+    + TIME_SIG_HASH_DIM
+    + 3
+)
+
+
+def _live_major_version(ableton_version: str | None) -> float:
+    if not ableton_version:
+        return 0.0
+    m = re.search(r"Live\s+(\d+)", ableton_version, re.IGNORECASE)
+    if m:
+        return float(min(12, max(0, int(m.group(1)))))
+    return 0.0
+
+
+def compute_n_clusters_heuristic(n_samples: int) -> int:
+    """Heuristic cluster count from research.md (bounded, deterministic)."""
+    if n_samples < 2:
+        return 1
+    return min(max(2, int(math.sqrt(n_samples))), 20, n_samples)
+
+
+def _hash_bucket(s: str, dim: int) -> int:
+    return hash(s) % dim
+
+
+def _apply_block_weights(row: list[float]) -> None:
+    """Apply per-block weights in-place (row layout matches METADATA_FEATURE_DIM)."""
+    d = PLUGIN_HASH_DIM
+    d2 = DEVICE_HASH_DIM
+    # tempo
+    row[0:2] = [row[0] * WEIGHT_TEMPO, row[1] * WEIGHT_TEMPO]
+    i = 2
+    row[i : i + d] = [x * WEIGHT_PLUGIN_BLOCK for x in row[i : i + d]]
+    i += d
+    row[i : i + d2] = [x * WEIGHT_DEVICE_BLOCK for x in row[i : i + d2]]
+    i += d2
+    # structural: track, arr, audio, midi, return (5 cols)
+    row[i : i + 5] = [x * WEIGHT_STRUCTURAL for x in row[i : i + 5]]
+    i += 5
+    # feature vector + has flag
+    row[i : i + FEATURE_VECTOR_DIM] = [x * WEIGHT_FEATURE_VECTOR for x in row[i : i + FEATURE_VECTOR_DIM]]
+    i += FEATURE_VECTOR_DIM
+    row[i] *= WEIGHT_FEATURE_VECTOR
+    i += 1
+    # key, scale, time sig
+    row[i : i + KEY_HASH_DIM] = [x * WEIGHT_KEY_SCALE_TS for x in row[i : i + KEY_HASH_DIM]]
+    i += KEY_HASH_DIM
+    row[i : i + SCALE_HASH_DIM] = [x * WEIGHT_KEY_SCALE_TS for x in row[i : i + SCALE_HASH_DIM]]
+    i += SCALE_HASH_DIM
+    row[i : i + TIME_SIG_HASH_DIM] = [x * WEIGHT_KEY_SCALE_TS for x in row[i : i + TIME_SIG_HASH_DIM]]
+    i += TIME_SIG_HASH_DIM
+    # misc: automation, markers, live major
+    row[i : i + 3] = [x * WEIGHT_MISC for x in row[i : i + 3]]
+
+
+def build_metadata_feature_matrix(
+    projects: list[dict[str, Any]],
+    *,
+    plugin_hash_dim: int = PLUGIN_HASH_DIM,
+    device_hash_dim: int = DEVICE_HASH_DIM,
+) -> tuple[Any, list[int], list[str]]:
+    """Build a numeric matrix from DB-backed project dicts only (FR-001).
+
+    Does not read ``als_path``, call ``MLFeatureExtractor``, or open files.
+
+    Tempo and plugin/device blocks are weighted highest (FR-002, FR-003); additional
+    columns encode structural, optional stored ``feature_vector``, key/time signature,
+    automation, markers, and Live version.
+
+    Args:
+        projects: Dicts with keys including id, tempo, plugins, devices, track_count,
+            arrangement_length, and optional enriched fields from the worker.
+
+    Returns:
+        (X, project_ids, warnings) where X has shape (n_samples, METADATA_FEATURE_DIM).
+    """
+    np = _get_numpy()
+    warnings: list[str] = []
+
+    tempos = [p.get("tempo") for p in projects]
+    numeric_tempos = [t for t in tempos if t is not None and isinstance(t, (int, float)) and t > 0]
+    median_tempo = float(np.median(numeric_tempos)) if numeric_tempos else 120.0
+
+    missing_tempo_count = sum(1 for t in tempos if t is None or t <= 0)
+    if missing_tempo_count:
+        warnings.append(
+            f"{missing_tempo_count} project(s) have missing tempo; imputed with median for clustering."
+        )
+
+    n_features = METADATA_FEATURE_DIM
+    rows: list[list[float]] = []
+    project_ids: list[int] = []
+
+    for p in projects:
+        pid = int(p.get("id", -1))
+        if pid < 0:
+            continue
+        project_ids.append(pid)
+
+        t = p.get("tempo")
+        if t is None or (isinstance(t, (int, float)) and t <= 0):
+            tempo_val = median_tempo
+            miss = 1.0
+        else:
+            tempo_val = float(t)
+            miss = 0.0
+
+        row = [0.0] * n_features
+        row[0] = tempo_val
+        row[1] = miss
+
+        off = 2
+        for pl in p.get("plugins") or []:
+            if isinstance(pl, str) and pl:
+                b = _hash_bucket(pl, plugin_hash_dim)
+                row[off + b] += 1.0
+        off += plugin_hash_dim
+        for dev in p.get("devices") or []:
+            if isinstance(dev, str) and dev:
+                b = _hash_bucket(dev, device_hash_dim)
+                row[off + b] += 1.0
+        off += device_hash_dim
+
+        tc = float(p.get("track_count") or 0)
+        al = float(p.get("arrangement_length") or 0.0)
+        row[off] = float(np.log1p(tc))
+        row[off + 1] = float(np.log1p(al))
+        off += 2
+
+        at = float(p.get("audio_tracks") or 0)
+        mt = float(p.get("midi_tracks") or 0)
+        rt = float(p.get("return_tracks") or 0)
+        row[off] = float(np.log1p(at))
+        row[off + 1] = float(np.log1p(mt))
+        row[off + 2] = float(np.log1p(rt))
+        off += 3
+
+        fv = p.get("feature_vector")
+        has_fv = 0.0
+        if fv is not None and isinstance(fv, (list, tuple)) and len(fv) > 0:
+            has_fv = 1.0
+            for j in range(FEATURE_VECTOR_DIM):
+                v = float(fv[j]) if j < len(fv) else 0.0
+                row[off + j] = v
+        off += FEATURE_VECTOR_DIM
+        row[off] = has_fv
+        off += 1
+
+        mk = p.get("musical_key") or ""
+        if isinstance(mk, str) and mk:
+            row[off + _hash_bucket(mk, KEY_HASH_DIM)] += 1.0
+        off += KEY_HASH_DIM
+        st = p.get("scale_type") or ""
+        if isinstance(st, str) and st:
+            row[off + _hash_bucket(st, SCALE_HASH_DIM)] += 1.0
+        off += SCALE_HASH_DIM
+        ts = p.get("time_signature") or ""
+        if isinstance(ts, str) and ts:
+            row[off + _hash_bucket(ts, TIME_SIG_HASH_DIM)] += 1.0
+        off += TIME_SIG_HASH_DIM
+
+        auto = bool(p.get("has_automation"))
+        row[off] = 1.0 if auto else 0.0
+        off += 1
+        markers = p.get("timeline_markers")
+        mc = len(markers) if isinstance(markers, list) else 0
+        row[off] = float(np.log1p(min(mc, 500)))
+        off += 1
+        av = p.get("ableton_version")
+        row[off] = _live_major_version(av if isinstance(av, str) else None)
+
+        _apply_block_weights(row)
+
+        rows.append(row)
+
+    if not rows:
+        return np.zeros((0, n_features), dtype=np.float64), [], warnings
+
+    X = np.asarray(rows, dtype=np.float64)
+    return X, project_ids, warnings

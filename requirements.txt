@@ -28,6 +28,7 @@ scikit-learn>=1.8.0  # Used in: ml_clustering, similarity_analyzer, ml_feature_e
 # TESTING: Upgraded to numpy 2.x - major version change, testing compatibility with scikit-learn, librosa, pandas
 # See numpy 2.0 migration guide: https://numpy.org/devdocs/numpy_2_0_migration_guide.html
 numpy>=2.0.0  # Used in: ml_feature_extractor, similarity_analyzer, ml_clustering, recommendation_engine
+scipy>=1.14.0  # Used in: similarity_tree_service (hierarchical clustering linkage/fcluster); numpy 2.x compatible
 # TESTING: Upgraded to pandas 3.x - major version change, removed deprecated functionality
 # Requires Python 3.11+, upgrade path: pandas 2.3 -> 3.0
 # See pandas 3.0 migration guide: https://pandas.pydata.org/docs/whatsnew/v3.0.0.html

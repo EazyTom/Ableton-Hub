@@ -605,6 +605,22 @@ class ProjectGrid(QWidget):
         """Get the list of selected project IDs."""
         return list(self._selected_ids)
 
+    def select_project_by_id(self, project_id: int) -> bool:
+        """Select a project if it is present in the current loaded set."""
+        if not any(p.id == project_id for p in self._projects):
+            return False
+        if self._view_mode == "grid" and project_id in self._cards:
+            self._on_card_clicked(project_id)
+            return True
+        if self._view_mode == "list":
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, 0)
+                if item and item.data(Qt.ItemDataRole.UserRole) == project_id:
+                    self.table.selectRow(row)
+                    self.project_selected.emit(project_id)
+                    return True
+        return False
+
     def _create_and_add_to_collection(self, project_id: int) -> None:
         """Create a new collection and add the project to it."""
         from ..dialogs.create_collection import CreateCollectionDialog

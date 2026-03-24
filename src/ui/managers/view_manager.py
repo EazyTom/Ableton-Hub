@@ -24,6 +24,7 @@ class ViewManager(QObject):
     VIEW_SIMILARITIES = "similarities"
     VIEW_PROPERTIES = "properties"
     VIEW_FIND_EXPORTS = "find_exports"
+    VIEW_SIMILARITY_TREE = "similarity_tree"
 
     def __init__(self, content_stack: QStackedWidget, parent: QObject | None = None):
         """Initialize the view manager.

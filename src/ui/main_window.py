@@ -36,6 +36,7 @@ from .widgets.location_panel import LocationPanel
 from .widgets.project_grid import ProjectGrid
 from .widgets.project_properties_view import ProjectPropertiesView
 from .widgets.sidebar import Sidebar
+from .widgets.similarity_tree_view import SimilarityTreeView
 
 
 class MainWindow(QMainWindow):
@@ -299,6 +300,14 @@ class MainWindow(QMainWindow):
         self.find_audio_exports_view.back_requested.connect(self._on_find_exports_back)
         self.content_stack.addWidget(self.find_audio_exports_view)
 
+        # Similarity Cluster Tree (index 8)
+        self.similarity_tree_view = SimilarityTreeView()
+        self.similarity_tree_view.open_in_live_requested.connect(self._on_project_open_in_live)
+        self.similarity_tree_view.show_in_library_requested.connect(
+            self._on_similarity_show_in_library
+        )
+        self.content_stack.addWidget(self.similarity_tree_view)
+
         self.splitter.addWidget(self.content_stack)
 
         # Initialize ViewManager and register all views
@@ -316,6 +325,9 @@ class MainWindow(QMainWindow):
         )
         self.view_manager.register_view(
             ViewManager.VIEW_FIND_EXPORTS, self.find_audio_exports_view, 7
+        )
+        self.view_manager.register_view(
+            ViewManager.VIEW_SIMILARITY_TREE, self.similarity_tree_view, 8
         )
 
         # Set initial sizes
@@ -1533,6 +1545,10 @@ class MainWindow(QMainWindow):
         if self.view_manager.get_current_view() == ViewManager.VIEW_FIND_EXPORTS:
             self.find_audio_exports_view.cleanup()
 
+        # Stop similarity tree worker when leaving that view
+        if self.view_manager.get_current_view() == ViewManager.VIEW_SIMILARITY_TREE:
+            self.similarity_tree_view.cleanup()
+
         # Reset missing projects view when navigating away from projects view
         if view != "projects" and self._show_missing_projects:
             self._show_missing_projects = False
@@ -1564,6 +1580,8 @@ class MainWindow(QMainWindow):
             selected_ids = self.project_grid.get_selected_ids()
             if selected_ids and len(selected_ids) == 1:
                 self.recommendations_panel.set_project(selected_ids[0])
+        elif view == "similarity_tree":
+            self.view_manager.switch_to_view(ViewManager.VIEW_SIMILARITY_TREE)
         elif view == "new_collection":
             # Show new collection dialog
             self._on_new_collection()
@@ -2065,6 +2083,20 @@ class MainWindow(QMainWindow):
                 )
         finally:
             session.close()
+
+    def _on_similarity_show_in_library(self, project_id: int) -> None:
+        """Switch to All Projects and select the project when it is loaded."""
+        self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
+        self._load_projects()
+
+        def _select() -> None:
+            if not self.project_grid.select_project_by_id(project_id):
+                self.statusBar().showMessage(
+                    "Project is not in the current list — clear filters or pick All locations.",
+                    6000,
+                )
+
+        QTimer.singleShot(200, _select)
 
     def _show_no_live_installation_dialog(self) -> None:
         """Show dialog when no Live installation is configured, with actionable buttons."""

@@ -288,6 +288,11 @@ class Sidebar(QWidget):
         self._nav_items["similarities"] = similarities
         nav_section.add_item(similarities)
 
+        similarity_tree = SidebarItem("Similarity Tree", "🌳")
+        similarity_tree.clicked.connect(lambda: self._on_nav_click("similarity_tree"))
+        self._nav_items["similarity_tree"] = similarity_tree
+        nav_section.add_item(similarity_tree)
+
         favorites = SidebarItem("Favorites", "💎")
         favorites.clicked.connect(lambda: self._on_nav_click("favorites"))
         self._nav_items["favorites"] = favorites
