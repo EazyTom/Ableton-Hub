@@ -85,3 +85,27 @@ None.
 - **quickstart.md**: Manual validation steps for developers.
 
 Agent context updated via `.specify/scripts/powershell/update-agent-context.ps1 -AgentType cursor-agent`.
+
+## Phase 8 (proposed): Richer branch visualization
+
+**Goal**: Make cluster hierarchy easier to read—clear parent/child relationships, optional **per-branch color**, and stronger **connector** affordances than the default `QTreeWidget` appearance, without changing clustering semantics.
+
+**Current baseline**: [`similarity_tree_view.py`](../../src/ui/widgets/similarity_tree_view.py) uses `QTreeWidget` with one column and default style-driven branch drawing (often subtle on dark themes).
+
+### Direction (incremental)
+
+| Tier | Approach | Outcome | Effort |
+|------|-----------|---------|--------|
+| **A — Styling** | Tune `QTreeView`/`QTreeWidget`: `setIndentation()`, `setAnimated(True)`, `setAlternatingRowColors(True)`, targeted **QSS** for `QTreeView::branch` / item padding so native lines and expanders read clearly on `AbletonTheme`. | Better collapse/expand and baseline “tree” look; no new deps. | Low |
+| **B — Per-branch color** | When building items in `_populate_tree`, assign a **stable color index** per top-level group (hash of label or order), store in `UserRole`, apply `QBrush` via `setForeground` / light `setBackground` on the subtree, or a **narrow left accent** via delegate. | Distinct colored “ribbons” per major branch; still `QTreeWidget`. | Low–medium |
+| **C — Custom delegate** | Subclass `QStyledItemDelegate` (or `QAbstractItemDelegate`) to paint **vertical accent bars**, thicker guides, or depth-based opacity while reusing the same model data. | Maximum control while keeping the list/tree UX. | Medium |
+| **D — Model/view refactor** | Replace `QTreeWidget` with `QTreeView` + `QAbstractItemModel` wrapping `SimilarityGroupNode` (or a thin adapter). | Easier testing, cleaner separation for custom painting and future columns. | Medium–high |
+| **E — Dendrogram pane (optional)** | Second panel: `scipy.cluster.hierarchy.dendrogram` via **Matplotlib** `FigureCanvasQTAgg` or **pyqtgraph** using the existing linkage matrix. | True merge-tree geometry (“biology style”); complements—not replaces—the expandable list. | Medium (new dep if Matplotlib not already present) |
+
+**Modules (“best Python stack”)**: For this feature, **PyQt6’s built-in tree + delegate** is the right default—no extra graph library is required for colored branches or clearer connectors. **SciPy** already provides linkage for an optional dendrogram; add **matplotlib** (or pyqtgraph) only if you want a dedicated dendrogram view. **NetworkX** / force-directed layouts are usually unnecessary for a strict hierarchy.
+
+**Risks**: Heavy QSS can fight platform styles; full custom paint (Tier C) needs HiDPI checks. Performance stays acceptable if painting stays per-row O(1).
+
+**Spec touch**: If implemented, add a short UX note under User Story 1/2 (visual grouping cues) and optional SC for “users can distinguish branches at a glance.”
+
+**Related doc**: See [research.md §7](./research.md) for rationale and alternatives.

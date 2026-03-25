@@ -11,12 +11,13 @@
 - Clustering uses this broad set of indexed metadata, while **tempo proximity and plugin/device overlap remain the strongest weighted factors** (FR-002, FR-003).
 - “Strongest” similarity means tempo proximity outweighs plugin/device overlap when the model must rank or split groups, ahead of other metadata dimensions (see functional requirements).
 - The primary surface is a dedicated view or panel in the desktop app where the tree lives; exact entry point (menu vs. sidebar) is a product detail left to design during planning.
+- Richer branch visualization (styling, per-branch color) is described in implementation terms in [plan.md](./plan.md) (Phase 8); it does not change clustering weights.
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Open the similarity tree (Priority: P1)
 
-A producer opens a view that shows their projects organized as a branching tree. Each branch represents a group of projects that are more like each other than like projects in other branches, using only information already stored about each project. Tempo closeness is treated as the strongest signal; overlap of plugins and devices is the next most important. The producer can see the structure at a glance without running a separate similarity search for each project.
+A producer opens a view that shows their projects organized as a branching tree. Each branch represents a group of projects that are more like each other than like projects in other branches, using only information already stored about each project. Tempo closeness is treated as the strongest signal; overlap of plugins and devices is the next most important. The producer can see the structure at a glance without running a separate similarity search for each project. The view uses clear **visual hierarchy** (indentation, expand/collapse animation, readable connector styling on dark themes) and **distinct color cues per top-level branch** so multiple roots are easy to tell apart without reading labels alone.
 
 **Why this priority**: Without the tree, the feature delivers no value; this is the core outcome.
 
@@ -31,7 +32,7 @@ A producer opens a view that shows their projects organized as a branching tree.
 
 ### User Story 2 - Explore branches and members (Priority: P2)
 
-The producer expands and collapses branches to see which projects sit in each group. Each group is understandable from labels or short summaries: **tempo band and shared tools remain prominent**, and summaries **may also reflect other similarity dimensions** when they are present and meaningful (for example shared key/scale, structural traits, automation, or marker activity). When some dimensions are missing for many members, the UI **clearly indicates** partial or missing metadata rather than implying certainty.
+The producer expands and collapses branches to see which projects sit in each group. Each group is understandable from labels or short summaries: **tempo band and shared tools remain prominent**, and summaries **may also reflect other similarity dimensions** when they are present and meaningful (for example shared key/scale, structural traits, automation, or marker activity). When some dimensions are missing for many members, the UI **clearly indicates** partial or missing metadata rather than implying certainty. **Visual cues** (per-branch tint and a left accent stripe) reinforce which subtree a row belongs to, including nested projects under the same top-level group.
 
 **Why this priority**: Browsing the tree is how users act on the grouping.
 
@@ -76,6 +77,7 @@ The producer limits the tree to a subset of their library (for example projects 
 - **FR-003**: The grouping MUST incorporate plugin and device overlap as secondary signals so that projects with common tools cluster when tempos are compatible.
 - **FR-008**: Group summaries MUST surface human-readable information beyond raw identifiers; they MUST remain honest when metadata is partial (for example missing tempo or sparse feature vectors), consistent with User Story 2.
 - **FR-004**: The system MUST present groups as a hierarchical tree with branches and child projects that users can expand and collapse.
+- **FR-009**: The tree presentation SHOULD use non-text cues (for example indentation, branch styling, and consistent per–top-level-group color) so users can distinguish major branches at a glance on typical display themes, without changing clustering logic.
 - **FR-005**: The system MUST not modify, move, or delete user project files as part of computing or displaying the tree.
 - **FR-006**: When metadata is insufficient to form multiple meaningful groups, the system MUST show a clear message or simplified layout instead of an empty or broken view.
 - **FR-007**: Users MUST be able to open at least one project from a branch (for example via existing open or reveal actions) without leaving the app.
@@ -95,3 +97,4 @@ The producer limits the tree to a subset of their library (for example projects 
 - **SC-003**: In structured review sessions, reviewers agree that very different tempos usually produce separate branches even when plugins overlap, and similar tempos more often land in the same branch when plugins also overlap (measured with a short fixed checklist of example pairs).
 - **SC-004**: If grouping fails or data is missing, 100% of such cases show a user-visible explanation or fallback layout rather than a blank screen or silent failure.
 - **SC-005** *(qualitative)*: In review, users can name at least one **non-tempo** similarity cue from a group summary or tooltip when that dimension is present and shared across a majority of members in that group (for example key, automation-heavy, or typical track counts).
+- **SC-006** *(qualitative)*: In structured review with at least three top-level groups, participants report they can tell which major branch a row belongs to using color or layout cues without relying on the row text alone.

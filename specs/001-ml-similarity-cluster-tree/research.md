@@ -50,3 +50,27 @@
 **Decision**: New widget using `QTreeWidget` or `QAbstractItemModel` + `QTreeView`; labels from `ClusterInfo`-style summaries (`suggested_label` pattern in `ml_clustering.py`). Context actions delegate to existing **open project** / **reveal** flows (FR-007).
 
 **Rationale**: Matches existing Hub patterns and minimizes new navigation design in MVP.
+
+## 7. Tree visualization: connectors, colors, and “real” branches
+
+**Problem**: Users want **visible connecting branches** and/or **color-coded subtrees** so the hierarchy reads faster than a flat-looking list. The current implementation uses `QTreeWidget`, which relies on the active Qt style and stylesheet for branch lines; on dark Fusion themes those lines can be **low contrast**.
+
+**Decision (for future work)**: Prefer **incremental** improvements before replacing the control:
+
+1. **Style tuning** — `setIndentation`, `setAnimated`, alternating rows, and `QTreeView::branch` QSS so native expanders and connectors match `AbletonTheme` (`border`, `text_secondary`).
+2. **Per-branch color** — Assign a **stable palette index** per top-level group (or per root `SimilarityGroupNode`), apply `foreground`/`background` or a **delegate-drawn left accent** on the subtree. No change to clustering output.
+3. **Custom delegate** — `QStyledItemDelegate.paint` for a 2–4px colored strip + optional rounded row background; keeps keyboard accessibility and selection behavior.
+4. **Optional dendrogram** — The service already computes **linkage**; `scipy.cluster.hierarchy.dendrogram` (Matplotlib) or pyqtgraph can show a **true merge diagram** in a second widget. Good for power users; different interaction model than expand/collapse.
+
+**Python modules**:
+
+- **PyQt6** (`QTreeView`/`QTreeWidget`, `QStyledItemDelegate`) — **primary**; best fit for app-integrated tree.
+- **SciPy** — already used; supports dendrogram visualization inputs.
+- **Matplotlib** (`FigureCanvasQTAgg`) — embed dendrogram if product wants scientific layout; adds dependency weight.
+- **pyqtgraph** — fast plots; optional alternative to Matplotlib for dendrogram-like views.
+- **NetworkX + graph layout** — generally **not** needed for a strict tree; avoid unless moving to free-form graphs.
+
+**Alternatives considered**:
+
+- Replace tree with **fully custom `QWidget` + `QPainter`** graph — **high effort**; reserve for if Qt tree cannot meet design.
+- **Web view + D3** — **rejected** for MVP (stack, packaging, IPC).

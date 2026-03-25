@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -24,6 +25,7 @@ from ...services.similarity_tree_models import SimilarityGroupNode, SimilarityTr
 from ...utils.logging import get_logger
 from ..theme import AbletonTheme
 from ..workers.similarity_tree_worker import SimilarityTreeWorker
+from .similarity_tree_item_delegate import SimilarityTreeItemDelegate
 
 
 class SimilarityTreeView(QWidget):
@@ -93,6 +95,8 @@ class SimilarityTreeView(QWidget):
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
         self.tree.itemExpanded.connect(self._on_item_expanded)
+        self._apply_similarity_tree_visuals()
+        self.tree.setItemDelegateForColumn(0, SimilarityTreeItemDelegate(self.tree, self.tree))
         stack_layout.addWidget(self.tree)
 
         layout.addWidget(self._stack, stretch=1)
@@ -105,6 +109,44 @@ class SimilarityTreeView(QWidget):
         help_lbl.setWordWrap(True)
         help_lbl.setStyleSheet(f"color: {AbletonTheme.COLORS['text_secondary']}; font-size: 11px;")
         layout.addWidget(help_lbl)
+
+    def _apply_similarity_tree_visuals(self) -> None:
+        """Indentation, animation, alternating rows, theme-aware QSS for branch lines (Phase 8)."""
+        t = self.tree
+        t.setIndentation(24)
+        t.setAnimated(True)
+        t.setAlternatingRowColors(True)
+        t.setRootIsDecorated(True)
+        c = AbletonTheme.COLORS
+        t.setStyleSheet(
+            f"""
+            QTreeWidget {{
+                background-color: {c["surface"]};
+                color: {c["text_primary"]};
+                alternate-background-color: {c["background_alt"]};
+                border: 1px solid {c["border"]};
+                border-radius: 4px;
+                outline: none;
+                show-decoration-selected: 1;
+            }}
+            QTreeWidget::item {{
+                padding: 3px 6px;
+            }}
+            QTreeWidget::item:selected {{
+                background-color: {c["accent"]};
+                color: {c["text_on_accent"]};
+            }}
+            QTreeWidget::item:hover:!selected {{
+                background-color: {c["surface_hover"]};
+            }}
+            QTreeView::branch:has-siblings:!adjoins-item {{
+                border-left: 1px solid {c["border_light"]};
+            }}
+            QTreeView::branch:has-siblings:adjoins-item {{
+                border-left: 1px solid {c["border_light"]};
+            }}
+            """
+        )
 
     def _populate_locations(self) -> None:
         """Fill location combo from database."""
@@ -186,9 +228,32 @@ class SimilarityTreeView(QWidget):
     def _populate_tree(self, result: SimilarityTreeResult) -> None:
         self.tree.clear()
 
-        def add_node(parent_item: QTreeWidgetItem | None, node: SimilarityGroupNode) -> QTreeWidgetItem:
-            item = QTreeWidgetItem([node.label])
-            item.setData(0, Qt.ItemDataRole.UserRole, {"kind": node.kind, "pid": node.project_id})
+        def add_node(
+            parent_item: QTreeWidgetItem | None, node: SimilarityGroupNode, branch_index: int
+        ) -> QTreeWidgetItem:
+            if node.kind == "group":
+                item = QTreeWidgetItem([node.label])
+            else:
+                pid = node.project_id
+                meta = result.projects.get(str(pid), {}) if pid else {}
+                display_name = str(meta.get("display_name") or node.label)
+                pct = meta.get("similarity_to_branch_percent")
+                if pct is None:
+                    pct = node.similarity_to_branch_percent
+                if pct is not None:
+                    row_text = f"{pct}% — {display_name}"
+                else:
+                    row_text = f"— — {display_name}"
+                item = QTreeWidgetItem([row_text])
+            item.setData(
+                0,
+                Qt.ItemDataRole.UserRole,
+                {"kind": node.kind, "pid": node.project_id, "branch_index": branch_index},
+            )
+            bc = SimilarityTreeItemDelegate.branch_color(branch_index)
+            bg = QColor(bc)
+            bg.setAlpha(48)
+            item.setBackground(0, QBrush(bg))
             if node.kind == "group":
                 tip_parts = [node.label]
                 tip_parts.extend(node.breakdown_lines)
@@ -198,13 +263,24 @@ class SimilarityTreeView(QWidget):
             else:
                 pid = node.project_id
                 meta = result.projects.get(str(pid), {}) if pid else {}
+                display_name = str(meta.get("display_name") or node.label)
                 tempo = meta.get("tempo")
-                tip = f"{node.label}"
+                pct = meta.get("similarity_to_branch_percent")
+                if pct is None:
+                    pct = node.similarity_to_branch_percent
+                tip_lines = [display_name]
+                if pct is not None:
+                    tip_lines.append(f"Similarity to branch: {pct}%")
+                else:
+                    tip_lines.append("Similarity to branch: unavailable")
                 if tempo is not None:
-                    tip += f"\nTempo: {tempo} BPM"
+                    tip_lines.append(f"Tempo: {tempo} BPM")
                 elif result.warnings:
-                    tip += "\nTempo may be missing."
-                item.setToolTip(0, tip)
+                    tip_lines.append("Tempo may be missing.")
+                extra = meta.get("similarity_tooltip")
+                if extra:
+                    tip_lines.append(extra)
+                item.setToolTip(0, "\n".join(tip_lines))
 
             if parent_item is None:
                 self.tree.addTopLevelItem(item)
@@ -212,11 +288,11 @@ class SimilarityTreeView(QWidget):
                 parent_item.addChild(item)
 
             for ch in node.children:
-                add_node(item, ch)
+                add_node(item, ch, branch_index)
             return item
 
-        for root in result.root_nodes:
-            add_node(None, root)
+        for branch_i, root in enumerate(result.root_nodes):
+            add_node(None, root, branch_i)
 
         self.tree.expandToDepth(2)
 

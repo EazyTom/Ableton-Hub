@@ -8,6 +8,7 @@ from datetime import datetime, UTC
 from typing import Any
 
 from . import ml_clustering as _ml_clustering
+from .branch_member_ordering import apply_branch_similarity_ordering
 from .ml_clustering import (
     MLClusteringService,
     build_metadata_feature_matrix,
@@ -209,7 +210,7 @@ def build_similarity_tree(
             label=str(p0.get("name", f"Project {pid}")),
             project_id=pid,
         )
-        return SimilarityTreeResult(
+        single_result = SimilarityTreeResult(
             root_nodes=[
                 SimilarityGroupNode(
                     kind="group",
@@ -225,6 +226,8 @@ def build_similarity_tree(
             computed_at=datetime.now(UTC),
             parameters=params,
         )
+        apply_branch_similarity_ordering(single_result, project_dicts)
+        return single_result
 
     if not _ml_clustering._check_sklearn():
         return SimilarityTreeResult(
@@ -272,10 +275,12 @@ def build_similarity_tree(
 
     root_nodes = cluster_labels_to_group_nodes(project_dicts, project_ids, labels)
 
-    return SimilarityTreeResult(
+    clustered = SimilarityTreeResult(
         root_nodes=root_nodes,
         projects=projects_map,
         warnings=warnings,
         computed_at=datetime.now(UTC),
         parameters=params,
     )
+    apply_branch_similarity_ordering(clustered, project_dicts)
+    return clustered

@@ -24,6 +24,9 @@ class SimilarityGroupNode:
     breakdown_lines: list[str] = field(default_factory=list)
     """Extra summary lines for group nodes (tooltips / detail)."""
 
+    similarity_to_branch_percent: int | None = None
+    """When kind is project: similarity to branch medoid (0–100), or None if unavailable."""
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize for JSON / contract interchange."""
         d: dict[str, Any] = {
@@ -33,6 +36,8 @@ class SimilarityGroupNode:
         }
         if self.project_id is not None:
             d["project_id"] = self.project_id
+        if self.similarity_to_branch_percent is not None:
+            d["similarity_to_branch_percent"] = self.similarity_to_branch_percent
         if self.breakdown_lines:
             d["breakdown_lines"] = list(self.breakdown_lines)
         if self.children:
@@ -44,7 +49,7 @@ class SimilarityGroupNode:
 class SimilarityTreeResult:
     """Worker → UI payload for the similarity tree view."""
 
-    version: str = "1.1"
+    version: str = "1.2"
     root_nodes: list[SimilarityGroupNode] = field(default_factory=list)
     projects: dict[str, dict[str, Any]] = field(default_factory=dict)
     """Map project_id (str) → display fields."""

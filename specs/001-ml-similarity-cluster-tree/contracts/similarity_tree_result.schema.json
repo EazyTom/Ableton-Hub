@@ -8,7 +8,7 @@
   "properties": {
     "version": {
       "type": "string",
-      "description": "Schema version for forward compatibility.",
+      "description": "Schema version for forward compatibility (1.2+ adds optional branch similarity fields).",
       "pattern": "^1\\."
     },
     "computed_at": {
@@ -31,7 +31,15 @@
         "required": ["display_name"],
         "properties": {
           "display_name": { "type": "string" },
-          "tempo": { "type": ["number", "null"] }
+          "tempo": { "type": ["number", "null"] },
+          "similarity_to_branch_percent": {
+            "type": ["integer", "null"],
+            "description": "Similarity of this project to its branch medoid (0–100)."
+          },
+          "similarity_tooltip": {
+            "type": "string",
+            "description": "Optional explanation line(s) from SimilarityAnalyzer."
+          }
         },
         "additionalProperties": true
       }
@@ -60,6 +68,10 @@
         "project_id": {
           "type": "integer",
           "description": "Set when kind is project."
+        },
+        "similarity_to_branch_percent": {
+          "type": ["integer", "null"],
+          "description": "When kind is project: similarity to branch medoid (0–100)."
         },
         "children": {
           "type": "array",

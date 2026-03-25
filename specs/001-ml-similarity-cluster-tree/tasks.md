@@ -121,12 +121,28 @@ description: "Task list for Similarity Cluster Tree View"
 
 ---
 
+## Phase 8: Richer branch visualization (plan Phase 8)
+
+**Purpose**: Clearer hierarchy affordances—connectors, indentation, and optional per-branch color—without changing clustering semantics. See `specs/001-ml-similarity-cluster-tree/plan.md` (Phase 8) and `research.md` §7.
+
+**Independent Test**: Open Similarity Tree with ≥3 top-level groups; branch lines/readability improve on dark theme; (if T028–T029 done) each major subtree has a distinct color cue.
+
+- [x] T027 In `src/ui/widgets/similarity_tree_view.py`, tune the `QTreeWidget`: set sensible `setIndentation`, `setAnimated(True)`, `setAlternatingRowColors(True)`, and add **QSS** for `QTreeView` / `QTreeView::branch` (and item padding) so native expanders and connector lines read clearly against `AbletonTheme` in `src/ui/theme.py` (**Tier A**).
+- [x] T028 In `src/ui/widgets/similarity_tree_view.py` `_populate_tree`, assign a **stable per–top-level-branch** color index (order- or hash-based), store branch id in `Qt.ItemDataRole.UserRole`, and apply `setForeground` / light `setBackground` across each root’s subtree (groups + projects) using a small fixed palette (**Tier B**).
+- [x] T029 Add `src/ui/widgets/similarity_tree_item_delegate.py` with a `QStyledItemDelegate` that paints a **narrow left accent** (and optional row tint) using branch color from item `UserRole`; register with `setItemDelegateForColumn(0, ...)` on the tree (**Tier C**). Keep selection/focus accessible (contrast checks).
+- [ ] T030 *(Optional / defer)* Refactor to `QTreeView` + `QAbstractItemModel` adapter wrapping `SimilarityGroupNode` under `src/ui/widgets/` when custom painting or extra columns need cleaner separation (**Tier D**).
+- [ ] T031 *(Optional)* Add an optional **dendrogram** pane: ensure linkage is available from `src/services/similarity_tree_service.py` / `SimilarityTreeResult` (parameters or documented field), embed `scipy.cluster.hierarchy.dendrogram` via Matplotlib `FigureCanvasQTAgg` (add `matplotlib` to `requirements.txt` if not already present) (**Tier E**).
+- [x] T032 Amend `specs/001-ml-similarity-cluster-tree/spec.md` (US1/US2 visual grouping cues; optional measurable SC for “distinguish branches at a glance”) to match implemented Tier A–C; cross-link `plan.md` Phase 8.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
 
-- **Phase 1** → **Phase 2** → **Phase 3 (US1)** → **Phase 4 (US2)** → **Phase 5 (US3)** → **Phase 6**
+- **Phase 1** → **Phase 2** → **Phase 3 (US1)** → **Phase 4 (US2)** → **Phase 5 (US3)** → **Phase 6** → **Phase 7** → **Phase 8**
 - **US2** and **US3** assume **US1** view/worker shell exists
+- **Phase 8** assumes Phase 3 view exists; **T028–T029** depend on **T027** (shared tree instance / styling baseline)
 
 ### User Story Dependencies
 
@@ -138,6 +154,8 @@ description: "Task list for Similarity Cluster Tree View"
 
 - **T007** can run in parallel with T004–T006 **only if** tests target stable function signatures agreed in T002–T003; safer to run T007 after T002–T005
 - **T010** and **T012** [P] potential: `view_manager.py` vs `sidebar.py` — different files after `similarity_tree_view.py` exists
+- **T032** can run in parallel with **T031** after visualization behavior (T027–T029) is settled
+- **T030** and **T031** are optional tracks; do not block T027–T029 or T032
 
 ---
 
@@ -166,6 +184,7 @@ Task: "T012 [US1] sidebar.py nav item"
 2. Add US2 (labels/banners)
 3. Add US3 (scope/refresh)
 4. Polish + FR-007 menu
+5. Phase 8 (T027+) for branch styling/colors; optional T030–T031 afterward
 
 ---
 
