@@ -92,6 +92,14 @@ class UIConfig:
 
 
 @dataclass
+class LiveConfig:
+    """Ableton Live installation detection configuration."""
+
+    scan_default_install_locations: bool = True
+    scan_extended_install_locations: bool = True
+
+
+@dataclass
 class Config:
     """Main configuration container."""
 
@@ -101,8 +109,9 @@ class Config:
     link: LinkConfig = field(default_factory=LinkConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     ui: UIConfig = field(default_factory=UIConfig)
+    live: LiveConfig = field(default_factory=LiveConfig)
     first_run: bool = True
-    version: str = "1.0.10"
+    version: str = "1.0.11"
 
 
 class ConfigManager:
@@ -186,6 +195,7 @@ class ConfigManager:
             "link": asdict(config.link),
             "logging": asdict(config.logging),
             "ui": asdict(config.ui),
+            "live": asdict(config.live),
             "first_run": config.first_run,
             "version": config.version,
         }
@@ -199,6 +209,7 @@ class ConfigManager:
             link=LinkConfig(**data.get("link", {})),
             logging=LoggingConfig(**data.get("logging", {})),
             ui=UIConfig(**data.get("ui", {})),
+            live=LiveConfig(**data.get("live", {})),
             first_run=data.get("first_run", True),
             version=data.get("version", "1.0.1"),
         )

@@ -313,30 +313,29 @@ class Project(Base):
         """Extract major version number from ableton_version string.
 
         Returns:
-            Major version number (9, 10, 11, 12) or None if not available.
+            Major version number (9+) or None if not available.
         """
-        if not self.ableton_version:
-            return None
+        from ..utils.live_version import parse_live_major_version
 
-        # Parse version string like "Ableton Live 11.3.10" or "Live 12.0.5"
-        match = re.search(r"Live\s+(\d+)", self.ableton_version)
-        if match:
-            try:
-                major_version = int(match.group(1))
-                if 9 <= major_version <= 12:
-                    return major_version
-            except (ValueError, TypeError):
-                pass
-        return None
+        return parse_live_major_version(self.ableton_version)
 
     def get_live_version_display(self) -> str | None:
-        """Get display string for Live version (v9, v10, v11, v12).
+        """Get display string for Live version (v9, v10, v13, etc.).
 
         Returns:
             Version string like "v11" or None if not available.
         """
         major = self.get_live_version_major()
         return f"v{major}" if major else None
+
+    def get_live_version_full_display(self) -> str | None:
+        """Get display string including patch/pre-release (e.g. v12.4a1)."""
+        from ..utils.live_version import extract_live_version_token
+
+        token = extract_live_version_token(self.ableton_version)
+        if token:
+            return f"v{token}"
+        return self.get_live_version_display()
 
     def get_sample_references_list(self) -> list[str]:
         """Get sample references as a Python list."""
@@ -485,30 +484,14 @@ class LiveInstallation(Base):
         """Extract major version number from version string.
 
         Handles full version strings including hotfix and beta versions.
-        Examples: "11.3.13" -> 11, "12.0.5" -> 12, "12.0.5b1" -> 12, "12b1" -> 12
+        Examples: "11.3.13" -> 11, "12.0.5" -> 12, "12.0.5b1" -> 12, "13.0.1" -> 13
 
         Returns:
-            Major version number (9, 10, 11, 12) or None if not available.
+            Major version number (9+) or None if not available.
         """
-        if not self.version:
-            return None
+        from ..utils.live_version import parse_live_major_version
 
-        # Parse version string like "11.3.13", "12.0.5", "12.0.5b1", or "12b1"
-        # First, remove any beta/rc suffixes (e.g., "b1", "beta1", "rc2") from the first part
-        # Split by dot to get parts
-        version_parts = self.version.split(".")
-        if version_parts:
-            try:
-                # Get the first part and remove any beta suffix (e.g., "12b1" -> "12")
-                first_part = version_parts[0]
-                # Remove any trailing letters and digits (beta suffixes)
-                major_version_str = re.sub(r"[a-zA-Z].*$", "", first_part)
-                major_version = int(major_version_str)
-                if 9 <= major_version <= 12:
-                    return major_version
-            except (ValueError, TypeError):
-                pass
-        return None
+        return parse_live_major_version(self.version)
 
     def __repr__(self) -> str:
         return f"<LiveInstallation(id={self.id}, name='{self.name}', version='{self.version}')>"

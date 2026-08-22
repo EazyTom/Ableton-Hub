@@ -9,7 +9,7 @@ One-stop reference for AI agents working on this codebase. Read this before maki
 | Item | Value |
 |------|-------|
 | **Tech stack** | Python 3.11+, PyQt6 6.10+, SQLAlchemy 2.0+, SQLite with FTS5 |
-| **Current version** | v1.0.10 |
+| **Current version** | v1.0.11 |
 | **Entry point** | `src/main.py` → `main()` |
 | **App setup** | `src/app.py` → `AbletonHubApp` |
 | **Config** | Dataclasses in `src/config.py`; JSON persistence via `ConfigManager` |
@@ -246,6 +246,10 @@ project.plugins = json.dumps(metadata.plugins)  # Double-encodes; breaks Jaccard
 | Audio playback | `src/services/audio_player.py` | Singleton; WAV, MP3, FLAC, etc. |
 | Find Audio Exports | `src/ui/widgets/find_audio_exports_view.py`, `src/ui/workers/audio_scan_worker.py` | Location-scoped export discovery and mapping; View menu "Show Unlinked Exports" loads unmapped exports across all locations via `set_all_locations()`; column headers toggle sort order when clicked (Name, Size, Path, Modified); **Associate to Project** dropdown always loads projects from ALL locations so users can link exports to projects from other locations (e.g. when a location has no projects) |
 | Similarity | `src/services/similarity_analyzer.py`, `ml_feature_extractor.py`, `ml_clustering.py` | Jaccard, cosine, ML |
+| Plugin analytics | `src/services/plugin_analytics.py`, `src/ui/widgets/plugin_dashboard_view.py` | Plugin frequency dashboard |
+| ML clusters UI | `src/ui/widgets/cluster_view.py`, `src/ui/workers/cluster_worker.py` | K-means cluster visualization |
+| Live version utils | `src/utils/live_version.py` | Shared Live 9+/alpha version parsing and sort keys |
+| Live detection | `src/services/live_detector.py`, `LiveConfig` in `config.py` | Scans default install folders (Windows: `%ProgramData%`/`Program Files`/`Ableton`; macOS: `/Applications`, `~/Applications`); optional extended paths; Settings → Live tab |
 | Soundcheck | `src/services/soundcheck_service.py` | `SoundcheckService`; plays startup audio with fade; 440Hz fallback; `UIConfig.soundcheck_at_startup`, `soundcheck_path` |
 | Update Checker | `src/services/update_checker.py`, `src/ui/dialogs/update_dialog.py` | Queries GitHub releases; `UIConfig.check_for_updates_at_startup`; `UpdateDialog` shows download link |
 | FTUE | `src/ui/dialogs/ftue_dialog.py` | Renders `FTUE.md` as HTML on first launch |
@@ -319,7 +323,7 @@ Use PowerShell or Command Prompt — no bash/Linux commands.
 
 - Read-only; never modify .als files
 - Gzipped XML; parser extracts plugins, devices, tempo, key, arrangement length, timeline markers
-- Handles Live 9.x–12.x; uses lxml if available, else stdlib
+- Handles Live 9.x+; uses lxml if available, else stdlib
 - `arrangement_length` = arrangement timeline clips only; `furthest_sample_end` = session clips
 - Timeline markers via dawtool (external)
 

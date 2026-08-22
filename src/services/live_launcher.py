@@ -13,7 +13,7 @@ class LiveLauncher:
 
     def __init__(self):
         self.logger = get_logger(__name__)
-        self._detector = LiveDetector()
+        self._detector = LiveDetector.from_config()
 
     def get_available_versions(self) -> list[LiveVersion]:
         """Get all available Live versions."""

@@ -25,7 +25,7 @@ class LiveController(QObject):
         """
         super().__init__(parent)
         self.logger = get_logger(__name__)
-        self._detector = LiveDetector()
+        self._detector = LiveDetector.from_config()
 
     def auto_detect_installations(self) -> list:
         """Auto-detect Ableton Live installations.

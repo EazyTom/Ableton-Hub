@@ -12,27 +12,119 @@ from ..utils.logging import get_logger
 class LiveVersion:
     """Represents an installed Ableton Live version."""
 
-    version: str  # e.g., "11.3.13"
+    version: str  # e.g., "11.3.13", "12.4a1", "13.0.1"
     path: Path  # Path to Live executable
     build: str | None = None  # Build number if available
     is_suite: bool = False  # True if Live Suite, False if Standard/Intro
+    is_prerelease: bool = False  # True for alpha/beta/rc builds
+
+    def __post_init__(self) -> None:
+        from ..utils.live_version import is_prerelease_version
+
+        if not self.is_prerelease:
+            self.is_prerelease = is_prerelease_version(self.version)
 
     def __str__(self) -> str:
         suite_str = " Suite" if self.is_suite else ""
-        return f"Live {self.version}{suite_str}"
+        pre_str = " (Pre-release)" if self.is_prerelease else ""
+        return f"Live {self.version}{suite_str}{pre_str}"
 
 
 class LiveDetector:
     """Detects installed Ableton Live versions on the system."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        *,
+        scan_default_locations: bool = True,
+        scan_extended_locations: bool = True,
+    ):
         self.logger = get_logger(__name__)
+        self._scan_default_locations = scan_default_locations
+        self._scan_extended_locations = scan_extended_locations
         self._versions: list[LiveVersion] = []
         self._scan()
 
+    @classmethod
+    def from_config(cls, config=None) -> "LiveDetector":
+        """Build a detector using application Live detection settings."""
+        if config is None:
+            from ..config import get_config
+
+            config = get_config()
+        return cls(
+            scan_default_locations=config.live.scan_default_install_locations,
+            scan_extended_locations=config.live.scan_extended_install_locations,
+        )
+
+    @staticmethod
+    def get_default_windows_base_paths() -> list[Path]:
+        """Standard Windows folders that contain ``Ableton\\Live *`` installs."""
+        return [
+            Path(os.environ.get("ProgramData", "C:\\ProgramData")),
+            Path(os.environ.get("ProgramFiles", "C:\\Program Files")),
+            Path(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)")),
+        ]
+
+    @staticmethod
+    def get_extended_windows_base_paths() -> list[Path]:
+        """Additional Windows folders that may contain Ableton installs."""
+        return [
+            Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")),
+            Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")),
+        ]
+
+    @staticmethod
+    def get_default_macos_app_paths() -> list[Path]:
+        """Standard macOS application folders for ``Live *.app`` bundles."""
+        return [Path("/Applications"), Path.home() / "Applications"]
+
+    @staticmethod
+    def get_extended_macos_paths() -> list[Path]:
+        """Additional macOS Ableton support folders."""
+        return [Path.home() / "Library" / "Application Support" / "Ableton"]
+
+    @classmethod
+    def describe_default_install_locations(cls) -> str:
+        """Human-readable summary of default scan paths for the current OS."""
+        if sys.platform == "win32":
+            lines = [
+                f"{base / 'Ableton'}" for base in cls.get_default_windows_base_paths()
+            ]
+            return "Windows default folders:\n" + "\n".join(f"  • {line}" for line in lines)
+        if sys.platform == "darwin":
+            lines = [str(path) for path in cls.get_default_macos_app_paths()]
+            return "macOS default folders:\n" + "\n".join(f"  • {line}" for line in lines)
+        return "Default Ableton install folders for this platform."
+
+    def _windows_base_search_paths(self) -> list[Path]:
+        paths: list[Path] = []
+        if self._scan_default_locations:
+            paths.extend(self.get_default_windows_base_paths())
+        if self._scan_extended_locations:
+            paths.extend(self.get_extended_windows_base_paths())
+        # Preserve order while removing duplicates
+        seen: set[str] = set()
+        unique_paths: list[Path] = []
+        for path in paths:
+            key = str(path).lower()
+            if key not in seen:
+                seen.add(key)
+                unique_paths.append(path)
+        return unique_paths
+
     def get_versions(self) -> list[LiveVersion]:
         """Get all detected Live versions, sorted by version (newest first)."""
-        return sorted(self._versions, key=lambda v: self._parse_version(v.version), reverse=True)
+        return sorted(
+            self._versions,
+            key=lambda v: self._parse_version(v.version),
+            reverse=True,
+        )
+
+    def detect_all(self) -> list[LiveVersion]:
+        """Alias for get_versions() used by LiveController."""
+        self.refresh()
+        return self.get_versions()
 
     def get_version_by_path(self, path: Path) -> LiveVersion | None:
         """Get Live version by executable path."""
@@ -52,27 +144,75 @@ class LiveDetector:
         else:
             self._scan_linux()
 
+    def _windows_live_exe_candidates(
+        self, install_dir: Path, version_num: str, major_version: int
+    ) -> list[Path]:
+        """Build candidate Live executables for a Windows install folder."""
+        candidates: list[Path] = [
+            install_dir / "Live.exe",
+            install_dir / "Program" / "Ableton Live.exe",
+            install_dir / "Program" / f"Ableton Live {version_num}.exe",
+            install_dir / "Program" / f"Ableton Live {install_dir.name}.exe",
+            install_dir / "Program" / f"Ableton {install_dir.name}.exe",
+            install_dir / "Program" / f"Ableton Live {version_num} Suite.exe",
+            install_dir / "Program" / f"Ableton Live {version_num} Standard.exe",
+            install_dir / f"Live {major_version}.exe",
+            install_dir / "Program" / f"Live {major_version}.exe",
+        ]
+
+        program_dir = install_dir / "Program"
+        if program_dir.is_dir():
+            for pattern in ("Ableton Live*.exe", "Live*.exe"):
+                for exe_path in sorted(program_dir.glob(pattern)):
+                    if exe_path not in candidates:
+                        candidates.append(exe_path)
+
+        return candidates
+
+    def _find_windows_live_exe(
+        self, install_dir: Path, version_num: str, major_version: int
+    ) -> Path | None:
+        """Return the first existing Live executable for an install folder."""
+        for exe_path in self._windows_live_exe_candidates(
+            install_dir, version_num, major_version
+        ):
+            self.logger.debug(f"Checking for Live.exe at: {exe_path}")
+            if exe_path.exists():
+                self.logger.debug(f"Found Live.exe: {exe_path}")
+                return exe_path
+        return None
+
+    def _resolve_install_version_label(
+        self, install_dir: Path, version_num: str, live_exe: Path
+    ) -> str:
+        """Resolve a display/install version string from PE metadata and folder name."""
+        from ..utils.live_version import parse_live_folder_label
+
+        version_str = self._get_exe_version(live_exe)
+        _, folder_label, _ = parse_live_folder_label(install_dir.name)
+
+        if version_str and version_str != version_num:
+            return version_str
+        if folder_label:
+            return folder_label
+        return version_num
+
+    def _is_prerelease_install(self, install_dir: Path, version_str: str) -> bool:
+        from ..utils.live_version import is_prerelease_version, parse_live_folder_label
+
+        _, _, folder_prerelease = parse_live_folder_label(install_dir.name)
+        return folder_prerelease or is_prerelease_version(version_str)
+
     def _scan_windows(self) -> None:
         """Scan for Live on Windows."""
-        # Common installation base paths on Windows
-        program_files = Path(os.environ.get("ProgramFiles", "C:\\Program Files"))
-        program_files_x86 = Path(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"))
-        program_data = Path(os.environ.get("ProgramData", "C:\\ProgramData"))
-        local_appdata = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-        appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-
-        # Base paths that might contain an "Ableton" folder
-        base_search_paths = [
-            program_files,
-            program_files_x86,
-            program_data,  # C:\ProgramData\Ableton
-            local_appdata,
-            appdata,
-        ]
+        base_search_paths = self._windows_base_search_paths()
+        if not base_search_paths:
+            self.logger.debug("Windows Live scan skipped: no search paths enabled")
+            return
 
         import re
 
-        # Scan all base paths for "Ableton" folders
+        # Scan enabled base paths for "Ableton" folders
         for base_path in base_search_paths:
             self.logger.debug(f"Checking base path: {base_path}")
             if not base_path.exists():
@@ -131,57 +271,13 @@ class LiveDetector:
                                 f"Matched Live pattern: {item.name} -> version {version_num} (major: {major_version})"
                             )
 
-                            # Try multiple possible locations for Live.exe
-                            possible_paths = [
-                                item / "Live.exe",  # Direct in Live folder
-                                item / "Program" / "Ableton Live.exe",  # In Program subfolder
-                                item
-                                / "Program"
-                                / f"Ableton Live {version_num}.exe",  # Versioned in Program
-                            ]
-
-                            # Also check for Suite/Standard variants in Program folder
-                            suite_variants = [
-                                item / "Program" / f"Ableton Live {version_num} Suite.exe",
-                                item / "Program" / f"Ableton Live {version_num} Standard.exe",
-                            ]
-                            possible_paths.extend(suite_variants)
-
-                            # For Live 10, 11, 12, also check common alternative naming
-                            if major_version in [10, 11, 12]:
-                                # Check for "Live X Suite" or "Live X Standard" folder names with executable
-                                possible_paths.extend(
-                                    [
-                                        item / f"Live {major_version}.exe",  # Simple version
-                                        item
-                                        / "Program"
-                                        / f"Live {major_version}.exe",  # In Program
-                                    ]
-                                )
-
-                            live_exe = None
-                            for exe_path in possible_paths:
-                                self.logger.debug(f"Checking for Live.exe at: {exe_path}")
-                                if exe_path.exists():
-                                    live_exe = exe_path
-                                    self.logger.debug(f"Found Live.exe: {live_exe}")
-                                    break
+                            live_exe = self._find_windows_live_exe(item, version_num, major_version)
 
                             if live_exe:
-                                # Try to extract full version from executable file properties first
-                                # This gives us the exact version (e.g., 12.3.5) instead of just major (12)
-                                version_str = self._get_exe_version(live_exe)
-
-                                # Fallback to folder name version if executable version extraction fails
-                                if not version_str or version_str == version_num:
-                                    version_str = version_num
-                                    self.logger.debug(
-                                        f"Using version from folder name: {version_str}"
-                                    )
-                                else:
-                                    self.logger.debug(
-                                        f"Extracted version from executable: {version_str} (folder had: {version_num})"
-                                    )
+                                version_str = self._resolve_install_version_label(
+                                    item, version_num, live_exe
+                                )
+                                self.logger.debug(f"Resolved install version label: {version_str}")
 
                                 # Check if it's Suite (Standard is default if not Suite)
                                 # Check both folder name and executable name
@@ -190,6 +286,7 @@ class LiveDetector:
                                     or "Suite" in live_exe.name
                                     or self._check_suite_windows(item)
                                 )
+                                is_prerelease = self._is_prerelease_install(item, version_str)
 
                                 # Avoid duplicates (check if we already have this path)
                                 if not any(v.path == live_exe for v in self._versions):
@@ -198,7 +295,10 @@ class LiveDetector:
                                     )
                                     self._versions.append(
                                         LiveVersion(
-                                            version=version_str, path=live_exe, is_suite=is_suite
+                                            version=version_str,
+                                            path=live_exe,
+                                            is_suite=is_suite,
+                                            is_prerelease=is_prerelease,
                                         )
                                     )
                             else:
@@ -222,16 +322,18 @@ class LiveDetector:
 
     def _scan_macos(self) -> None:
         """Scan for Live on macOS."""
-        # Common installation paths on macOS
-        applications = Path("/Applications")
-        user_applications = Path.home() / "Applications"
+        app_search_paths: list[Path] = []
+        if self._scan_default_locations:
+            app_search_paths.extend(self.get_default_macos_app_paths())
+        if not app_search_paths and not self._scan_extended_locations:
+            self.logger.debug("macOS Live scan skipped: no search paths enabled")
+            return
 
-        # Also check common user data locations
-        library_app_support = Path.home() / "Library" / "Application Support" / "Ableton"
+        library_app_support = None
+        if self._scan_extended_locations:
+            library_app_support = self.get_extended_macos_paths()[0]
 
-        search_paths = [applications, user_applications]
-
-        for base_path in search_paths:
+        for base_path in app_search_paths:
             if not base_path.exists():
                 continue
 
@@ -248,48 +350,42 @@ class LiveDetector:
                     # - "Live 10.1.30.app", "Live 11.3.13.app", "Live 12.0.5.app"
                     import re
 
-                    # Captures full version including hotfix and beta (e.g., "12.3.5", "12.0.5b1", "11.3.13rc2")
+                    from ..utils.live_version import parse_live_folder_label
+
+                    # Captures full version including hotfix and beta (e.g., "12.3.5", "12.0.5b1")
                     live_match = re.match(
-                        r"^Live\s+(\d+(?:\.\d+)*(?:[a-zA-Z]+\d+)?)", item.name, re.IGNORECASE
+                        r"^Live\s+(\d+(?:\.\d+)*(?:[a-zA-Z]+\d+)?)", item.stem, re.IGNORECASE
                     )
                     if live_match:
                         version_num = live_match.group(1)
-                        # Extract major version (10, 11, or 12) for validation
-                        # Remove beta suffix for major version extraction
                         major_version_str = re.sub(r"[a-zA-Z].*$", "", version_num.split(".")[0])
                         major_version = int(major_version_str)
 
-                        # Only process Live 10, 11, 12 (and future versions >= 10)
                         if major_version >= 10:
-                            # Live executable is inside the .app bundle
                             live_exe = item / "Contents" / "MacOS" / "Live"
                             if live_exe.exists():
-                                # Try to extract full version from Info.plist first
-                                # This gives us the exact version (e.g., 12.3.5) instead of just major (12)
                                 version_str = self._get_exe_version(live_exe)
+                                _, folder_label, folder_prerelease = parse_live_folder_label(
+                                    item.stem
+                                )
 
-                                # Fallback to folder name version if Info.plist extraction fails
                                 if not version_str or version_str == version_num:
-                                    version_str = version_num
-                                    self.logger.debug(
-                                        f"Using version from folder name: {version_str}"
-                                    )
-                                else:
-                                    self.logger.debug(
-                                        f"Extracted version from Info.plist: {version_str} (folder had: {version_num})"
-                                    )
+                                    version_str = folder_label or version_num
+                                is_suite = "Suite" in item.stem or self._check_suite_macos(item)
+                                is_prerelease = folder_prerelease or self._is_prerelease_install(
+                                    item, version_str
+                                )
 
-                                # Check if it's Suite
-                                is_suite = "Suite" in item.name or self._check_suite_macos(item)
-
-                                # Avoid duplicates
                                 if not any(v.path == live_exe for v in self._versions):
                                     self.logger.info(
                                         f"Adding Live version: {version_str} {'Suite' if is_suite else 'Standard'} at {live_exe}"
                                     )
                                     self._versions.append(
                                         LiveVersion(
-                                            version=version_str, path=live_exe, is_suite=is_suite
+                                            version=version_str,
+                                            path=live_exe,
+                                            is_suite=is_suite,
+                                            is_prerelease=is_prerelease,
                                         )
                                     )
             except (PermissionError, OSError):
@@ -297,7 +393,7 @@ class LiveDetector:
                 continue
 
         # Also check Application Support for additional installations
-        if library_app_support.exists():
+        if library_app_support and library_app_support.exists():
             try:
                 for item in library_app_support.iterdir():
                     if not item.is_dir():
@@ -642,15 +738,10 @@ class LiveDetector:
         return None
 
     def _parse_version(self, version_str: str) -> tuple:
-        """Parse version string to tuple for sorting (e.g., "11.3.13" -> (11, 3, 13))."""
-        try:
-            parts = [int(x) for x in version_str.split(".")]
-            # Pad with zeros for consistent sorting
-            while len(parts) < 3:
-                parts.append(0)
-            return tuple(parts[:3])
-        except ValueError:
-            return (0, 0, 0)
+        """Parse version string to tuple for sorting (supports alpha/beta/rc)."""
+        from ..utils.live_version import parse_version_sort_key
+
+        return parse_version_sort_key(version_str)
 
     def refresh(self) -> None:
         """Rescan for Live versions."""

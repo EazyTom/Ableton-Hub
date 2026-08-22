@@ -35,6 +35,7 @@ class ProjectGrid(QWidget):
     project_selected = pyqtSignal(int)  # Project ID
     project_double_clicked = pyqtSignal(int)  # Project ID
     project_open_in_live_requested = pyqtSignal(int)  # Project ID
+    project_open_with_live_requested = pyqtSignal(int)  # Project ID
     selection_changed = pyqtSignal(list)  # List of project IDs
     sort_requested = pyqtSignal(str, str)  # Column name, direction (asc/desc)
     tags_modified = pyqtSignal()  # Emitted when tags are created/modified
@@ -286,7 +287,7 @@ class ProjectGrid(QWidget):
             self.table.setItem(row, 5, QTableWidgetItem(date_str))
 
             # Version
-            version_display = project.get_live_version_display() or ""
+            version_display = project.get_live_version_full_display() or project.get_live_version_display() or ""
             version_item = QTableWidgetItem(version_display)
             version_item.setTextAlignment(
                 Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
@@ -435,6 +436,11 @@ class ProjectGrid(QWidget):
         open_in_live_action = menu.addAction("Open Project in Live")
         open_in_live_action.triggered.connect(
             lambda: self.project_open_in_live_requested.emit(project_id)
+        )
+
+        open_with_action = menu.addAction("Open With...")
+        open_with_action.triggered.connect(
+            lambda: self.project_open_with_live_requested.emit(project_id)
         )
 
         open_folder_action = menu.addAction("Open in File Manager")

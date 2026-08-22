@@ -530,7 +530,9 @@ class ProjectCard(QFrame):
 
         # Live version
         if hasattr(self, "version_label") and self.version_label is not None:
-            version_display = self.project.get_live_version_display()
+            version_display = self.project.get_live_version_full_display()
+            if not version_display:
+                version_display = self.project.get_live_version_display()
             if version_display:
                 self.version_label.setText(version_display)
                 self.version_label.setVisible(True)

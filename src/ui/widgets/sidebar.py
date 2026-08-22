@@ -293,6 +293,16 @@ class Sidebar(QWidget):
         self._nav_items["similarity_tree"] = similarity_tree
         nav_section.add_item(similarity_tree)
 
+        plugin_dashboard = SidebarItem("Plugin Dashboard", "🎛️")
+        plugin_dashboard.clicked.connect(lambda: self._on_nav_click("plugin_dashboard"))
+        self._nav_items["plugin_dashboard"] = plugin_dashboard
+        nav_section.add_item(plugin_dashboard)
+
+        cluster_view = SidebarItem("ML Clusters", "🧩")
+        cluster_view.clicked.connect(lambda: self._on_nav_click("cluster"))
+        self._nav_items["cluster"] = cluster_view
+        nav_section.add_item(cluster_view)
+
         favorites = SidebarItem("Favorites", "💎")
         favorites.clicked.connect(lambda: self._on_nav_click("favorites"))
         self._nav_items["favorites"] = favorites

@@ -4,7 +4,7 @@
 
 # Ableton Hub
 
-**Version 1.0.10** — The "cross-platform trusted installer" release - 🔒 Bravo! 🔒
+**Version 1.0.11** — Live 13, alpha builds, plugin analytics, ML clusters, and smarter Live launching
 ## What is Ableton Hub?
 
 Ableton Hub is a desktop application that helps you organize, manage, and discover your Ableton Live projects across multiple locations. Whether your projects are on your computer, external drives, network shares, or cloud storage, Ableton Hub scans and indexes them all in one place. Creating collections of your projects and mapping exports to projects with deep learning of your project stats.
@@ -585,6 +585,12 @@ Contributions are welcome! Please see the **[Contributing Guide](CONTRIBUTING.md
 ## Roadmap
 - **[Feature Development Status](docs/FEATURE_DEVELOPMENT.md)** - What's implemented and what's planned
 - **[Planned Features Roadmap](docs/PLANNED_FEATURES.plan)** - Detailed implementation plans for future features
+
+### v1.0.11 - Live 13, Analytics & Smart Launcher
+- ✅ **Live 13 & Alpha Support** - Detect Live 13+ and pre-release builds (e.g. 12.4a1); version badges, sorting, and launch matching work across future Live versions
+- ✅ **Plugin Usage Dashboard** - See most-used plugins across your library; filter projects by plugin from the new dashboard (sidebar or Tools menu)
+- ✅ **ML Cluster Visualization** - K-means grouping of similar projects with suggested labels; create collections from clusters
+- ✅ **Open With... Smart Launcher** - Choose which Live installation opens a project; version mismatch warnings with optional backup before opening in a newer Live
 
 ### v1.0.10 - Trusted Installer Release 
 - ✅ **Trusted Open Source** - Official trusted installer release; verified, signed installers for Windows (MSI) and macOS (DMG)

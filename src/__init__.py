@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Single source of truth for version - prefer pyproject.toml when running from source,
 # else importlib.metadata when installed, else hardcoded fallback
-_FALLBACK_VERSION = "1.0.10"
+_FALLBACK_VERSION = "1.0.11"
 
 
 def _get_version_from_pyproject() -> str | None:
@@ -47,35 +47,31 @@ WHATS_NEW = {
     "version": __version__,
     "features": [
         (
-            "Trusted Windows MSI Installer",
+            "Live 13 & Alpha Version Support",
             (
-                "Windows installer is now code-signed with Certum SimplySign; "
-                "SmartScreen and browsers will recognize it as trusted"
+                "Detect and use Live 13+ installations; alpha, beta, and RC builds "
+                "(e.g. 12.4a1) are recognized for sorting, display, and launch matching"
             ),
         ),
         (
-            "Audio Preview in Collections",
+            "Plugin Usage Dashboard",
             (
-                "Preview audio exports directly from collection views; "
-                "play tracks without opening the full project"
+                "New dashboard showing most-used plugins across your library; "
+                "filter the project grid by plugin or jump to projects using a plugin"
             ),
         ),
         (
-            "UI Loading Bugfixes",
-            ("Fixed various UI loading issues; " "more reliable startup and view transitions"),
-        ),
-        (
-            "Icon Fixes",
+            "ML Cluster Visualization",
             (
-                "Custom app icon now displays correctly on Windows and macOS installers; "
-                "no more default BeeWare icon"
+                "Group similar projects with K-means clustering; "
+                "explore clusters in a tree view and create collections from clusters"
             ),
         ),
         (
-            "dawtool Markers Fixed",
+            "Open With... Smart Launcher",
             (
-                "Timeline marker extraction from .als files now works correctly; "
-                "fixed dawtool integration for marker parsing"
+                "Choose which Live installation opens a project; "
+                "warnings when opening in a newer version with optional backup first"
             ),
         ),
     ],
@@ -83,6 +79,38 @@ WHATS_NEW = {
 
 # Previous release highlights (for reference in About dialog)
 PREVIOUS_FEATURES = [
+    (
+        "Trusted Windows MSI Installer",
+        (
+            "Windows installer is now code-signed with Certum SimplySign; "
+            "SmartScreen and browsers will recognize it as trusted"
+        ),
+    ),
+    (
+        "Audio Preview in Collections",
+        (
+            "Preview audio exports directly from collection views; "
+            "play tracks without opening the full project"
+        ),
+    ),
+    (
+        "UI Loading Bugfixes",
+        ("Fixed various UI loading issues; more reliable startup and view transitions"),
+    ),
+    (
+        "Icon Fixes",
+        (
+            "Custom app icon now displays correctly on Windows and macOS installers; "
+            "no more default BeeWare icon"
+        ),
+    ),
+    (
+        "dawtool Markers Fixed",
+        (
+            "Timeline marker extraction from .als files now works correctly; "
+            "fixed dawtool integration for marker parsing"
+        ),
+    ),
     (
         "FTUE Startup Guide",
         (

@@ -32,6 +32,8 @@ class MenuBarManager(QObject):
     global_search_requested = pyqtSignal()
     song_name_generator_requested = pyqtSignal()
     show_link_panel_requested = pyqtSignal()
+    show_plugin_dashboard_requested = pyqtSignal()
+    show_cluster_view_requested = pyqtSignal()
     force_rescan_metadata_requested = pyqtSignal()
     clear_thumbnail_cache_requested = pyqtSignal()
     cleanup_missing_projects_requested = pyqtSignal()
@@ -190,6 +192,16 @@ class MenuBarManager(QObject):
         link_panel_action.triggered.connect(self.show_link_panel_requested.emit)
         tools_menu.addAction(link_panel_action)
         self._actions["link_panel"] = link_panel_action
+
+        plugin_dashboard_action = QAction("Plugin Usage Dashboard...", self._main_window)
+        plugin_dashboard_action.triggered.connect(self.show_plugin_dashboard_requested.emit)
+        tools_menu.addAction(plugin_dashboard_action)
+        self._actions["plugin_dashboard"] = plugin_dashboard_action
+
+        cluster_view_action = QAction("ML Cluster Visualization...", self._main_window)
+        cluster_view_action.triggered.connect(self.show_cluster_view_requested.emit)
+        tools_menu.addAction(cluster_view_action)
+        self._actions["cluster_view"] = cluster_view_action
 
         tools_menu.addSeparator()
 

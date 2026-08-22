@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from sqlalchemy import case
 
 from .. import __version__, get_whats_new_html
 from ..config import Config, save_config
@@ -29,10 +28,12 @@ from .managers.menu_bar_manager import MenuBarManager
 from .managers.toolbar_manager import ToolBarManager
 from .managers.view_manager import ViewManager
 from .theme import AbletonTheme
+from .widgets.cluster_view import ClusterView
 from .widgets.collection_view import CollectionView
 from .widgets.find_audio_exports_view import FindAudioExportsView
 from .widgets.link_panel import LinkPanel
 from .widgets.location_panel import LocationPanel
+from .widgets.plugin_dashboard_view import PluginDashboardView
 from .widgets.project_grid import ProjectGrid
 from .widgets.project_properties_view import ProjectPropertiesView
 from .widgets.sidebar import Sidebar
@@ -151,6 +152,8 @@ class MainWindow(QMainWindow):
         self.menu_manager.global_search_requested.connect(self._on_global_search)
         self.menu_manager.song_name_generator_requested.connect(self._on_song_name_generator)
         self.menu_manager.show_link_panel_requested.connect(self._show_link_panel)
+        self.menu_manager.show_plugin_dashboard_requested.connect(self._show_plugin_dashboard)
+        self.menu_manager.show_cluster_view_requested.connect(self._show_cluster_view)
         self.menu_manager.force_rescan_metadata_requested.connect(self._on_force_rescan_metadata)
         self.menu_manager.clear_thumbnail_cache_requested.connect(self._on_clear_thumbnail_cache)
         self.menu_manager.cleanup_missing_projects_requested.connect(
@@ -248,6 +251,7 @@ class MainWindow(QMainWindow):
         self.project_grid.project_selected.connect(self._on_project_selected)
         self.project_grid.project_double_clicked.connect(self.show_project_properties)
         self.project_grid.project_open_in_live_requested.connect(self._on_project_open_in_live)
+        self.project_grid.project_open_with_live_requested.connect(self._on_project_open_with_live)
         self.project_grid.sort_requested.connect(self._on_grid_sort_requested)
         self.project_grid.tags_modified.connect(self._refresh_sidebar)
         # Store reference to main window for refresh
@@ -308,6 +312,22 @@ class MainWindow(QMainWindow):
         )
         self.content_stack.addWidget(self.similarity_tree_view)
 
+        # Plugin usage dashboard (index 9)
+        self.plugin_dashboard_view = PluginDashboardView()
+        self.plugin_dashboard_view.project_selected.connect(self.show_project_properties)
+        self.plugin_dashboard_view.filter_by_plugin_requested.connect(
+            self._on_filter_by_plugin
+        )
+        self.content_stack.addWidget(self.plugin_dashboard_view)
+
+        # ML cluster visualization (index 10)
+        self.cluster_view = ClusterView()
+        self.cluster_view.project_selected.connect(self.show_project_properties)
+        self.cluster_view.create_collection_requested.connect(
+            self._on_create_collection_from_cluster
+        )
+        self.content_stack.addWidget(self.cluster_view)
+
         self.splitter.addWidget(self.content_stack)
 
         # Initialize ViewManager and register all views
@@ -329,6 +349,10 @@ class MainWindow(QMainWindow):
         self.view_manager.register_view(
             ViewManager.VIEW_SIMILARITY_TREE, self.similarity_tree_view, 8
         )
+        self.view_manager.register_view(
+            ViewManager.VIEW_PLUGIN_DASHBOARD, self.plugin_dashboard_view, 9
+        )
+        self.view_manager.register_view(ViewManager.VIEW_CLUSTER, self.cluster_view, 10)
 
         # Set initial sizes
         self.splitter.setSizes([self.config.window.sidebar_width, 1000])
@@ -711,25 +735,14 @@ class MainWindow(QMainWindow):
                 # Sort by file size ascending, nulls last
                 query = query.order_by(nullslast(Project.file_size.asc()))
             elif sort_field == "version_desc":
-                # Sort by version descending (v12, v11, v10, v9, None)
-                # Use a CASE statement to order versions numerically
-                version_order = case(
-                    (Project.ableton_version.like("%Live 12%"), 12),
-                    (Project.ableton_version.like("%Live 11%"), 11),
-                    (Project.ableton_version.like("%Live 10%"), 10),
-                    (Project.ableton_version.like("%Live 9%"), 9),
-                    else_=0,
-                )
+                from ..utils.live_version import live_version_order_case
+
+                version_order = live_version_order_case(Project.ableton_version, descending=True)
                 query = query.order_by(nullslast(version_order.desc()))
             elif sort_field == "version_asc":
-                # Sort by version ascending (v9, v10, v11, v12, None)
-                version_order = case(
-                    (Project.ableton_version.like("%Live 9%"), 9),
-                    (Project.ableton_version.like("%Live 10%"), 10),
-                    (Project.ableton_version.like("%Live 11%"), 11),
-                    (Project.ableton_version.like("%Live 12%"), 12),
-                    else_=0,
-                )
+                from ..utils.live_version import live_version_order_case
+
+                version_order = live_version_order_case(Project.ableton_version, descending=False)
                 query = query.order_by(nullslast(version_order.asc()))
             elif sort_field == "key_asc":
                 # Sort by musical key alphabetically (A, A#, B, C, etc.), nulls last
@@ -1214,6 +1227,57 @@ class MainWindow(QMainWindow):
         self.view_manager.switch_to_view(ViewManager.VIEW_LINK)
         self.sidebar.clear_selection()
 
+    def _show_plugin_dashboard(self) -> None:
+        """Show plugin usage dashboard."""
+        self.view_manager.switch_to_view(ViewManager.VIEW_PLUGIN_DASHBOARD)
+        self.plugin_dashboard_view.refresh()
+        self.sidebar.clear_selection()
+
+    def _show_cluster_view(self) -> None:
+        """Show ML cluster visualization."""
+        self.view_manager.switch_to_view(ViewManager.VIEW_CLUSTER)
+        self.cluster_view.refresh()
+        self.sidebar.clear_selection()
+
+    def _on_filter_by_plugin(self, plugin_name: str) -> None:
+        """Filter the project library by plugin name."""
+        self.view_manager.switch_to_view(ViewManager.VIEW_PROJECTS)
+        if self.search_bar:
+            self.search_bar.setText(plugin_name)
+        self._load_projects(search_query=plugin_name)
+
+    def _on_create_collection_from_cluster(self, project_ids: list, label: str) -> None:
+        """Create a collection from an ML cluster."""
+        from ..database import Collection, CollectionType, ProjectCollection, get_session
+
+        if not project_ids:
+            return
+
+        with get_session() as session:
+            collection = Collection(
+                name=label,
+                description="Created from ML cluster visualization",
+                collection_type=CollectionType.CUSTOM,
+            )
+            session.add(collection)
+            session.flush()
+
+            for index, project_id in enumerate(project_ids, start=1):
+                session.add(
+                    ProjectCollection(
+                        project_id=project_id,
+                        collection_id=collection.id,
+                        track_number=index,
+                    )
+                )
+            session.commit()
+            collection_id = collection.id
+
+        self._refresh_sidebar()
+        self.view_manager.switch_to_view(ViewManager.VIEW_COLLECTIONS)
+        self.collection_view.set_collection(collection_id)
+        self.statusBar().showMessage(f"Created collection '{label}' with {len(project_ids)} projects.", 5000)
+
     def _on_force_rescan_metadata(self) -> None:
         """Force re-scan of all project metadata by clearing parse timestamps."""
         from ..database import Project, get_session
@@ -1549,6 +1613,9 @@ class MainWindow(QMainWindow):
         if self.view_manager.get_current_view() == ViewManager.VIEW_SIMILARITY_TREE:
             self.similarity_tree_view.cleanup()
 
+        if self.view_manager.get_current_view() == ViewManager.VIEW_CLUSTER:
+            self.cluster_view.cleanup()
+
         # Reset missing projects view when navigating away from projects view
         if view != "projects" and self._show_missing_projects:
             self._show_missing_projects = False
@@ -1582,6 +1649,12 @@ class MainWindow(QMainWindow):
                 self.recommendations_panel.set_project(selected_ids[0])
         elif view == "similarity_tree":
             self.view_manager.switch_to_view(ViewManager.VIEW_SIMILARITY_TREE)
+        elif view == "plugin_dashboard":
+            self.view_manager.switch_to_view(ViewManager.VIEW_PLUGIN_DASHBOARD)
+            self.plugin_dashboard_view.refresh()
+        elif view == "cluster":
+            self.view_manager.switch_to_view(ViewManager.VIEW_CLUSTER)
+            self.cluster_view.refresh()
         elif view == "new_collection":
             # Show new collection dialog
             self._on_new_collection()
@@ -2007,13 +2080,25 @@ class MainWindow(QMainWindow):
         # Could show details panel
 
     def _on_project_open_in_live(self, project_id: int) -> None:
-        """Open a project with Ableton Live."""
+        """Open a project with the best-matching Ableton Live installation."""
+        self._launch_project_in_live(project_id)
+
+    def _on_project_open_with_live(self, project_id: int) -> None:
+        """Open a project after choosing a Live installation."""
+        self._launch_project_in_live(project_id, choose_installation=True)
+
+    def _launch_project_in_live(
+        self, project_id: int, *, choose_installation: bool = False
+    ) -> None:
+        """Launch a project in Live, optionally prompting for installation."""
         from pathlib import Path
 
-        from ..database import LiveInstallation
-        from ..services.live_launcher import LiveLauncher
+        from ..database import AppSettings, LiveInstallation
         from ..services.live_detector import LiveVersion
+        from ..services.live_launcher import LiveLauncher
+        from ..utils.live_version import is_prerelease_version
         from .controllers.live_controller import LiveController
+        from .dialogs.open_with_live_dialog import OpenWithLiveDialog, maybe_backup_project
 
         session = get_session()
         try:
@@ -2028,27 +2113,60 @@ class MainWindow(QMainWindow):
                 )
                 return
 
-            launcher = LiveLauncher()
             live_controller = LiveController()
-
-            # Get project's major version
-            project_major_version = project.get_live_version_major()
-
-            # Try to find matching installation by major version
-            matching_install = None
-            if project_major_version:
-                matching_install = live_controller.find_matching_installation(project_major_version)
-
-            # If no match, get default installation (favorite or first if only one)
-            if not matching_install:
-                matching_install = live_controller.get_default_installation()
-
-            # If still no installation found, show actionable dialog
-            if not matching_install:
+            installations = live_controller.get_all_installations()
+            if not installations:
                 self._show_no_live_installation_dialog()
                 return
 
-            # Launch with the selected installation
+            project_major_version = project.get_live_version_major()
+            recommended = None
+            if project_major_version:
+                recommended = live_controller.find_matching_installation(project_major_version)
+            if recommended is None:
+                recommended = live_controller.get_default_installation()
+
+            matching_install = recommended
+            make_backup = False
+
+            if choose_installation or len(installations) > 1:
+                dialog = OpenWithLiveDialog(
+                    project,
+                    installations,
+                    recommended_id=recommended.id if recommended else None,
+                    parent=self,
+                )
+                if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_installation:
+                    return
+                matching_install = dialog.selected_installation
+                make_backup = dialog.make_backup_first
+            elif matching_install is None:
+                matching_install = installations[0]
+
+            install_major = matching_install.get_major_version()
+            if (
+                not choose_installation
+                and project_major_version
+                and install_major
+                and install_major > project_major_version
+            ):
+                reply = QMessageBox.warning(
+                    self,
+                    "Newer Live Version",
+                    f"This project was created in Live {project_major_version}, but will open in "
+                    f"Live {install_major}.\n\nAbleton may permanently upgrade the .als file.\n\n"
+                    "Continue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+                make_backup = True
+
+            if make_backup:
+                backup_path = AppSettings.get_value(session, "backup_location", None)
+                if not maybe_backup_project(project, backup_path, parent=self):
+                    return
+
             exe_path = Path(matching_install.executable_path)
             if not exe_path.exists():
                 QMessageBox.warning(
@@ -2059,20 +2177,21 @@ class MainWindow(QMainWindow):
                 )
                 return
 
-            # Convert LiveInstallation to LiveVersion for launcher
             live_version = LiveVersion(
                 version=matching_install.version,
                 path=exe_path,
                 build=matching_install.build,
                 is_suite=matching_install.is_suite,
+                is_prerelease=is_prerelease_version(matching_install.version),
             )
 
-            # Launch directly - no confirmation dialog
+            launcher = LiveLauncher()
             success = launcher.launch_project(path, live_version)
             if success:
-                version_info = f" (v{project_major_version})" if project_major_version else ""
+                version_info = project.get_live_version_full_display() or ""
+                pre_note = " (pre-release)" if live_version.is_prerelease else ""
                 self.logger.info(
-                    f"Opened {project.name}{version_info} with: {matching_install.name}"
+                    f"Opened {project.name} {version_info} with: {matching_install.name}{pre_note}"
                 )
             else:
                 QMessageBox.critical(
@@ -2131,7 +2250,7 @@ class MainWindow(QMainWindow):
         self.logger.debug(f"LOCALAPPDATA: {os.environ.get('LOCALAPPDATA', 'N/A')}")
         self.logger.debug(f"APPDATA: {os.environ.get('APPDATA', 'N/A')}")
 
-        detector = LiveDetector()
+        detector = LiveDetector.from_config(self.config)
         detected_versions = detector.get_versions()
 
         self.logger.info(f"Found {len(detected_versions)} version(s)")
@@ -2142,7 +2261,7 @@ class MainWindow(QMainWindow):
             msg = QMessageBox(self)
             msg.setWindowTitle("No Versions Found")
             msg.setText(
-                "No Ableton Live installations were detected in default locations.\n\n"
+                "No Ableton Live installations were detected in the configured locations.\n\n"
                 "You can manually add an installation using 'Add Manual Installation...'"
             )
             msg.addButton("Add Manual Installation", QMessageBox.ButtonRole.AcceptRole)

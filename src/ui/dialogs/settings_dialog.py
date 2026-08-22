@@ -327,9 +327,39 @@ class SettingsDialog(QDialog):
         live_btn_layout.addStretch()
         live_layout.addLayout(live_btn_layout)
 
+        detect_group = QGroupBox("Detection Locations")
+        detect_layout = QVBoxLayout(detect_group)
+
+        self.scan_default_live_locations = QCheckBox("Scan default install folders")
+        self.scan_default_live_locations.setChecked(self.config.live.scan_default_install_locations)
+        self.scan_default_live_locations.setToolTip(
+            "Windows: %ProgramData%\\Ableton, Program Files\\Ableton\n"
+            "macOS: /Applications and ~/Applications"
+        )
+        detect_layout.addWidget(self.scan_default_live_locations)
+
+        self.scan_extended_live_locations = QCheckBox("Also scan extended locations (AppData, user folders)")
+        self.scan_extended_live_locations.setChecked(
+            self.config.live.scan_extended_install_locations
+        )
+        detect_layout.addWidget(self.scan_extended_live_locations)
+
+        from ...services.live_detector import LiveDetector
+
+        default_paths_label = QLabel(LiveDetector.describe_default_install_locations())
+        default_paths_label.setWordWrap(True)
+        default_paths_label.setStyleSheet("color: #888; font-size: 10px;")
+        detect_layout.addWidget(default_paths_label)
+
+        detect_default_btn = QPushButton("Detect from Default Locations")
+        detect_default_btn.clicked.connect(self._on_detect_default_live_locations)
+        detect_layout.addWidget(detect_default_btn)
+
+        live_layout.addWidget(detect_group)
+
         info_label = QLabel(
             "Add Ableton Live installations to open projects by double-clicking. "
-            "Use Auto-Detect to find installations in default locations."
+            "Use Auto-Detect or Detect from Default Locations to find installs."
         )
         info_label.setWordWrap(True)
         info_label.setStyleSheet("color: #888; font-size: 10px;")
@@ -416,17 +446,41 @@ class SettingsDialog(QDialog):
                 main_window._refresh_sidebar()
 
     def _on_auto_detect_live(self) -> None:
-        """Run auto-detect for Live installations."""
+        """Run auto-detect for Live installations using enabled location settings."""
+        self._run_live_detection(default_only=False)
+
+    def _on_detect_default_live_locations(self) -> None:
+        """Detect Live installs from OS default folders only."""
+        self._run_live_detection(default_only=True)
+
+    def _run_live_detection(self, *, default_only: bool) -> None:
+        """Detect Live installations and persist new entries."""
         from ...services.live_detector import LiveDetector
 
-        detector = LiveDetector()
+        if default_only:
+            detector = LiveDetector(scan_default_locations=True, scan_extended_locations=False)
+        else:
+            scan_default = self.scan_default_live_locations.isChecked()
+            scan_extended = self.scan_extended_live_locations.isChecked()
+            if not scan_default and not scan_extended:
+                QMessageBox.warning(
+                    self,
+                    "No Detection Locations",
+                    "Enable at least one detection location option before running auto-detect.",
+                )
+                return
+            detector = LiveDetector(
+                scan_default_locations=scan_default,
+                scan_extended_locations=scan_extended,
+            )
+
         detected_versions = detector.get_versions()
 
         if not detected_versions:
             QMessageBox.information(
                 self,
                 "No Versions Found",
-                "No Ableton Live installations were detected in default locations.\n\n"
+                "No Ableton Live installations were detected in the selected locations.\n\n"
                 "You can manually add an installation using 'Add Live Installation...'",
             )
             return
@@ -463,15 +517,16 @@ class SettingsDialog(QDialog):
         if main_window and hasattr(main_window, "_refresh_sidebar"):
             main_window._refresh_sidebar()
 
+        title = "Detection Complete" if default_only else "Auto-Detect Complete"
         if added_count > 0:
             msg = f"Added {added_count} installation(s)."
             if skipped_count:
                 msg += f" {skipped_count} already configured."
-            QMessageBox.information(self, "Auto-Detect Complete", msg)
+            QMessageBox.information(self, title, msg)
         elif skipped_count > 0:
             QMessageBox.information(
                 self,
-                "Auto-Detect Complete",
+                title,
                 "All detected installations are already configured.",
             )
 
@@ -697,6 +752,13 @@ class SettingsDialog(QDialog):
         self.config.scan.auto_scan_on_startup = self.auto_scan_startup.isChecked()
         self.config.scan.scan_frequency_hours = self.scan_frequency.value()
         self.config.scan.recursive_depth = self.recursive_depth.value()
+
+        self.config.live.scan_default_install_locations = (
+            self.scan_default_live_locations.isChecked()
+        )
+        self.config.live.scan_extended_install_locations = (
+            self.scan_extended_live_locations.isChecked()
+        )
 
         # Parse exclude patterns
         patterns_text = self.exclude_patterns.text().strip()

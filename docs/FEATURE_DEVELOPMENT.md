@@ -106,8 +106,10 @@ This document tracks all features that have been implemented and those planned f
 - ✅ Tag-based filtering
 
 #### Ableton Live Integration
-- ✅ Automatic Live version detection (9.x, 10.x, 11.x, 12.x)
-- ✅ Live launcher with version selection
+- ✅ Automatic Live version detection (9.x+, including Live 13 and alpha/pre-release builds)
+- ✅ Live launcher with version selection and **Open With...** dialog
+- ✅ Version mismatch warnings when opening projects in newer Live versions
+- ✅ Optional backup-before-open when upgrading project format
 - ✅ Quick launch (double-click projects)
 - ✅ Preferences folder access per Live version
 - ✅ Options.txt editing/creation
@@ -116,6 +118,12 @@ This document tracks all features that have been implemented and those planned f
 - ✅ Link device discovery and monitoring
 - ✅ Real-time Link network status
 - ✅ Device information display (name, IP address)
+
+#### Release (v1.0.11)
+- ✅ Live 13 and alpha/pre-release version support (detection, display, sorting, launch matching)
+- ✅ Plugin Usage Dashboard — plugin frequency, project lookup, filter library by plugin
+- ✅ ML Cluster Visualization — K-means clusters, tree view, create collection from cluster
+- ✅ Open With... smart launcher — version picker, mismatch warnings, optional backup before open
 
 #### Release Infrastructure & UX (v1.0.3–v1.0.10)
 - ✅ Startup Soundcheck service — plays audio on launch to verify output; custom sound file support; 440 Hz sine fallback if no file found
@@ -138,14 +146,14 @@ This document tracks all features that have been implemented and those planned f
 
 ### ML Clustering Visualization
 - ✅ ML Clustering service (K-means, DBSCAN, Hierarchical) - **Complete** — includes `ClusterInfo` dataclass with `avg_tempo`, `common_plugins`, `common_devices`, `suggested_label`, `silhouette_score`
-- ⏳ Cluster visualization UI widget - **Not started**
-- ⏳ Auto-organize by cluster feature - **Not started**
+- ✅ Cluster visualization UI widget - **Complete** (`cluster_view.py`)
+- ✅ Auto-organize by cluster feature - **Complete** (create collection from cluster)
 
 ### Plugin Usage Analytics
 - ✅ Plugin extraction from ALS files - **Complete**
 - ✅ Plugin data in feature vectors - **Complete**
-- ⏳ Plugin usage dashboard UI - **Not started**
-- ⏳ "Projects using this plugin" filter - **Not started**
+- ✅ Plugin usage dashboard UI - **Complete** (`plugin_dashboard_view.py`)
+- ✅ "Projects using this plugin" filter - **Complete**
 
 ### Workflow Analytics
 - ✅ Project metadata timestamps (created, modified) - **Complete**
@@ -158,9 +166,7 @@ This document tracks all features that have been implemented and those planned f
 ## ❌ Planned Features (Not Yet Developed)
 
 ### High Priority
-- **Plugin Usage Dashboard**: Dedicated UI showing most-used plugins, plugin combinations, missing plugin warnings
 - **Workflow Analytics Dashboard**: Timeline visualization, productivity charts, project lifecycle metrics
-- **ML Cluster Visualization**: Visual grouping of similar projects, cluster labeling, smart collection suggestions
 
 ### Medium Priority
 - **Project Versioning & History**: Automatic version detection, version timeline, version comparison
@@ -203,4 +209,4 @@ This document tracks all features that have been implemented and those planned f
 
 ---
 
-*Last updated: March 2026 (v1.0.10)*
+*Last updated: March 2026 (v1.0.11)*

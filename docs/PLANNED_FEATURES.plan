@@ -2,7 +2,49 @@
 
 This document contains detailed implementation plans for future features.
 
-**Last Updated**: March 17, 2026
+**Last Updated**: August 22, 2026 (v1.0.11)
+
+---
+
+## ✅ Recently Completed (v1.0.11)
+
+### Live 13, Analytics & Smart Launcher
+
+#### Live 13 & Alpha Version Support ✅
+- **Status**: Complete
+- **Implementation**: Shared version parsing/sorting for Live 13+ and pre-release builds (alpha, beta, RC, e.g. `12.4a1`); used for badges, install detection, and launch matching
+- **Features**:
+  - Detect Live 13+ and pre-release folder/exe names
+  - Sort pre-releases before the matching release build
+  - Configurable scan of default vs extended install locations in Settings
+- **Files**: `src/utils/live_version.py`, `src/services/live_detector.py`, `src/database/models.py`, `src/config.py`, `src/ui/dialogs/settings_dialog.py`, `tests/test_live_version.py`, `tests/test_live_detector.py`
+
+#### Plugin Usage Dashboard ✅
+- **Status**: Complete (Phase 5.1)
+- **Implementation**: Aggregates plugin frequency from indexed projects; table UI in sidebar / Tools menu
+- **Features**:
+  - Unique-plugin count and projects-with-plugin-data summary
+  - Searchable table sorted by usage
+  - Show Projects (opens first matching project) and Filter Library by plugin
+- **Not in this release** (deferred): bar charts, plugin-combination matrix, missing-plugin warnings, dedicated `PluginUsage` table
+- **Files**: `src/services/plugin_analytics.py`, `src/ui/widgets/plugin_dashboard_view.py`, `src/ui/main_window.py`, `src/ui/managers/view_manager.py`, `src/ui/managers/menu_bar_manager.py`, `src/ui/widgets/sidebar.py`
+
+#### ML Cluster Visualization ✅
+- **Status**: Complete (Phase 5.3)
+- **Implementation**: Background K-means clustering of indexed feature vectors; tree view of clusters and projects
+- **Features**:
+  - Configurable cluster count (2–20)
+  - Cluster labels with avg tempo and common plugins (`ClusterInfo` contract)
+  - Double-click project to open properties
+  - Create collection from cluster
+- **Not in this release** (deferred): 2D PCA scatter plot, DBSCAN/Hierarchical algorithm picker
+- **Files**: `src/ui/widgets/cluster_view.py`, `src/ui/workers/cluster_worker.py`, `src/services/ml_clustering.py`
+
+#### Open With... Smart Launcher ✅
+- **Status**: Complete
+- **Implementation**: Project context menu opens a dialog to pick which Live install launches the project
+- **Features**: Version mismatch warnings; optional backup before opening in a newer Live; recommended install highlighted
+- **Files**: `src/ui/dialogs/open_with_live_dialog.py`, `src/ui/widgets/project_grid.py`, `src/ui/main_window.py`
 
 ---
 
@@ -92,52 +134,9 @@ This document contains detailed implementation plans for future features.
 
 ---
 
-## Phase 5 Completion: UI Components
+## Phase 5 Remaining: Workflow Analytics
 
-### 5.1 Plugin Usage Dashboard
-
-**Priority**: High  
-**Estimated Effort**: 2-3 weeks  
-**Dependencies**: ML Feature Extractor (complete), ALS Parser (complete)
-
-**Goal**: Provide visibility into plugin usage patterns across the project library.
-
-**Features**:
-1. Most used plugins across all projects (bar chart)
-2. Plugin usage frequency per project
-3. Plugin combinations (which plugins are used together)
-4. Missing plugin warnings (detect unavailable plugins)
-5. "Projects using this plugin" quick filter
-
-**Implementation**:
-
-```
-src/ui/widgets/plugin_dashboard.py
-├── PluginDashboard(QWidget)
-│   ├── _setup_ui()
-│   ├── _load_plugin_stats()
-│   ├── _create_usage_chart()
-│   ├── _create_combinations_view()
-│   └── _filter_by_plugin()
-```
-
-**Database Additions** (optional optimization):
-```python
-class PluginUsage(Base):
-    plugin_name = Column(String(255), primary_key=True)
-    usage_count = Column(Integer, default=0)
-    projects_using = Column(JSON, default=list)
-    last_used = Column(DateTime)
-```
-
-**UI Layout**:
-- Header with "Plugin Usage" title
-- Stats cards: Total plugins, Most used, Least used
-- Bar chart of top 20 plugins
-- Table view of all plugins with counts
-- Click plugin → Filter projects grid
-
----
+Plugin Usage Dashboard (5.1) and ML Cluster Visualization (5.3) shipped in v1.0.11. Remaining Phase 5 work is the workflow analytics UI.
 
 ### 5.2 Workflow Analytics Dashboard
 
@@ -180,44 +179,6 @@ src/ui/widgets/workflow_dashboard.py
 - Timeline chart (projects over time)
 - Activity heatmap (modifications by day/week)
 - Status pie chart
-
----
-
-### 5.3 ML Cluster Visualization
-
-**Priority**: Medium  
-**Estimated Effort**: 2 weeks  
-**Dependencies**: ML Clustering Service (complete)
-
-**Backend API Note**: `ml_clustering.py` returns `ClusterInfo` dataclass with `cluster_id`, `project_ids`, `avg_tempo`, `common_plugins`, `common_devices`, `suggested_label`, `silhouette_score` — this is the data contract for the cluster visualization UI.
-
-**Goal**: Visualize project clusters and enable smart organization.
-
-**Features**:
-1. 2D scatter plot of clustered projects (PCA reduction)
-2. Cluster labels with characteristics (avg tempo, common devices)
-3. Click cluster → View projects in cluster
-4. "Create Smart Collection from Cluster" action
-5. Re-cluster with different algorithms
-
-**Implementation**:
-
-```
-src/ui/widgets/cluster_view.py
-├── ClusterVisualization(QWidget)
-│   ├── _setup_ui()
-│   ├── _run_clustering()
-│   ├── _create_scatter_plot()
-│   ├── _show_cluster_details()
-│   └── _create_collection_from_cluster()
-```
-
-**UI Layout**:
-- Algorithm selector (K-means, DBSCAN, Hierarchical)
-- Parameter controls (n_clusters, eps, etc.)
-- 2D scatter plot with colored clusters
-- Cluster details panel (hover/click)
-- Action buttons (create collection, re-cluster)
 
 ---
 
@@ -467,21 +428,19 @@ class ProjectCustomValue(Base):
 ## Implementation Priority Order
 
 ### Near-term (Next 1-2 months)
-1. **Plugin Usage Dashboard** - High value, completes Phase 5
-2. **Workflow Analytics Dashboard** - High value, completes Phase 5
-3. **ML Cluster Visualization** - Medium value, completes Phase 5
+1. **Workflow Analytics Dashboard** - High value, remaining Phase 5 UI
 
 ### Mid-term (2-4 months)
-4. **Statistics Dashboard** - Medium value, builds on workflow analytics
-5. **Project Versioning** - Medium value, common workflow need
+2. **Statistics Dashboard** - Medium value, builds on workflow analytics
+3. **Project Versioning** - Medium value, common workflow need
 
 ### Long-term (4-6+ months)
-6. **Project Templates** - Lower priority
-7. **Time Tracking** - Lower priority
-8. **Export Presets** - Lower priority
-9. **Custom Metadata Fields** - Lower priority
-10. **Project Archiving** - Lower priority
-11. **Workflow Automation** - Future consideration
+4. **Project Templates** - Lower priority
+5. **Time Tracking** - Lower priority
+6. **Export Presets** - Lower priority
+7. **Custom Metadata Fields** - Lower priority
+8. **Project Archiving** - Lower priority
+9. **Workflow Automation** - Future consideration
 
 ---
 
@@ -520,10 +479,8 @@ The following infrastructure improvements have been completed and provide a soli
 
 ### Known Remaining Work
 
-#### High Priority (Phase 5 Completion)
-- Plugin Usage Dashboard - UI implementation needed (data extraction complete)
+#### High Priority (Phase 5 remaining)
 - Workflow Analytics Dashboard - UI implementation needed (metrics calculation complete)
-- ML Cluster Visualization - UI implementation needed (clustering service complete)
 
 #### Medium Priority
 - Statistics Dashboard - Builds on workflow analytics
@@ -537,6 +494,11 @@ The following infrastructure improvements have been completed and provide a soli
 - Project Archiving - Systematic archiving with policies
 - Workflow Automation - Bulk operations and scheduled tasks
 
+#### Optional follow-ups (v1.0.11 shipped a first version)
+- Plugin dashboard charts, combinations, and missing-plugin warnings
+- Cluster 2D scatter plot and non-K-means algorithms
+- Dedicated tests for plugin dashboard, cluster view, and Open With dialog
+
 ---
 
-*Last updated: March 17, 2026*
+*Last updated: August 22, 2026 (v1.0.11)*

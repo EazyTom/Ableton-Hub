@@ -639,12 +639,10 @@ METADATA_FEATURE_DIM = (
 
 
 def _live_major_version(ableton_version: str | None) -> float:
-    if not ableton_version:
-        return 0.0
-    m = re.search(r"Live\s+(\d+)", ableton_version, re.IGNORECASE)
-    if m:
-        return float(min(12, max(0, int(m.group(1)))))
-    return 0.0
+    from ..utils.live_version import parse_live_major_version
+
+    major = parse_live_major_version(ableton_version)
+    return float(major) if major is not None else 0.0
 
 
 def compute_n_clusters_heuristic(n_samples: int) -> int:
